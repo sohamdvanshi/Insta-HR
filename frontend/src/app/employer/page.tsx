@@ -119,12 +119,27 @@ export default function EmployerDashboard() {
   return (
     <main className="min-h-screen bg-gray-50 pt-16">
       <div className="max-w-7xl mx-auto px-6 py-10">
+
+        {/* Hero banner */}
         <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white mb-8">
-          <h1 className="text-3xl font-bold mb-1">Employer Dashboard</h1>
-          <p className="text-blue-100">Manage your job postings and applications</p>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold mb-1">Employer Dashboard</h1>
+              <p className="text-blue-100">Manage your job postings and applications</p>
+            </div>
+            <a
+              href="/ai-screening"
+              className="inline-flex items-center gap-2 px-5 py-3 bg-white text-purple-700 font-bold rounded-xl shadow hover:bg-purple-50 transition-colors text-sm whitespace-nowrap"
+            >
+              🤖 AI Resume Screening
+            </a>
+          </div>
         </div>
+
         {message && <div className="bg-green-50 text-green-700 px-4 py-3 rounded-xl mb-6 font-medium">{message}</div>}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Jobs list */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="p-6 border-b border-gray-100 flex items-center justify-between">
@@ -139,20 +154,37 @@ export default function EmployerDashboard() {
               ) : (
                 <div className="divide-y divide-gray-50">
                   {jobs.map(job => (
-                    <button key={job.id} onClick={() => fetchApplications(job)}
-                      className={"w-full text-left p-4 hover:bg-blue-50 transition-colors " + (selectedJob?.id === job.id ? "bg-blue-50 border-l-4 border-blue-600" : "")}>
-                      <p className="font-semibold text-gray-900 text-sm mb-1">{job.title}</p>
-                      <p className="text-gray-500 text-xs mb-2">{job.location} - {job.jobType}</p>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{job.totalApplications} applied</span>
-                        <span className={"text-xs px-2 py-0.5 rounded-full " + (job.status === "active" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600")}>{job.status}</span>
-                      </div>
-                    </button>
+                    <div key={job.id} className={"hover:bg-blue-50 transition-colors " + (selectedJob?.id === job.id ? "bg-blue-50 border-l-4 border-blue-600" : "")}>
+                      <button
+                        onClick={() => fetchApplications(job)}
+                        className="w-full text-left p-4 pb-2"
+                      >
+                        <p className="font-semibold text-gray-900 text-sm mb-1">{job.title}</p>
+                        <p className="text-gray-500 text-xs mb-2">{job.location} - {job.jobType}</p>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{job.totalApplications} applied</span>
+                          <span className={"text-xs px-2 py-0.5 rounded-full " + (job.status === "active" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600")}>{job.status}</span>
+                        </div>
+                      </button>
+                      {/* Per-job AI Screening shortcut */}
+                      {(job.totalApplications > 0) && (
+                        <div className="px-4 pb-3">
+                          <a
+                            href={`/ai-screening?jobId=${job.id}`}
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-purple-600 hover:text-purple-800 hover:underline transition-colors"
+                          >
+                            🤖 Screen with AI
+                          </a>
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </div>
               )}
             </div>
           </div>
+
+          {/* Applications panel */}
           <div className="lg:col-span-2">
             {!selectedJob ? (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center text-gray-400">
@@ -161,9 +193,19 @@ export default function EmployerDashboard() {
               </div>
             ) : (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="p-6 border-b border-gray-100">
-                  <h2 className="font-bold text-gray-900">{selectedJob.title}</h2>
-                  <p className="text-gray-500 text-sm">{applications.length} applications</p>
+                <div className="p-6 border-b border-gray-100 flex items-center justify-between gap-4 flex-wrap">
+                  <div>
+                    <h2 className="font-bold text-gray-900">{selectedJob.title}</h2>
+                    <p className="text-gray-500 text-sm">{applications.length} applications</p>
+                  </div>
+                  {applications.length > 0 && (
+                    <a
+                      href={`/ai-screening?jobId=${selectedJob.id}`}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-bold rounded-xl hover:bg-purple-700 transition-colors"
+                    >
+                      🤖 AI Screen These Candidates
+                    </a>
+                  )}
                 </div>
                 {appLoading ? (
                   <div className="p-12 text-center text-gray-400">Loading applications...</div>

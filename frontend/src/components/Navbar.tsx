@@ -49,6 +49,16 @@ export default function Navbar() {
             <Link href="/post-job" className="hover:text-blue-600 transition-colors">Post a Job</Link>
           )}
           {user?.role === 'employer' && (
+            <Link
+              href="/ai-screening"
+              className={`hover:text-purple-600 transition-colors flex items-center gap-1 ${
+                pathname === '/ai-screening' ? 'text-purple-600 font-semibold' : ''
+              }`}
+            >
+              🤖 AI Screening
+            </Link>
+          )}
+          {user?.role === 'employer' && (
             <Link href="/subscription" className="hover:text-blue-600 transition-colors">Upgrade Plan</Link>
           )}
           {user?.role === 'candidate' && (
@@ -112,6 +122,9 @@ export default function Navbar() {
           <Link href="/training" className="text-gray-700 font-medium">Training</Link>
           {user?.role === 'employer' && (
             <Link href="/post-job" className="text-gray-700 font-medium">Post a Job</Link>
+          )}
+          {user?.role === 'employer' && (
+            <Link href="/ai-screening" className="text-purple-700 font-medium">🤖 AI Screening</Link>
           )}
           {user?.role === 'employer' && (
             <Link href="/subscription" className="text-gray-700 font-medium">Upgrade Plan</Link>
