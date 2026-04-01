@@ -1,11 +1,19 @@
-const { Job, User, Application } = require('../models/index');
+const { Op } = require('sequelize');
+const { Job, User, Application, Payment } = require('../models/index');
 
 exports.getStats = async (req, res) => {
   try {
     const totalJobs = await Job.count();
     const totalUsers = await User.count({ where: { role: ['candidate', 'employer'] } });
     const totalApplications = await Application.count();
-    res.json({ success: true, data: { totalJobs, totalUsers, totalApplications, revenue: 0 } });
+
+    // FIX #6: Compute real revenue from successful payments instead of hardcoded 0
+    const revenueResult = await Payment.sum('amount', {
+      where: { status: 'success' }
+    });
+    const revenue = revenueResult || 0;
+
+    res.json({ success: true, data: { totalJobs, totalUsers, totalApplications, revenue } });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

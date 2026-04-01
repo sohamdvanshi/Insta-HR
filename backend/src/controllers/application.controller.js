@@ -4,6 +4,9 @@ const { Application, Job, User, CandidateProfile } = require('../models');
 const { extractResumeText } = require('../services/ai/resumeParserService');
 const { screenResumeAgainstJob } = require('../services/ai/resumeScreeningService');
 
+// FIX #7: Max resume text length to prevent oversized DB writes
+const MAX_RESUME_TEXT_LENGTH = 50000;
+
 exports.applyToJob = async (req, res) => {
   try {
     const { jobId } = req.params;
@@ -62,6 +65,11 @@ exports.applyToJob = async (req, res) => {
         success: false,
         message: parseError.message || 'Failed to parse resume'
       });
+    }
+
+    // FIX #7: Truncate resume text to prevent oversized DB writes
+    if (resumeText.length > MAX_RESUME_TEXT_LENGTH) {
+      resumeText = resumeText.substring(0, MAX_RESUME_TEXT_LENGTH);
     }
 
     const application = await Application.create({

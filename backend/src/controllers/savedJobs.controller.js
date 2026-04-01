@@ -1,6 +1,12 @@
 const { SavedJob, Job, User, JobAlert } = require('../models/index');
 const nodemailer = require('nodemailer');
 
+// FIX #9: Create transporter once as a module-level singleton, not per-request
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+});
+
 // ── SAVED JOBS ──
 
 exports.saveJob = async (req, res) => {
@@ -98,13 +104,10 @@ exports.sendJobAlertEmails = async (job) => {
     const alerts = await JobAlert.findAll({ where: { isActive: true } });
     if (!alerts.length) return;
 
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
-    });
+    // FIX #4: Use APP_URL env var instead of hardcoded localhost:3000
+    const appUrl = process.env.APP_URL || 'http://localhost:3000';
 
     for (const alert of alerts) {
-      // Check if job matches alert criteria
       const keywordMatch = !alert.keywords || 
         alert.keywords.split(',').some(k => 
           job.title?.toLowerCase().includes(k.trim().toLowerCase()) ||
@@ -117,6 +120,7 @@ exports.sendJobAlertEmails = async (job) => {
 
       if (keywordMatch && locationMatch && industryMatch && typeMatch) {
         try {
+          // FIX #9: Use the singleton transporter defined at module level
           await transporter.sendMail({
             from: '"InstaHire Jobs" <' + process.env.SMTP_USER + '>',
             to: alert.email,
@@ -140,7 +144,7 @@ exports.sendJobAlertEmails = async (job) => {
 
                   <p style="color:#374151;line-height:1.6;">${(job.description || '').substring(0, 200)}...</p>
 
-                  <a href="http://localhost:3000/jobs/${job.id}" 
+                  <a href="${appUrl}/jobs/${job.id}" 
                      style="display:inline-block;background:#2563eb;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:bold;margin-top:16px;">
                     View & Apply Now →
                   </a>
@@ -148,7 +152,7 @@ exports.sendJobAlertEmails = async (job) => {
                   <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
                   <p style="color:#9ca3af;font-size:12px;text-align:center;">
                     You're receiving this because you set up a job alert on InstaHire.<br>
-                    <a href="http://localhost:3000/dashboard" style="color:#6b7280;">Manage your alerts</a>
+                    <a href="${appUrl}/dashboard" style="color:#6b7280;">Manage your alerts</a>
                   </p>
                 </div>
               </div>

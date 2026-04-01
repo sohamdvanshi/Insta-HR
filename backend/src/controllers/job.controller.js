@@ -295,6 +295,9 @@ exports.updateJob = async (req, res) => {
       status: status ?? job.status
     });
 
+    // FIX #10: Reload job from DB so response contains the latest persisted values
+    await job.reload();
+
     return res.json({
       success: true,
       message: 'Job updated successfully',
@@ -364,9 +367,8 @@ exports.closeJob = async (req, res) => {
       });
     }
 
-    await job.update({
-      status: 'closed'
-    });
+    await job.update({ status: 'closed' });
+    await job.reload();
 
     return res.json({
       success: true,
@@ -402,9 +404,8 @@ exports.reopenJob = async (req, res) => {
       });
     }
 
-    await job.update({
-      status: 'active'
-    });
+    await job.update({ status: 'active' });
+    await job.reload();
 
     return res.json({
       success: true,

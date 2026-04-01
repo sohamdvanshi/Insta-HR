@@ -167,6 +167,14 @@ exports.login = async (req, res) => {
       });
     }
 
+    // FIX #3: Reject login for suspended/deactivated accounts
+    if (!user.isActive) {
+      return res.status(403).json({
+        success: false,
+        message: 'Your account has been deactivated. Please contact support.'
+      });
+    }
+
     await user.update({ lastLogin: new Date() });
 
     const token = signToken(user.id);

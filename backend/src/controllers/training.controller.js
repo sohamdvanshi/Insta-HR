@@ -105,6 +105,8 @@ exports.deleteCourse = async (req, res) => {
   }
 };
 
+// FIX #8: enrollCourse relies on route-level auth middleware (protect + authorizeRole('candidate'))
+// Ensure the router applies protect middleware before this handler to prevent unauthenticated enrollment
 exports.enrollCourse = async (req, res) => {
   try {
     const course = await Training.findByPk(req.params.id);
