@@ -1,7 +1,10 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { OAuth2Client } = require('google-auth-library');
 const { User, CandidateProfile } = require('../models/index');
 const emailService = require('../services/email/emailService');
+
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const signToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -33,10 +36,12 @@ exports.register = async (req, res) => {
       phone,
       role,
       otp,
-      otpExpiry
+      otpExpiry,
+      authProvider: 'local',
+      isEmailVerified: false
     });
 
-    if (role === 'candidate' && firstName) {
+    if (role === 'candidate') {
       await CandidateProfile.create({
         userId: user.id,
         firstName: firstName || '',
@@ -45,18 +50,17 @@ exports.register = async (req, res) => {
     }
 
     await emailService.sendOTPEmail(email, otp);
-    await emailService.sendWelcomeEmail(email, firstName || email);
-
-    const token = signToken(user.id);
 
     res.status(201).json({
       success: true,
-      message: 'Account created successfully!',
-      token,
+      message: 'Account created successfully. Please verify your email with OTP.',
+      userId: user.id,
       user: {
         id: user.id,
         email: user.email,
-        role: user.role
+        role: user.role,
+        authProvider: user.authProvider,
+        isEmailVerified: user.isEmailVerified
       }
     });
   } catch (error) {
@@ -100,12 +104,26 @@ exports.verifyOTP = async (req, res) => {
       otpExpiry: null
     });
 
+    if (typeof emailService.sendWelcomeEmail === 'function') {
+      await emailService.sendWelcomeEmail(
+        user.email,
+        user.firstName || user.name || user.email
+      );
+    }
+
     const token = signToken(user.id);
 
     res.json({
       success: true,
       message: 'Email verified successfully!',
-      token
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        authProvider: user.authProvider,
+        isEmailVerified: user.isEmailVerified
+      }
     });
   } catch (error) {
     res.status(500).json({
@@ -118,13 +136,27 @@ exports.verifyOTP = async (req, res) => {
 // Resend OTP
 exports.resendOTP = async (req, res) => {
   try {
-    const { userId } = req.body;
+    const { userId, email } = req.body;
 
-    const user = await User.findByPk(userId);
+    let user = null;
+
+    if (userId) {
+      user = await User.findByPk(userId);
+    } else if (email) {
+      user = await User.findOne({ where: { email } });
+    }
+
     if (!user) {
       return res.status(404).json({
         success: false,
         message: 'User not found'
+      });
+    }
+
+    if (user.isEmailVerified) {
+      return res.status(400).json({
+        success: false,
+        message: 'This account is already verified'
       });
     }
 
@@ -136,7 +168,9 @@ exports.resendOTP = async (req, res) => {
 
     res.json({
       success: true,
-      message: 'OTP resent successfully!'
+      message: 'OTP resent successfully!',
+      userId: user.id,
+      email: user.email
     });
   } catch (error) {
     res.status(500).json({
@@ -152,7 +186,7 @@ exports.login = async (req, res) => {
     const { email, password } = req.body;
 
     const user = await User.findOne({ where: { email } });
-    if (!user) {
+    if (!user || !user.password) {
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password'
@@ -167,6 +201,16 @@ exports.login = async (req, res) => {
       });
     }
 
+    if (!user.isEmailVerified) {
+      return res.status(403).json({
+        success: false,
+        code: 'EMAIL_NOT_VERIFIED',
+        message: 'Please verify your email before logging in',
+        userId: user.id,
+        email: user.email
+      });
+    }
+
     await user.update({ lastLogin: new Date() });
 
     const token = signToken(user.id);
@@ -178,13 +222,128 @@ exports.login = async (req, res) => {
       user: {
         id: user.id,
         email: user.email,
-        role: user.role
+        role: user.role,
+        authProvider: user.authProvider,
+        isEmailVerified: user.isEmailVerified
       }
     });
   } catch (error) {
     res.status(500).json({
       success: false,
       message: error.message
+    });
+  }
+};
+
+// Google Login
+exports.googleLogin = async (req, res) => {
+  try {
+    const { credential, role, firstName, lastName } = req.body;
+
+    if (!credential) {
+      return res.status(400).json({
+        success: false,
+        message: 'Google credential is required'
+      });
+    }
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID
+    });
+
+    const payload = ticket.getPayload();
+
+    if (!payload) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid Google token'
+      });
+    }
+
+    const {
+      sub: googleId,
+      email,
+      email_verified,
+      name,
+      picture,
+      given_name,
+      family_name
+    } = payload;
+
+    if (!email || !email_verified) {
+      return res.status(400).json({
+        success: false,
+        message: 'Google email is not verified'
+      });
+    }
+
+    let user = await User.findOne({ where: { googleId } });
+
+    if (!user) {
+      user = await User.findOne({ where: { email } });
+
+      if (user) {
+        await user.update({
+          googleId,
+          authProvider: user.authProvider === 'local' ? 'google+local' : 'google',
+          avatar: picture || user.avatar,
+          isEmailVerified: true,
+          lastLogin: new Date()
+        });
+      } else {
+        user = await User.create({
+          email,
+          password: null,
+          phone: null,
+          googleId,
+          authProvider: 'google',
+          avatar: picture || null,
+          role: role || 'candidate',
+          isEmailVerified: true,
+          isActive: true,
+          lastLogin: new Date()
+        });
+
+        if ((role || 'candidate') === 'candidate') {
+          await CandidateProfile.create({
+            userId: user.id,
+            firstName: firstName || given_name || name?.split(' ')[0] || '',
+            lastName: lastName || family_name || name?.split(' ').slice(1).join(' ') || ''
+          });
+        }
+
+        if (typeof emailService.sendWelcomeEmail === 'function') {
+          await emailService.sendWelcomeEmail(email, given_name || name || email);
+        }
+      }
+    } else {
+      await user.update({
+        avatar: picture || user.avatar,
+        isEmailVerified: true,
+        lastLogin: new Date()
+      });
+    }
+
+    const token = signToken(user.id);
+
+    return res.json({
+      success: true,
+      message: 'Google login successful!',
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        authProvider: user.authProvider,
+        avatar: user.avatar,
+        isEmailVerified: user.isEmailVerified
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Google login failed'
     });
   }
 };

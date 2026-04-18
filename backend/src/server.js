@@ -16,6 +16,8 @@ if (!fs.existsSync(uploadsDir)) {
 const emailService = require('./services/email/emailService');
 require('./models/index');
 const sequelize = require('./config/database');
+const { createRedisConnection } = require('./config/redis');
+
 const authRoutes = require('./routes/auth.routes');
 const candidateRoutes = require('./routes/candidate.routes');
 const jobRoutes = require('./routes/job.routes');
@@ -24,10 +26,28 @@ const trainingRoutes = require('./routes/training.routes');
 const paymentRoutes = require('./routes/payment.routes');
 const employerRoutes = require('./routes/employer.routes');
 const adminRoutes = require('./routes/admin.routes');
+const bulkEmailCampaignRoutes = require('./routes/bulkEmailCampaign.routes');
+const manpowerRequestRoutes = require('./routes/manpowerRequest.routes');
+const deploymentRoutes = require('./routes/deployment.routes');
 const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
+const { startSubscriptionCron } = require('./cron/subscription.cron');
+const contractRoutes = require('./routes/contract.routes');
+const attendanceRoutes = require('./routes/attendance.routes');
+const payrollRoutes = require('./routes/payroll.routes');
+const invoiceRoutes = require('./routes/invoice.routes');
+const analyticsRoutes = require('./routes/analytics.routes');
+const employerAnalyticsRoutes = require('./routes/employerAnalytics.routes');
+const employerTrendsRoutes = require('./routes/employerTrends.routes');
+const employerSegmentAnalyticsRoutes = require('./routes/employerSegmentAnalytics.routes');
+const adminAuditRoutes = require('./routes/adminAudit.routes');
+const { connectElasticsearch } = require('./config/elasticsearch');
+const { ensureJobsIndex } = require('./services/search/jobSearch.service');
+
 
 const app = express();
+
+startSubscriptionCron();
 
 /* ------------------ SECURITY ------------------ */
 app.disable('x-powered-by');
@@ -112,11 +132,27 @@ app.use('/api/v1/candidates', candidateRoutes);
 app.use('/api/v1/jobs', jobRoutes);
 app.use('/api/v1/applications', applicationRoutes);
 app.use('/api/v1/training', trainingRoutes);
+app.use('/api/v1/resumes', require('./routes/resume.routes'));
 app.use('/api/v1/ai', require('./routes/aiScreening.routes'));
+app.use('/api/v1/ai', require('./routes/resumeAI.routes'));
 app.use('/api/v1/jobs-actions', require('./routes/savedJobs.routes'));
 app.use('/api/v1/payments', paymentRoutes);
 app.use('/api/v1/employer', employerRoutes);
 app.use('/api/v1/admin', adminRoutes);
+app.use('/api/v1/employer/campaigns', bulkEmailCampaignRoutes);
+app.use('/api/v1/employer/deployments', deploymentRoutes);
+
+/* ------------------ PHASE 4 ROUTES ------------------ */
+app.use('/api/v1/employer/manpower-requests', manpowerRequestRoutes);
+app.use('/api/v1/employer/contracts', contractRoutes);
+app.use('/api/v1/employer/attendance', attendanceRoutes);
+app.use('/api/v1/employer/payrolls', payrollRoutes);
+app.use('/api/v1/employer/invoices', invoiceRoutes);
+app.use('/api/v1/admin/analytics', analyticsRoutes);
+app.use('/api/v1/employer/analytics', employerAnalyticsRoutes);
+app.use('/api/v1/employer/analytics', employerTrendsRoutes);
+app.use('/api/v1/employer/analytics', employerSegmentAnalyticsRoutes);
+app.use('/api/v1/admin/audit', adminAuditRoutes);
 
 /* ------------------ HEALTH CHECK ------------------ */
 app.get('/', (req, res) => {
@@ -150,6 +186,11 @@ async function startServer() {
   try {
     await sequelize.authenticate();
     console.log('✅ Database connected');
+
+    await createRedisConnection();
+    await connectElasticsearch();
+    await ensureJobsIndex();
+    
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📁 Uploads folder: ${uploadsDir}`);

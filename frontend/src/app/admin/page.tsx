@@ -28,6 +28,26 @@ interface Stats {
   revenue: number
 }
 
+type StoredUser = {
+  id: string
+  email: string
+  role: string
+}
+
+const getStoredAuth = () => {
+  const token = localStorage.getItem('token') || ''
+  const userRaw = localStorage.getItem('user')
+
+  if (!token || !userRaw) return { token: '', user: null }
+
+  try {
+    const user = JSON.parse(userRaw)
+    return { token, user }
+  } catch {
+    return { token: '', user: null }
+  }
+}
+
 export default function AdminPage() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [jobs, setJobs] = useState<Job[]>([])
@@ -37,31 +57,56 @@ export default function AdminPage() {
   const [message, setMessage] = useState('')
 
   useEffect(() => {
-    const user = localStorage.getItem('user')
-    const token = localStorage.getItem('token')
-    if (!user || !token) { window.location.href = '/login'; return }
-    const parsed = JSON.parse(user)
-    if (parsed.role !== 'admin') { window.location.href = '/dashboard'; return }
+    const { token, user } = getStoredAuth()
+
+    if (!token || !user) {
+      window.location.href = '/login'
+      return
+    }
+
+    if (user.role !== 'admin') {
+      window.location.href = '/dashboard'
+      return
+    }
+
     fetchAll(token)
   }, [])
 
   const fetchAll = async (token: string) => {
     try {
       const [statsRes, jobsRes, usersRes] = await Promise.all([
-        fetch('http://localhost:5000/api/v1/admin/stats', { headers: { Authorization: 'Bearer ' + token } }),
-        fetch('http://localhost:5000/api/v1/admin/jobs', { headers: { Authorization: 'Bearer ' + token } }),
-        fetch('http://localhost:5000/api/v1/admin/users', { headers: { Authorization: 'Bearer ' + token } }),
+        fetch('http://localhost:5000/api/v1/admin/stats', {
+          headers: { Authorization: 'Bearer ' + token }
+        }),
+        fetch('http://localhost:5000/api/v1/admin/jobs', {
+          headers: { Authorization: 'Bearer ' + token }
+        }),
+        fetch('http://localhost:5000/api/v1/admin/users', {
+          headers: { Authorization: 'Bearer ' + token }
+        }),
       ])
+
+      if (statsRes.status === 401 || jobsRes.status === 401 || usersRes.status === 401) {
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        window.location.href = '/login'
+        return
+      }
+
       const [statsData, jobsData, usersData] = await Promise.all([
-        statsRes.json(), jobsRes.json(), usersRes.json()
+        statsRes.json(),
+        jobsRes.json(),
+        usersRes.json()
       ])
+
       if (statsData.success) setStats(statsData.data)
       if (jobsData.success) setJobs(jobsData.data)
       if (usersData.success) setUsers(usersData.data)
     } catch (err) {
       console.error(err)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   const updateJobStatus = async (jobId: string, status: string) => {
@@ -119,8 +164,6 @@ export default function AdminPage() {
   return (
     <main className="min-h-screen bg-gray-50 pt-16">
       <div className="max-w-7xl mx-auto px-6 py-8">
-
-        {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Admin Panel</h1>
@@ -129,9 +172,12 @@ export default function AdminPage() {
           <span className="px-4 py-2 bg-red-100 text-red-700 font-medium rounded-xl text-sm">Super Admin</span>
         </div>
 
-        {message && <div className="bg-green-50 text-green-700 px-4 py-3 rounded-xl mb-6 font-medium">✓ {message}</div>}
+        {message && (
+          <div className="bg-green-50 text-green-700 px-4 py-3 rounded-xl mb-6 font-medium">
+            ✓ {message}
+          </div>
+        )}
 
-        {/* Stats */}
         {stats && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
             {[
@@ -148,21 +194,29 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* Tabs */}
         <div className="flex gap-2 mb-6">
           {['dashboard', 'jobs', 'users'].map(tab => (
-            <button key={tab} onClick={() => setActiveTab(tab)}
-              className={"px-4 py-2 rounded-xl font-medium text-sm capitalize transition-colors " + (activeTab === tab ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200')}>
-              {tab === 'dashboard' ? 'Dashboard' : tab === 'jobs' ? 'Jobs (' + jobs.length + ')' : 'Users (' + users.length + ')'}
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={
+                "px-4 py-2 rounded-xl font-medium text-sm capitalize transition-colors " +
+                (activeTab === tab
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200')
+              }
+            >
+              {tab === 'dashboard'
+                ? 'Dashboard'
+                : tab === 'jobs'
+                ? 'Jobs (' + jobs.length + ')'
+                : 'Users (' + users.length + ')'}
             </button>
           ))}
         </div>
 
-        {/* Dashboard Tab */}
         {activeTab === 'dashboard' && (
           <div className="space-y-6">
-
-            {/* Quick Actions */}
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
               <h2 className="font-bold text-gray-900 mb-4">Quick Actions</h2>
               <div className="flex flex-wrap gap-3">
@@ -181,7 +235,6 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* Overview */}
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
               <h2 className="font-bold text-gray-900 mb-4 text-lg">Platform Overview</h2>
               <div className="grid grid-cols-2 gap-4">
@@ -203,18 +256,20 @@ export default function AdminPage() {
                 </div>
               </div>
             </div>
-
           </div>
         )}
 
-        {/* Jobs Tab */}
         {activeTab === 'jobs' && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
             <div className="p-6 border-b border-gray-100 flex items-center justify-between">
               <h2 className="font-bold text-gray-900">All Jobs ({jobs.length})</h2>
               <div className="flex gap-2 text-xs">
-                <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full">{jobs.filter(j => j.status === 'pending').length} pending</span>
-                <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full">{jobs.filter(j => j.status === 'active').length} active</span>
+                <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full">
+                  {jobs.filter(j => j.status === 'pending').length} pending
+                </span>
+                <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full">
+                  {jobs.filter(j => j.status === 'active').length} active
+                </span>
               </div>
             </div>
             <div className="divide-y divide-gray-100">
@@ -224,28 +279,48 @@ export default function AdminPage() {
                 <div key={job.id} className="p-6 flex items-center justify-between">
                   <div>
                     <h3 className="font-medium text-gray-900">{job.title}</h3>
-                    <p className="text-sm text-gray-500">{job.location} - {job.industry} - {job.jobType}</p>
-                    <p className="text-xs text-gray-400 mt-1">{new Date(job.createdAt).toLocaleDateString()}</p>
+                    <p className="text-sm text-gray-500">
+                      {job.location} - {job.industry} - {job.jobType}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {new Date(job.createdAt).toLocaleDateString()}
+                    </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className={"px-2 py-1 rounded-full text-xs font-medium " + (job.status === 'active' ? 'bg-green-100 text-green-700' : job.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700')}>
+                    <span className={
+                      "px-2 py-1 rounded-full text-xs font-medium " +
+                      (job.status === 'active'
+                        ? 'bg-green-100 text-green-700'
+                        : job.status === 'pending'
+                        ? 'bg-yellow-100 text-yellow-700'
+                        : 'bg-red-100 text-red-700')
+                    }>
                       {job.status}
                     </span>
+
                     {job.status === 'pending' && (
-                      <button onClick={() => updateJobStatus(job.id, 'active')}
-                        className="px-3 py-1 bg-green-600 text-white text-xs rounded-lg hover:bg-green-700">
+                      <button
+                        onClick={() => updateJobStatus(job.id, 'active')}
+                        className="px-3 py-1 bg-green-600 text-white text-xs rounded-lg hover:bg-green-700"
+                      >
                         Approve
                       </button>
                     )}
+
                     {job.status === 'active' && (
-                      <button onClick={() => updateJobStatus(job.id, 'closed')}
-                        className="px-3 py-1 bg-gray-600 text-white text-xs rounded-lg hover:bg-gray-700">
+                      <button
+                        onClick={() => updateJobStatus(job.id, 'closed')}
+                        className="px-3 py-1 bg-gray-600 text-white text-xs rounded-lg hover:bg-gray-700"
+                      >
                         Close
                       </button>
                     )}
+
                     {(job.status === 'pending' || job.status === 'active') && (
-                      <button onClick={() => updateJobStatus(job.id, 'rejected')}
-                        className="px-3 py-1 bg-red-500 text-white text-xs rounded-lg hover:bg-red-600">
+                      <button
+                        onClick={() => updateJobStatus(job.id, 'rejected')}
+                        className="px-3 py-1 bg-red-500 text-white text-xs rounded-lg hover:bg-red-600"
+                      >
                         Reject
                       </button>
                     )}
@@ -256,7 +331,6 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* Users Tab */}
         {activeTab === 'users' && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
             <div className="p-6 border-b border-gray-100">
@@ -270,25 +344,51 @@ export default function AdminPage() {
                   <div>
                     <p className="font-medium text-gray-900">{user.email}</p>
                     <div className="flex gap-2 mt-1">
-                      <span className={"px-2 py-0.5 rounded-full text-xs font-medium " + (user.role === 'employer' ? 'bg-blue-100 text-blue-700' : user.role === 'admin' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600')}>
+                      <span className={
+                        "px-2 py-0.5 rounded-full text-xs font-medium " +
+                        (user.role === 'employer'
+                          ? 'bg-blue-100 text-blue-700'
+                          : user.role === 'admin'
+                          ? 'bg-red-100 text-red-700'
+                          : 'bg-gray-100 text-gray-600')
+                      }>
                         {user.role}
                       </span>
-                      <span className={"px-2 py-0.5 rounded-full text-xs " + (user.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>
+                      <span className={
+                        "px-2 py-0.5 rounded-full text-xs " +
+                        (user.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')
+                      }>
                         {user.isActive ? 'Active' : 'Inactive'}
                       </span>
-                      {user.isEmailVerified && <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs">Verified</span>}
+                      {user.isEmailVerified && (
+                        <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs">
+                          Verified
+                        </span>
+                      )}
                     </div>
-                    <p className="text-xs text-gray-400 mt-1">Joined {new Date(user.createdAt).toLocaleDateString()}</p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Joined {new Date(user.createdAt).toLocaleDateString()}
+                    </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <select value={user.role} onChange={e => updateUserRole(user.id, e.target.value)}
-                      className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-blue-500">
+                    <select
+                      value={user.role}
+                      onChange={e => updateUserRole(user.id, e.target.value)}
+                      className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-blue-500"
+                    >
                       <option value="candidate">Candidate</option>
                       <option value="employer">Employer</option>
                       <option value="admin">Admin</option>
                     </select>
-                    <button onClick={() => toggleUserActive(user.id)}
-                      className={"px-3 py-1.5 text-xs rounded-lg " + (user.isActive ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-green-50 text-green-600 hover:bg-green-100')}>
+                    <button
+                      onClick={() => toggleUserActive(user.id)}
+                      className={
+                        "px-3 py-1.5 text-xs rounded-lg " +
+                        (user.isActive
+                          ? 'bg-red-50 text-red-600 hover:bg-red-100'
+                          : 'bg-green-50 text-green-600 hover:bg-green-100')
+                      }
+                    >
                       {user.isActive ? 'Deactivate' : 'Activate'}
                     </button>
                   </div>
@@ -297,7 +397,6 @@ export default function AdminPage() {
             </div>
           </div>
         )}
-
       </div>
     </main>
   )

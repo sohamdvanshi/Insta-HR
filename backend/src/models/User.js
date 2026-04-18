@@ -1,4 +1,4 @@
-const { DataTypes } = require('sequelize');
+const { DataTypes, Op } = require('sequelize');
 const sequelize = require('../config/database');
 const bcrypt = require('bcryptjs');
 
@@ -14,11 +14,25 @@ const User = sequelize.define('User', {
   },
   phone: {
     type: DataTypes.STRING,
-    allowNull: true    // ← REMOVE unique:true, just allow null
+    allowNull: true
   },
   password: {
     type: DataTypes.STRING,
-    allowNull: false
+    allowNull: true
+  },
+  googleId: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    unique: true
+  },
+  authProvider: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    defaultValue: 'local'
+  },
+  avatar: {
+    type: DataTypes.TEXT,
+    allowNull: true
   },
   role: {
     type: DataTypes.ENUM('candidate', 'employer', 'admin'),
@@ -45,8 +59,20 @@ const User = sequelize.define('User', {
     type: DataTypes.DATE,
   },
   subscriptionPlan: {
-    type: DataTypes.STRING,   // ← use STRING instead of ENUM to avoid alter issues
+    type: DataTypes.STRING,
     allowNull: true
+  },
+  subscriptionReminder7Sent: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
+  subscriptionReminder1Sent: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
+  subscriptionExpiredMailSent: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
   }
 }, {
   indexes: [
@@ -57,9 +83,18 @@ const User = sequelize.define('User', {
     {
       unique: true,
       fields: ['phone'],
-      where: {                // ← partial index: only unique when phone is NOT NULL
+      where: {
         phone: {
-          [require('sequelize').Op.ne]: null
+          [Op.ne]: null
+        }
+      }
+    },
+    {
+      unique: true,
+      fields: ['googleId'],
+      where: {
+        googleId: {
+          [Op.ne]: null
         }
       }
     }
@@ -67,6 +102,7 @@ const User = sequelize.define('User', {
 });
 
 User.prototype.comparePassword = async function(password) {
+  if (!this.password) return false;
   return bcrypt.compare(password, this.password);
 };
 

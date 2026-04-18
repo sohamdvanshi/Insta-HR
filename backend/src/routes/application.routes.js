@@ -18,6 +18,7 @@ router.get('/:id', protect, applicationController.getApplicationById);
 
 router.patch('/:id/status', protect, authorize('employer', 'admin'), applicationController.updateApplicationStatus);
 router.patch('/:id/manual-review', protect, authorize('employer', 'admin'), applicationController.updateManualReview);
+router.patch('/:id/schedule-interview', protect, authorize('employer', 'admin'), applicationController.scheduleInterview);
 router.post('/:id/rescreen', protect, authorize('employer', 'admin'), applicationController.rescreenApplication);
 
 router.delete('/:id', protect, applicationController.deleteApplication);

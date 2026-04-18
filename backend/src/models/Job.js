@@ -104,6 +104,15 @@ const Job = sequelize.define(
       type: DataTypes.ENUM('draft', 'active', 'closed'),
       allowNull: false,
       defaultValue: 'active'
+    },
+    isFeatured: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false
+    },
+    featuredUntil: {
+      type: DataTypes.DATE,
+      allowNull: true
     }
   },
   {

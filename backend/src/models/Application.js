@@ -35,6 +35,30 @@ const Application = sequelize.define(
       type: DataTypes.DATE,
       allowNull: true
     },
+    interviewMode: {
+      type: DataTypes.ENUM('online', 'offline'),
+      allowNull: true
+    },
+    interviewMeetingLink: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    interviewLocation: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    interviewNotes: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    interviewStatus: {
+      type: DataTypes.ENUM('scheduled', 'completed', 'cancelled', 'rescheduled'),
+      allowNull: true
+    },
+    interviewScheduledBy: {
+      type: DataTypes.UUID,
+      allowNull: true
+    },
     notes: {
       type: DataTypes.TEXT,
       allowNull: true
@@ -98,7 +122,13 @@ const Application = sequelize.define(
   },
   {
     tableName: 'applications',
-    timestamps: true
+    timestamps: true,
+    indexes: [
+      {
+        unique: true,
+        fields: ['jobId', 'candidateId']
+      }
+    ]
   }
 );
 
