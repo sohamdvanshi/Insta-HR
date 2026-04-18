@@ -394,9 +394,21 @@ export default function EmployerDashboard() {
   return (
     <main className="min-h-screen bg-gray-50 pt-16">
       <div className="max-w-7xl mx-auto px-6 py-10">
+
+        {/* Hero banner */}
         <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white mb-8">
-          <h1 className="text-3xl font-bold mb-1">Employer Dashboard</h1>
-          <p className="text-blue-100">Manage your job postings and applications</p>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold mb-1">Employer Dashboard</h1>
+              <p className="text-blue-100">Manage your job postings and applications</p>
+            </div>
+            <a
+              href="/ai-screening"
+              className="inline-flex items-center gap-2 px-5 py-3 bg-white text-purple-700 font-bold rounded-xl shadow hover:bg-purple-50 transition-colors text-sm whitespace-nowrap"
+            >
+              🤖 AI Resume Screening
+            </a>
+          </div>
         </div>
 
         {message && (
@@ -412,6 +424,7 @@ export default function EmployerDashboard() {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Jobs list */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="p-6 border-b border-gray-100 flex items-center justify-between">

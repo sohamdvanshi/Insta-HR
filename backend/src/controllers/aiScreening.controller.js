@@ -73,8 +73,7 @@ exports.screenCandidates = async (req, res) => {
     if (!job) return res.status(404).json({ success: false, message: 'Job not found' });
 
     // Authorization: admin can screen any job, employer can screen their own
-    // Check both userId and employerId fields (different setups use different names)
-    const jobOwnerId = job.userId || job.employerId || job.createdBy;
+    const jobOwnerId = job.employerId || job.userId || job.createdBy;
     console.log('Auth check - job owner:', jobOwnerId, '| req.user.id:', req.user.id, '| role:', req.user.role);
     if (req.user.role !== 'admin' && String(jobOwnerId) !== String(req.user.id)) {
       console.log('Auth FAILED - job does not belong to this employer');
@@ -83,26 +82,31 @@ exports.screenCandidates = async (req, res) => {
 
     const applications = await Application.findAll({
       where: { jobId },
+      // FIX #1: Use correct association alias (candidate, not candidateId)
       include: [{ model: User, as: 'candidate', attributes: ['id', 'email'] }]
     });
 
     if (!applications.length) {
+      // FIX #1: Use correct Job field names: requiredSkills & minExperienceYears
       return res.json({ success: true, data: [], message: 'No applications yet', summary: {
         total: 0, excellent: 0, good: 0, partial: 0, low: 0, avgScore: 0,
-        jobTitle: job.title, jobSkills: job.skills || [], jobExpMin: job.experienceMin || 0
+        jobTitle: job.title, jobSkills: job.requiredSkills || [], jobExpMin: job.minExperienceYears || 0
       }});
     }
 
-    const userIds = applications.map(a => a.userId);
-    const profiles = await CandidateProfile.findAll({ where: { userId: userIds } });
+    // FIX #1: applications use candidateId, not userId
+    const candidateIds = applications.map(a => a.candidateId);
+    const profiles = await CandidateProfile.findAll({ where: { userId: candidateIds } });
     const profileMap = {};
     profiles.forEach(p => { profileMap[p.userId] = p; });
 
-    const jobExpMin = job.experienceMin || 0;
-    const jobSkills = job.skills || [];
+    // FIX #1: Use correct Job field names
+    const jobExpMin = job.minExperienceYears || 0;
+    const jobSkills = job.requiredSkills || [];
 
     const results = applications.map(app => {
-      const profile = profileMap[app.userId] || {};
+      // FIX #1: look up profile by candidateId
+      const profile = profileMap[app.candidateId] || {};
       const user = app.candidate || {};
       const profileData = profile.toJSON ? profile.toJSON() : profile;
 
@@ -117,7 +121,8 @@ exports.screenCandidates = async (req, res) => {
       return {
         applicationId: app.id,
         applicationStatus: app.status || 'pending',
-        userId: app.userId,
+        // FIX #1: use candidateId
+        userId: app.candidateId,
         name: user.email ? user.email.split('@')[0] : 'Unknown',
         email: user.email || '',
         photoUrl: profileData.photoUrl || null,
@@ -144,6 +149,7 @@ exports.screenCandidates = async (req, res) => {
       low: results.filter(r => r.scores.overall < 40).length,
       avgScore: Math.round(results.reduce((s, r) => s + r.scores.overall, 0) / results.length),
       jobTitle: job.title,
+      // FIX #1: correct field names
       jobSkills,
       jobExpMin
     };

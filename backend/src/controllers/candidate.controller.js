@@ -94,12 +94,18 @@ exports.getAIMatches = async (req, res) => {
   try {
     const job = await Job.findByPk(req.params.jobId);
     if (!job) return res.status(404).json({ success: false, message: 'Job not found' });
-    const candidates = await CandidateProfile.findAll();
+
+    // FIX #11: Limit candidates fetched to avoid full table scan (max 500)
+    const candidates = await CandidateProfile.findAll({ limit: 500 });
     if (candidates.length === 0) return res.json({ success: true, data: [], message: 'No candidates found' });
-    const response = await axios.post('http://localhost:8000/match-candidates', {
-      job_skills: job.skills || [],
+
+    // FIX #5: Use AI_SERVICE_URL env var instead of hardcoded localhost:8000
+    const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+
+    const response = await axios.post(`${aiServiceUrl}/match-candidates`, {
+      job_skills: job.requiredSkills || [],
       job_description: job.description,
-      job_experience_min: job.experienceMin || 0,
+      job_experience_min: job.minExperienceYears || 0,
       candidates: candidates.map(c => c.toJSON())
     });
     res.json({ success: true, data: response.data });

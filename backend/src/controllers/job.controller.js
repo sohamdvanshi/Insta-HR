@@ -423,6 +423,9 @@ exports.updateJob = async (req, res) => {
     await invalidateJobRelatedCaches(job.id, job.employerId);
     await indexJobDocument(job);
 
+    // FIX #10: Reload job from DB so response contains the latest persisted values
+    await job.reload();
+
     return res.json({
       success: true,
       message: 'Job updated successfully',
@@ -503,9 +506,8 @@ exports.closeJob = async (req, res) => {
       });
     }
 
-    await job.update({
-      status: 'closed'
-    });
+    await job.update({ status: 'closed' });
+    await job.reload();
 
     await invalidateJobRelatedCaches(job.id, job.employerId);
     await indexJobDocument(job);
@@ -544,9 +546,8 @@ exports.reopenJob = async (req, res) => {
       });
     }
 
-    await job.update({
-      status: 'active'
-    });
+    await job.update({ status: 'active' });
+    await job.reload();
 
     await invalidateJobRelatedCaches(job.id, job.employerId);
     await indexJobDocument(job);

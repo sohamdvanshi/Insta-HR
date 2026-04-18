@@ -1,5 +1,6 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 
 interface Candidate {
   applicationId: number
@@ -64,7 +65,10 @@ function Bar({ label, v, color }: { label: string; v: number; color: string }) {
 
 const sc = (v: number) => v >= 80 ? '#10B981' : v >= 60 ? '#3B82F6' : v >= 40 ? '#F59E0B' : '#EF4444'
 
-export default function AIScreeningPage() {
+function AIScreeningContent() {
+  const searchParams = useSearchParams()
+  const preselectedJobId = searchParams.get('jobId')
+
   const [jobs, setJobs] = useState<Job[]>([])
   const [selJob, setSelJob] = useState<number | null>(null)
   const [results, setResults] = useState<Candidate[]>([])
@@ -81,8 +85,14 @@ export default function AIScreeningPage() {
     fetch('http://localhost:5000/api/v1/jobs/my', {
       headers: { Authorization: 'Bearer ' + token }
     }).then(r => r.json()).then(d => {
-      if (d.success) setJobs(d.data || [])
-      else setError('Could not load jobs: ' + (d.message || ''))
+      if (d.success) {
+        setJobs(d.data || [])
+        // Auto-screen if jobId passed via query param
+        if (preselectedJobId) {
+          const matched = (d.data || []).find((j: Job) => String(j.id) === preselectedJobId)
+          if (matched) screen(matched.id)
+        }
+      } else setError('Could not load jobs: ' + (d.message || ''))
     }).catch(() => setError('Cannot connect to backend')).finally(() => setLoadingJobs(false))
   }, [])
 
@@ -117,10 +127,15 @@ export default function AIScreeningPage() {
 
       {/* Header */}
       <div style={{ background: 'linear-gradient(135deg, #0F172A, #1E3A5F, #1D4ED8)', padding: '36px 0 28px' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 24px' }}>
-          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, letterSpacing: 2, fontWeight: 600, textTransform: 'uppercase', margin: '0 0 8px' }}>🤖 Phase 2 Feature</p>
-          <h1 style={{ color: '#fff', fontSize: 30, fontWeight: 800, margin: '0 0 6px' }}>AI Resume Screening</h1>
-          <p style={{ color: 'rgba(255,255,255,0.6)', margin: 0, fontSize: 14 }}>Rank candidates by skill match, experience & keyword relevance</p>
+        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+          <div>
+            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, letterSpacing: 2, fontWeight: 600, textTransform: 'uppercase', margin: '0 0 8px' }}>🤖 Phase 2 Feature</p>
+            <h1 style={{ color: '#fff', fontSize: 30, fontWeight: 800, margin: '0 0 6px' }}>AI Resume Screening</h1>
+            <p style={{ color: 'rgba(255,255,255,0.6)', margin: 0, fontSize: 14 }}>Rank candidates by skill match, experience & keyword relevance</p>
+          </div>
+          <a href="/employer" style={{ padding: '10px 18px', borderRadius: 10, background: 'rgba(255,255,255,0.12)', color: '#fff', fontSize: 13, fontWeight: 600, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.2)', backdropFilter: 'blur(4px)' }}>
+            ← Back to Dashboard
+          </a>
         </div>
       </div>
 
@@ -145,8 +160,8 @@ export default function AIScreeningPage() {
               {jobs.map(job => (
                 <button key={job.id} onClick={() => screen(job.id)}
                   style={{ padding: '14px 16px', borderRadius: 12, textAlign: 'left', cursor: 'pointer',
-                    border: selJob === job.id ? '2px solid #2563EB' : '1.5px solid #E5E7EB',
-                    background: selJob === job.id ? '#EFF6FF' : '#FAFAFA', transition: 'all 0.15s' }}>
+                    border: selJob === job.id ? '2px solid #7C3AED' : '1.5px solid #E5E7EB',
+                    background: selJob === job.id ? '#F5F3FF' : '#FAFAFA', transition: 'all 0.15s' }}>
                   <div style={{ fontWeight: 600, fontSize: 14, color: '#111827', marginBottom: 4 }}>{job.title}</div>
                   <div style={{ fontSize: 12, color: '#6B7280' }}>
                     {(job.skills || []).length > 0
@@ -203,8 +218,8 @@ export default function AIScreeningPage() {
             ].map(([key, label]) => (
               <button key={key} onClick={() => setFilter(key)}
                 style={{ padding: '6px 14px', borderRadius: 20, fontSize: 13, fontWeight: 500, cursor: 'pointer',
-                  border: filter === key ? '2px solid #2563EB' : '1.5px solid #E5E7EB',
-                  background: filter === key ? '#2563EB' : '#fff',
+                  border: filter === key ? '2px solid #7C3AED' : '1.5px solid #E5E7EB',
+                  background: filter === key ? '#7C3AED' : '#fff',
                   color: filter === key ? '#fff' : '#374151' }}>
                 {label}
               </button>
@@ -268,7 +283,7 @@ export default function AIScreeningPage() {
                     </select>
                     <button onClick={() => setExpanded(open ? null : c.applicationId)}
                       style={{ padding: '6px 12px', borderRadius: 8, border: '1.5px solid #E5E7EB', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                        background: open ? '#EFF6FF' : '#fff', color: open ? '#2563EB' : '#374151' }}>
+                        background: open ? '#F5F3FF' : '#fff', color: open ? '#7C3AED' : '#374151' }}>
                       {open ? 'Less ▲' : 'Details ▼'}
                     </button>
                   </div>
@@ -327,5 +342,13 @@ export default function AIScreeningPage() {
 
       </div>
     </main>
+  )
+}
+
+export default function AIScreeningPage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9CA3AF' }}>Loading...</div>}>
+      <AIScreeningContent />
+    </Suspense>
   )
 }
