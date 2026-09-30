@@ -1,354 +1,288 @@
 'use client'
-import { useState, useEffect, Suspense } from 'react'
+
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 
+interface Job {
+  id: string
+  title: string
+  requiredSkills?: string[] | string
+  skills?: string[] | string
+  minExperienceYears?: number
+}
+
 interface Candidate {
-  applicationId: number
+  applicationId: string
   applicationStatus: string
   name: string
-  email: string
-  photoUrl: string | null
-  headline: string
-  currentLocation: string
+  email?: string
+  headline?: string
+  currentLocation?: string
   yearsOfExperience: number
   resumeUrl: string | null
-  scores: { skillMatch: number; experienceMatch: number; keywordRelevance: number; overall: number }
+  resumeFilename: string | null
+  screeningComment: string
   matchedSkills: string[]
   missingSkills: string[]
+  scores: {
+    skillMatch: number
+    experienceMatch: number
+    keywordRelevance: number
+    overall: number
+  }
   label: string
-  labelColor: string
-  appliedAt: string
+  labelColor: 'green' | 'blue' | 'yellow' | 'red'
+  appliedAt?: string
+  photoUrl?: string | null
 }
 
 interface Summary {
-  total: number; excellent: number; good: number; partial: number; low: number
-  avgScore: number; jobTitle: string; jobSkills: string[]; jobExpMin: number
+  total: number
+  excellent: number
+  good: number
+  partial: number
+  low: number
+  avgScore: number
+  jobTitle: string
+  jobSkills: string | string[]
+  jobExpMin: number
 }
 
-interface Job { id: number; title: string; skills: string[] }
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'
+const BACKEND_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000'
 
-const LABEL: Record<string, { bg: string; text: string; border: string }> = {
-  green:  { bg: '#D1FAE5', text: '#065F46', border: '#6EE7B7' },
-  blue:   { bg: '#DBEAFE', text: '#1E40AF', border: '#93C5FD' },
+const LABELS = {
+  green: { bg: '#D1FAE5', text: '#065F46', border: '#6EE7B7' },
+  blue: { bg: '#DBEAFE', text: '#1E40AF', border: '#93C5FD' },
   yellow: { bg: '#FEF3C7', text: '#92400E', border: '#FCD34D' },
-  red:    { bg: '#FEE2E2', text: '#991B1B', border: '#FCA5A5' },
+  red: { bg: '#FEE2E2', text: '#991B1B', border: '#FCA5A5' }
 }
 
-function Ring({ v, size = 54 }: { v: number; size?: number }) {
-  const c = v >= 80 ? '#10B981' : v >= 60 ? '#3B82F6' : v >= 40 ? '#F59E0B' : '#EF4444'
-  const r = (size - 8) / 2, circ = 2 * Math.PI * r, dash = (v / 100) * circ
+const STATUS_COLORS: Record<string, string> = {
+  applied: '#2563EB',
+  shortlisted: '#10B981',
+  interview: '#3B82F6',
+  hired: '#8B5CF6',
+  rejected: '#EF4444'
+}
+
+function headers(includeJson = false): HeadersInit {
+  const token = typeof window === 'undefined' ? null : localStorage.getItem('token')
+  return {
+    ...(includeJson ? { 'Content-Type': 'application/json' } : {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {})
+  }
+}
+
+function toArray(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map(String).map(item => item.trim()).filter(Boolean)
+  if (typeof value === 'string') return value.split(',').map(item => item.trim()).filter(Boolean)
+  return []
+}
+
+function normalizeStatus(status?: string) {
+  return !status || status === 'pending' ? 'applied' : status
+}
+
+function scoreColor(value: number) {
+  if (value >= 80) return '#10B981'
+  if (value >= 60) return '#3B82F6'
+  if (value >= 40) return '#F59E0B'
+  return '#EF4444'
+}
+
+function resumeUrl(value?: string | null) {
+  if (!value) return null
+  if (/^https?:\/\//i.test(value)) return value
+  return `${BACKEND_BASE}${value.startsWith('/') ? value : `/${value}`}`
+}
+
+function normalizeCandidate(item: any): Candidate {
+  const scores = item.scores || {}
+  const overall = Number(item.aiScore ?? scores.overall ?? item.overall ?? 0)
+  const color = item.labelColor || (overall >= 80 ? 'green' : overall >= 60 ? 'blue' : overall >= 40 ? 'yellow' : 'red')
+
+  return {
+    applicationId: String(item.applicationId ?? item.id),
+    applicationStatus: normalizeStatus(item.applicationStatus ?? item.status),
+    name: item.name || item.candidateName || item.candidate?.candidateProfile?.firstName || item.candidate?.email || 'Candidate',
+    email: item.email || item.candidate?.email,
+    headline: item.headline || item.candidate?.candidateProfile?.headline,
+    currentLocation: item.currentLocation || item.candidate?.candidateProfile?.currentLocation,
+    yearsOfExperience: Number(item.yearsOfExperience ?? item.candidate?.candidateProfile?.yearsOfExperience ?? 0),
+    resumeUrl: item.resumeUrl ?? item.resumeURL ?? null,
+    resumeFilename: item.resumeFilename ?? null,
+    screeningComment: item.screeningComment || item.aiSummary || item.aiSummaryText || '',
+    matchedSkills: toArray(item.matchedSkills),
+    missingSkills: toArray(item.missingSkills),
+    scores: {
+      skillMatch: Number(item.skillMatch ?? scores.skillMatch ?? 0),
+      experienceMatch: Number(item.experienceMatch ?? scores.experienceMatch ?? 0),
+      keywordRelevance: Number(item.keywordRelevance ?? scores.keywordRelevance ?? 0),
+      overall
+    },
+    label: item.label || (overall >= 80 ? 'Excellent' : overall >= 60 ? 'Good' : overall >= 40 ? 'Partial' : 'Low'),
+    labelColor: color,
+    appliedAt: item.appliedAt || item.createdAt,
+    photoUrl: item.photoUrl || item.candidate?.avatar || null
+  }
+}
+
+function ScoreRing({ value }: { value: number }) {
+  const size = 58
+  const radius = 25
+  const circumference = 2 * Math.PI * radius
+  const safe = Math.min(Math.max(value, 0), 100)
+  const dash = safe / 100 * circumference
+
   return (
-    <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#E5E7EB" strokeWidth={5} />
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={c} strokeWidth={5}
-        strokeDasharray={`${dash} ${circ - dash}`} strokeLinecap="round" />
-      <text x={size/2} y={size/2+5} textAnchor="middle"
-        transform={`rotate(90,${size/2},${size/2})`}
-        style={{ fontSize: 13, fontWeight: 700, fill: '#111827' }}>{v}</text>
+    <svg width={size} height={size} viewBox="0 0 58 58" aria-label={`${Math.round(value)}% overall match`}>
+      <circle cx="29" cy="29" r={radius} fill="none" stroke="#E5E7EB" strokeWidth="5" />
+      <circle cx="29" cy="29" r={radius} fill="none" stroke={scoreColor(value)} strokeWidth="5" strokeDasharray={`${dash} ${circumference - dash}`} strokeLinecap="round" transform="rotate(-90 29 29)" />
+      <text x="29" y="34" textAnchor="middle" fontSize="13" fontWeight="700" fill="#111827">{Math.round(value)}</text>
     </svg>
   )
 }
 
-function Bar({ label, v, color }: { label: string; v: number; color: string }) {
+function ScoreBar({ label, value, color }: { label: string; value: number; color: string }) {
+  const safe = Math.min(Math.max(value, 0), 100)
   return (
-    <div style={{ marginBottom: 10 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-        <span style={{ fontSize: 11, color: '#6B7280' }}>{label}</span>
-        <span style={{ fontSize: 11, fontWeight: 700, color: '#374151' }}>{v}%</span>
+    <div style={{ marginBottom: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
+        <span>{label}</span><strong>{Math.round(value)}%</strong>
       </div>
-      <div style={{ height: 6, background: '#F3F4F6', borderRadius: 99 }}>
-        <div style={{ height: 6, borderRadius: 99, background: color, width: v + '%', transition: 'width 1s' }} />
+      <div style={{ height: 7, background: '#F3F4F6', borderRadius: 99 }}>
+        <div style={{ height: 7, width: `${safe}%`, background: color, borderRadius: 99 }} />
       </div>
     </div>
   )
 }
 
-const sc = (v: number) => v >= 80 ? '#10B981' : v >= 60 ? '#3B82F6' : v >= 40 ? '#F59E0B' : '#EF4444'
-
 function AIScreeningContent() {
   const searchParams = useSearchParams()
   const preselectedJobId = searchParams.get('jobId')
-
   const [jobs, setJobs] = useState<Job[]>([])
-  const [selJob, setSelJob] = useState<number | null>(null)
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null)
   const [results, setResults] = useState<Candidate[]>([])
   const [summary, setSummary] = useState<Summary | null>(null)
-  const [loading, setLoading] = useState(false)
   const [loadingJobs, setLoadingJobs] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [filter, setFilter] = useState('all')
-  const [expanded, setExpanded] = useState<number | null>(null)
+  const [expanded, setExpanded] = useState<string | null>(null)
+  const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null)
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    const token = localStorage.getItem('token')
-    if (!token) { window.location.href = '/login'; return }
-    fetch('http://localhost:5000/api/v1/jobs/my', {
-      headers: { Authorization: 'Bearer ' + token }
-    }).then(r => r.json()).then(d => {
-      if (d.success) {
-        setJobs(d.data || [])
-        // Auto-screen if jobId passed via query param
-        if (preselectedJobId) {
-          const matched = (d.data || []).find((j: Job) => String(j.id) === preselectedJobId)
-          if (matched) screen(matched.id)
-        }
-      } else setError('Could not load jobs: ' + (d.message || ''))
-    }).catch(() => setError('Cannot connect to backend')).finally(() => setLoadingJobs(false))
+  const screen = useCallback(async (jobId: string) => {
+    setSelectedJobId(jobId)
+    setLoading(true)
+    setError('')
+    setResults([])
+    setSummary(null)
+    setExpanded(null)
+
+    try {
+      const response = await fetch(`${API_BASE}/ai/screen/${jobId}`, { headers: headers() })
+      const data = await response.json()
+      if (!response.ok || !data.success) throw new Error(data.message || 'Screening failed')
+      setResults((Array.isArray(data.data) ? data.data : []).map(normalizeCandidate))
+      setSummary(data.summary || null)
+    } catch (err: any) {
+      setError(err.message || 'Could not connect to the backend')
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
-  const screen = async (jobId: number) => {
-    setSelJob(jobId); setLoading(true); setResults([]); setSummary(null); setError(''); setExpanded(null)
-    const token = localStorage.getItem('token')
-    try {
-      const res = await fetch(`http://localhost:5000/api/v1/ai/screen/${jobId}`, {
-        headers: { Authorization: 'Bearer ' + token }
+  useEffect(() => {
+    if (!localStorage.getItem('token')) {
+      window.location.href = '/login'
+      return
+    }
+
+    fetch(`${API_BASE}/jobs/my`, { headers: headers() })
+      .then(async response => {
+        const data = await response.json()
+        if (!response.ok || !data.success) throw new Error(data.message || 'Could not load jobs')
+        return data
       })
-      const d = await res.json()
-      if (d.success) { setResults(d.data || []); setSummary(d.summary) }
-      else setError(d.message || 'Screening failed')
-    } catch { setError('Cannot connect to backend. Is it running on port 5000?') }
-    setLoading(false)
+      .then(data => {
+        const loadedJobs: Job[] = Array.isArray(data.data) ? data.data : []
+        setJobs(loadedJobs)
+        const selected = loadedJobs.find(job => String(job.id) === String(preselectedJobId))
+        if (selected) screen(String(selected.id))
+      })
+      .catch((err: any) => setError(err.message || 'Could not load jobs'))
+      .finally(() => setLoadingJobs(false))
+  }, [preselectedJobId, screen])
+
+  const updateStatus = async (applicationId: string, status: string) => {
+    setStatusUpdatingId(applicationId)
+    setError('')
+
+    try {
+      const response = await fetch(`${API_BASE}/ai/application/${applicationId}/status`, {
+        method: 'PATCH',
+        headers: headers(true),
+        body: JSON.stringify({ status })
+      })
+      const data = await response.json()
+      if (!response.ok || !data.success) throw new Error(data.message || 'Failed to update status')
+      setResults(previous => previous.map(candidate => candidate.applicationId === applicationId ? { ...candidate, applicationStatus: status } : candidate))
+    } catch (err: any) {
+      setError(err.message || 'Failed to update application status')
+    } finally {
+      setStatusUpdatingId(null)
+    }
   }
 
-  const updateStatus = async (appId: number, status: string) => {
-    const token = localStorage.getItem('token')
-    await fetch(`http://localhost:5000/api/v1/ai/application/${appId}/status`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-      body: JSON.stringify({ status })
-    })
-    setResults(prev => prev.map(r => r.applicationId === appId ? { ...r, applicationStatus: status } : r))
-  }
-
-  const filtered = filter === 'all' ? results : results.filter(r => r.labelColor === filter)
+  const filteredResults = useMemo(() => filter === 'all' ? results : results.filter(candidate => candidate.labelColor === filter), [filter, results])
+  const jobSkills = summary ? toArray(summary.jobSkills) : []
 
   return (
     <main style={{ minHeight: '100vh', background: '#F8FAFC', paddingTop: 64, fontFamily: 'system-ui, sans-serif' }}>
-
-      {/* Header */}
-      <div style={{ background: 'linear-gradient(135deg, #0F172A, #1E3A5F, #1D4ED8)', padding: '36px 0 28px' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-          <div>
-            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, letterSpacing: 2, fontWeight: 600, textTransform: 'uppercase', margin: '0 0 8px' }}>🤖 Phase 2 Feature</p>
-            <h1 style={{ color: '#fff', fontSize: 30, fontWeight: 800, margin: '0 0 6px' }}>AI Resume Screening</h1>
-            <p style={{ color: 'rgba(255,255,255,0.6)', margin: 0, fontSize: 14 }}>Rank candidates by skill match, experience & keyword relevance</p>
-          </div>
-          <a href="/employer" style={{ padding: '10px 18px', borderRadius: 10, background: 'rgba(255,255,255,0.12)', color: '#fff', fontSize: 13, fontWeight: 600, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.2)', backdropFilter: 'blur(4px)' }}>
-            ← Back to Dashboard
-          </a>
+      <header style={{ background: 'linear-gradient(135deg, #0F172A, #1D4ED8)', padding: '36px 24px 30px', color: '#FFF' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+          <div><p style={{ opacity: .65, fontSize: 12, letterSpacing: 2, textTransform: 'uppercase', margin: '0 0 8px' }}>Phase 2 Feature</p><h1 style={{ fontSize: 30, margin: '0 0 6px' }}>AI Resume Screening</h1><p style={{ opacity: .7, margin: 0 }}>Rank candidates by skills, experience, and keyword relevance.</p></div>
+          <a href="/employer" style={{ alignSelf: 'center', color: '#FFF', textDecoration: 'none', padding: '10px 18px', border: '1px solid rgba(255,255,255,.25)', borderRadius: 10 }}>Back to Dashboard</a>
         </div>
-      </div>
+      </header>
 
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px' }}>
+      <div style={{ maxWidth: 1100, margin: '0 auto', padding: 24 }}>
+        {error && <div style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#B91C1C', padding: '12px 16px', borderRadius: 12, marginBottom: 20 }}>{error}</div>}
 
-        {/* Error banner */}
-        {error && (
-          <div style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: 12, padding: '12px 16px', marginBottom: 20, color: '#DC2626', fontSize: 14 }}>
-            ⚠️ {error}
-          </div>
-        )}
+        <section style={{ background: '#FFF', border: '1px solid #E5E7EB', borderRadius: 16, padding: 24, marginBottom: 20 }}>
+          <h2 style={{ margin: '0 0 16px', fontSize: 16 }}>Step 1: Select a Job to Screen</h2>
+          {loadingJobs ? <p>Loading your jobs...</p> : jobs.length === 0 ? <p>No jobs found. <a href="/post-job">Post a job first</a>.</p> : <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 10 }}>
+            {jobs.map(job => {
+              const skills = toArray(job.requiredSkills || job.skills)
+              const selected = selectedJobId === String(job.id)
+              return <button key={job.id} type="button" onClick={() => screen(String(job.id))} style={{ textAlign: 'left', padding: 15, borderRadius: 12, cursor: 'pointer', border: selected ? '2px solid #7C3AED' : '1px solid #E5E7EB', background: selected ? '#F5F3FF' : '#FFF' }}><div style={{ fontWeight: 700 }}>{job.title}</div><div style={{ color: '#6B7280', fontSize: 12, marginTop: 5 }}>{skills.length ? skills.slice(0, 3).join(', ') : 'No skills listed'}</div></button>
+            })}
+          </div>}
+        </section>
 
-        {/* Job picker */}
-        <div style={{ background: '#fff', borderRadius: 16, padding: 24, border: '1px solid #E5E7EB', marginBottom: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
-          <h2 style={{ fontSize: 15, fontWeight: 700, color: '#111827', margin: '0 0 16px' }}>Step 1 — Select a Job to Screen</h2>
-          {loadingJobs && <p style={{ color: '#9CA3AF', fontSize: 14 }}>Loading your jobs...</p>}
-          {!loadingJobs && jobs.length === 0 && (
-            <p style={{ color: '#9CA3AF', fontSize: 14 }}>No jobs found. <a href="/post-job" style={{ color: '#2563EB' }}>Post a job first →</a></p>
-          )}
-          {!loadingJobs && jobs.length > 0 && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 10 }}>
-              {jobs.map(job => (
-                <button key={job.id} onClick={() => screen(job.id)}
-                  style={{ padding: '14px 16px', borderRadius: 12, textAlign: 'left', cursor: 'pointer',
-                    border: selJob === job.id ? '2px solid #7C3AED' : '1.5px solid #E5E7EB',
-                    background: selJob === job.id ? '#F5F3FF' : '#FAFAFA', transition: 'all 0.15s' }}>
-                  <div style={{ fontWeight: 600, fontSize: 14, color: '#111827', marginBottom: 4 }}>{job.title}</div>
-                  <div style={{ fontSize: 12, color: '#6B7280' }}>
-                    {(job.skills || []).length > 0
-                      ? (job.skills || []).slice(0,3).join(', ') + ((job.skills?.length || 0) > 3 ? ` +${(job.skills?.length||0)-3} more` : '')
-                      : 'No skills listed'}
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        {loading && <section style={{ background: '#FFF', borderRadius: 16, padding: 48, textAlign: 'center' }}>Screening candidates...</section>}
 
-        {/* Loading */}
-        {loading && (
-          <div style={{ background: '#fff', borderRadius: 16, padding: 48, textAlign: 'center', border: '1px solid #E5E7EB' }}>
-            <div style={{ fontSize: 36, marginBottom: 12 }}>🔍</div>
-            <p style={{ fontWeight: 600, color: '#374151', margin: 0 }}>Screening candidates...</p>
-            <p style={{ color: '#9CA3AF', fontSize: 13, margin: '4px 0 0' }}>Analyzing skills, experience & keywords</p>
-          </div>
-        )}
+        {!loading && summary && <section style={{ background: 'linear-gradient(135deg, #0F172A, #1E3A5F)', color: '#FFF', borderRadius: 16, padding: 24, marginBottom: 16 }}><div style={{ display: 'flex', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap' }}><div><small style={{ opacity: .6 }}>Results for</small><h2 style={{ margin: '5px 0' }}>{summary.jobTitle}</h2><small style={{ opacity: .6 }}>Min exp: {summary.jobExpMin} years · Required skills: {jobSkills.length}</small></div><div style={{ display: 'flex', gap: 22, flexWrap: 'wrap' }}>{[[summary.total, 'Total', '#94A3B8'], [summary.excellent, 'Excellent', '#10B981'], [summary.good, 'Good', '#60A5FA'], [summary.partial, 'Partial', '#FBBF24'], [summary.avgScore, 'Avg Score', '#F59E0B']].map(([value, label, color]) => <div key={String(label)} style={{ textAlign: 'center' }}><div style={{ color: String(color), fontWeight: 800, fontSize: 23 }}>{value}</div><small style={{ opacity: .65 }}>{label}</small></div>)}</div></div></section>}
 
-        {/* Summary */}
-        {summary && !loading && (
-          <div style={{ background: 'linear-gradient(135deg, #0F172A, #1E3A5F)', borderRadius: 16, padding: 24, marginBottom: 16, color: '#fff' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
-              <div>
-                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginBottom: 4 }}>Results for</div>
-                <div style={{ fontSize: 20, fontWeight: 800 }}>{summary.jobTitle}</div>
-                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 4 }}>
-                  Min exp: {summary.jobExpMin}yrs &nbsp;•&nbsp; Required skills: {summary.jobSkills.length}
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: 24 }}>
-                {[['Total', summary.total, '#94A3B8'], ['Excellent', summary.excellent, '#10B981'], ['Good', summary.good, '#3B82F6'], ['Avg Score', summary.avgScore + '%', '#F59E0B']].map(([l,v,c]) => (
-                  <div key={String(l)} style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 24, fontWeight: 800, color: String(c) }}>{v}</div>
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>{l}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
+        {!loading && results.length > 0 && <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>{[['all', 'All'], ['green', 'Excellent'], ['blue', 'Good'], ['yellow', 'Partial'], ['red', 'Low']].map(([key, label]) => <button key={key} type="button" onClick={() => setFilter(key)} style={{ border: filter === key ? '2px solid #7C3AED' : '1px solid #E5E7EB', background: filter === key ? '#7C3AED' : '#FFF', color: filter === key ? '#FFF' : '#374151', borderRadius: 20, padding: '6px 14px', cursor: 'pointer' }}>{label} {key === 'all' ? results.length : results.filter(item => item.labelColor === key).length}</button>)}</div>}
 
-        {/* Filter tabs */}
-        {results.length > 0 && !loading && (
-          <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
-            {[
-              ['all', `All (${results.length})`],
-              ['green', `Excellent (${results.filter(r=>r.labelColor==='green').length})`],
-              ['blue', `Good (${results.filter(r=>r.labelColor==='blue').length})`],
-              ['yellow', `Partial (${results.filter(r=>r.labelColor==='yellow').length})`],
-              ['red', `Low (${results.filter(r=>r.labelColor==='red').length})`],
-            ].map(([key, label]) => (
-              <button key={key} onClick={() => setFilter(key)}
-                style={{ padding: '6px 14px', borderRadius: 20, fontSize: 13, fontWeight: 500, cursor: 'pointer',
-                  border: filter === key ? '2px solid #7C3AED' : '1.5px solid #E5E7EB',
-                  background: filter === key ? '#7C3AED' : '#fff',
-                  color: filter === key ? '#fff' : '#374151' }}>
-                {label}
-              </button>
-            ))}
-          </div>
-        )}
+        {!loading && filteredResults.map((candidate, index) => {
+          const palette = LABELS[candidate.labelColor]
+          const isOpen = expanded === candidate.applicationId
+          const fileUrl = resumeUrl(candidate.resumeUrl)
+          const status = normalizeStatus(candidate.applicationStatus)
 
-        {/* Results list */}
-        {!loading && filtered.map((c, idx) => {
-          const ls = LABEL[c.labelColor]
-          const open = expanded === c.applicationId
-          return (
-            <div key={c.applicationId} style={{ background: '#fff', borderRadius: 16, border: '1.5px solid #E5E7EB', marginBottom: 10, overflow: 'hidden', boxShadow: open ? '0 4px 20px rgba(0,0,0,0.08)' : '0 1px 3px rgba(0,0,0,0.04)' }}>
-              <div style={{ height: 3, background: sc(c.scores.overall) }} />
-              <div style={{ padding: '16px 20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-
-                  {/* Rank + avatar */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 200 }}>
-                    <div style={{ width: 26, height: 26, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0,
-                      background: idx === 0 ? '#FFD700' : idx === 1 ? '#C0C0C0' : idx === 2 ? '#CD7F32' : '#E5E7EB',
-                      color: idx < 3 ? '#000' : '#9CA3AF' }}>#{idx+1}</div>
-                    <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg,#2563EB,#7C3AED)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
-                      {c.photoUrl ? <img src={c.photoUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" /> : <span style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>{c.name[0]?.toUpperCase()}</span>}
-                    </div>
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: 14, color: '#111827' }}>{c.name}</div>
-                      <div style={{ fontSize: 11, color: '#6B7280' }}>{c.headline || c.email}</div>
-                    </div>
-                  </div>
-
-                  {/* Ring + label */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <Ring v={c.scores.overall} />
-                    <div>
-                      <span style={{ padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: ls.bg, color: ls.text, border: `1px solid ${ls.border}` }}>{c.label}</span>
-                      <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 3 }}>{c.yearsOfExperience} yrs exp</div>
-                    </div>
-                  </div>
-
-                  {/* Mini scores */}
-                  <div style={{ display: 'flex', gap: 18, flex: 1 }}>
-                    {[['Skills', c.scores.skillMatch], ['Exp', c.scores.experienceMatch], ['Keywords', c.scores.keywordRelevance]].map(([l, v]) => (
-                      <div key={String(l)} style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: sc(Number(v)) }}>{v}%</div>
-                        <div style={{ fontSize: 10, color: '#9CA3AF' }}>{l}</div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Actions */}
-                  <div style={{ display: 'flex', gap: 8, marginLeft: 'auto', alignItems: 'center' }}>
-                    <select value={c.applicationStatus} onChange={e => updateStatus(c.applicationId, e.target.value)}
-                      style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid #E5E7EB', fontSize: 12, fontWeight: 600, cursor: 'pointer', outline: 'none',
-                        color: ({ shortlisted:'#10B981', interview:'#3B82F6', hired:'#8B5CF6', rejected:'#EF4444' } as any)[c.applicationStatus] || '#6B7280' }}>
-                      <option value="pending">Pending</option>
-                      <option value="shortlisted">Shortlisted ✓</option>
-                      <option value="interview">Interview 📅</option>
-                      <option value="hired">Hired 🎉</option>
-                      <option value="rejected">Rejected ✗</option>
-                    </select>
-                    <button onClick={() => setExpanded(open ? null : c.applicationId)}
-                      style={{ padding: '6px 12px', borderRadius: 8, border: '1.5px solid #E5E7EB', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                        background: open ? '#F5F3FF' : '#fff', color: open ? '#7C3AED' : '#374151' }}>
-                      {open ? 'Less ▲' : 'Details ▼'}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Expanded detail */}
-                {open && (
-                  <div style={{ marginTop: 18, paddingTop: 18, borderTop: '1px solid #F3F4F6' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 20 }}>
-                      <div>
-                        <p style={{ fontSize: 11, fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: 1, margin: '0 0 12px' }}>Score Breakdown</p>
-                        <Bar label="Skill Match"        v={c.scores.skillMatch}        color="#10B981" />
-                        <Bar label="Experience Match"   v={c.scores.experienceMatch}   color="#3B82F6" />
-                        <Bar label="Keyword Relevance"  v={c.scores.keywordRelevance}  color="#8B5CF6" />
-                        <Bar label="Overall Score"      v={c.scores.overall}           color={sc(c.scores.overall)} />
-                      </div>
-                      <div>
-                        <p style={{ fontSize: 11, fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: 1, margin: '0 0 12px' }}>Matched Skills ✅</p>
-                        {c.matchedSkills.length === 0
-                          ? <p style={{ fontSize: 12, color: '#9CA3AF' }}>No skill matches</p>
-                          : <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                              {c.matchedSkills.map(s => <span key={s} style={{ padding: '3px 10px', borderRadius: 20, background: '#D1FAE5', color: '#065F46', fontSize: 11, fontWeight: 600 }}>{s}</span>)}
-                            </div>
-                        }
-                      </div>
-                      <div>
-                        <p style={{ fontSize: 11, fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: 1, margin: '0 0 12px' }}>Skill Gaps ❌</p>
-                        {c.missingSkills.length === 0
-                          ? <p style={{ fontSize: 12, color: '#10B981', fontWeight: 600 }}>All skills matched! 🎉</p>
-                          : <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                              {c.missingSkills.map(s => <span key={s} style={{ padding: '3px 10px', borderRadius: 20, background: '#FEE2E2', color: '#991B1B', fontSize: 11, fontWeight: 600 }}>{s}</span>)}
-                            </div>
-                        }
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: 16, marginTop: 14, paddingTop: 14, borderTop: '1px solid #F3F4F6', alignItems: 'center' }}>
-                      {c.currentLocation && <span style={{ fontSize: 12, color: '#6B7280' }}>📍 {c.currentLocation}</span>}
-                      {c.resumeUrl && <a href={c.resumeUrl} target="_blank" rel="noreferrer" style={{ padding: '6px 14px', borderRadius: 8, background: '#EFF6FF', color: '#2563EB', fontSize: 12, fontWeight: 600, textDecoration: 'none', border: '1px solid #BFDBFE' }}>📄 View Resume</a>}
-                      <span style={{ fontSize: 12, color: '#9CA3AF' }}>Applied: {new Date(c.appliedAt).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' })}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )
+          return <article key={candidate.applicationId} style={{ background: '#FFF', border: '1px solid #E5E7EB', borderRadius: 16, marginBottom: 10, overflow: 'hidden' }}><div style={{ height: 4, background: scoreColor(candidate.scores.overall) }} /><div style={{ padding: '16px 20px' }}><div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}><strong style={{ color: '#9CA3AF' }}>#{index + 1}</strong><div style={{ width: 42, height: 42, borderRadius: '50%', background: '#2563EB', color: '#FFF', display: 'grid', placeItems: 'center', fontWeight: 800 }}>{candidate.name[0]?.toUpperCase()}</div><div style={{ minWidth: 190, flex: 1 }}><div style={{ fontWeight: 800 }}>{candidate.name}</div><small style={{ color: '#6B7280' }}>{candidate.headline || candidate.email || 'Candidate'}</small></div><ScoreRing value={candidate.scores.overall} /><span style={{ padding: '3px 10px', borderRadius: 20, background: palette.bg, color: palette.text, border: `1px solid ${palette.border}`, fontSize: 12, fontWeight: 700 }}>{candidate.label}</span><div style={{ display: 'flex', gap: 8, alignItems: 'center' }}><select value={status} disabled={statusUpdatingId === candidate.applicationId} onChange={event => updateStatus(candidate.applicationId, event.target.value)} style={{ padding: '7px 9px', borderRadius: 8, border: '1px solid #E5E7EB', color: STATUS_COLORS[status] || '#374151', fontWeight: 700 }}><option value="applied">Applied</option><option value="shortlisted">Shortlisted</option><option value="interview">Interview</option><option value="hired">Hired</option><option value="rejected">Rejected</option></select><button type="button" onClick={() => setExpanded(isOpen ? null : candidate.applicationId)} style={{ padding: '7px 10px', borderRadius: 8, border: '1px solid #E5E7EB', background: isOpen ? '#F5F3FF' : '#FFF', cursor: 'pointer' }}>{isOpen ? 'Less' : 'Details'}</button></div></div>{isOpen && <div style={{ borderTop: '1px solid #F3F4F6', marginTop: 18, paddingTop: 18 }}>{candidate.screeningComment && <div style={{ background: '#F5F3FF', color: '#4C1D95', padding: 14, borderRadius: 12, marginBottom: 18 }}><strong>Why this candidate matches</strong><p style={{ margin: '7px 0 0' }}>{candidate.screeningComment}</p></div>}<div className="screening-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}><div><h4>Score Breakdown</h4><ScoreBar label="Skill Match" value={candidate.scores.skillMatch} color="#10B981" /><ScoreBar label="Experience Match" value={candidate.scores.experienceMatch} color="#3B82F6" /><ScoreBar label="Keyword Relevance" value={candidate.scores.keywordRelevance} color="#8B5CF6" /><ScoreBar label="Overall" value={candidate.scores.overall} color={scoreColor(candidate.scores.overall)} /></div><div><h4>Matched Skills</h4>{candidate.matchedSkills.length ? <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>{candidate.matchedSkills.map((skill, skillIndex) => <span key={`${skill}-${skillIndex}`} style={{ background: '#D1FAE5', color: '#065F46', padding: '4px 9px', borderRadius: 20, fontSize: 12 }}>{skill}</span>)}</div> : <small>No skill matches found.</small>}</div><div><h4>Skill Gaps</h4>{candidate.missingSkills.length ? <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>{candidate.missingSkills.map((skill, skillIndex) => <span key={`${skill}-${skillIndex}`} style={{ background: '#FEE2E2', color: '#991B1B', padding: '4px 9px', borderRadius: 20, fontSize: 12 }}>{skill}</span>)}</div> : <small style={{ color: '#059669' }}>All skills matched.</small>}</div></div><div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 16, color: '#6B7280', fontSize: 13 }}><span>{candidate.currentLocation || 'Location unavailable'}</span><span>{candidate.yearsOfExperience} years experience</span>{fileUrl ? <a href={fileUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#2563EB', fontWeight: 700 }}>View Uploaded Resume</a> : <span>No resume uploaded</span>}{candidate.resumeFilename && <span>{candidate.resumeFilename}</span>}{candidate.appliedAt && <span>Applied: {new Date(candidate.appliedAt).toLocaleDateString('en-IN')}</span>}</div></div>}</div></article>
         })}
 
-        {/* No applications */}
-        {!loading && selJob && results.length === 0 && !error && (
-          <div style={{ background: '#fff', borderRadius: 16, padding: 48, textAlign: 'center', border: '1px solid #E5E7EB' }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>📭</div>
-            <p style={{ fontWeight: 600, color: '#374151', margin: 0 }}>No applications yet for this job</p>
-            <p style={{ color: '#9CA3AF', fontSize: 13, marginTop: 4 }}>Share your job to get applicants</p>
-          </div>
-        )}
-
+        {!loading && selectedJobId && results.length === 0 && !error && <section style={{ background: '#FFF', border: '1px solid #E5E7EB', borderRadius: 16, padding: 48, textAlign: 'center' }}>No applications yet for this job.</section>}
       </div>
+      <style jsx global>{`@media (max-width: 800px) { .screening-grid { grid-template-columns: 1fr !important; } }`}</style>
     </main>
   )
 }
 
 export default function AIScreeningPage() {
-  return (
-    <Suspense fallback={<div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9CA3AF' }}>Loading...</div>}>
-      <AIScreeningContent />
-    </Suspense>
-  )
+  return <Suspense fallback={<main style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>Loading...</main>}><AIScreeningContent /></Suspense>
 }

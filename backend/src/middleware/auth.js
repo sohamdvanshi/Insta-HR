@@ -1,48 +1,116 @@
-const jwt = require('jsonwebtoken');
-const { User } = require('../models/index');
+const jwt = require('jsonwebtoken')
+const { User } = require('../models/index')
+
+const getBearerToken = (req) => {
+  const authHeader = req.headers.authorization
+
+  if (
+    !authHeader ||
+    typeof authHeader !== 'string' ||
+    !authHeader.startsWith('Bearer ')
+  ) {
+    return null
+  }
+
+  const token = authHeader.slice(7).trim()
+  return token || null
+}
 
 exports.protect = async (req, res, next) => {
   try {
-    // Get token from header
-    const token = req.headers.authorization?.split(' ')[1];
+    const token = getBearerToken(req)
 
     if (!token) {
       return res.status(401).json({
         success: false,
-        message: 'Please login to access this'
-      });
+        code: 'TOKEN_REQUIRED',
+        message: 'Please login to access this resource'
+      })
     }
 
-    // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (!process.env.JWT_SECRET) {
+      console.error('JWT_SECRET is not configured')
 
-    // Get user
-    const user = await User.findByPk(decoded.id);
-    if (!user) {
+      return res.status(500).json({
+        success: false,
+        message: 'Authentication is not configured'
+      })
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET)
+
+    if (!decoded || !decoded.id) {
       return res.status(401).json({
         success: false,
-        message: 'User not found'
-      });
+        code: 'INVALID_TOKEN_PAYLOAD',
+        message: 'Invalid token payload. Please login again.'
+      })
     }
 
-    req.user = user;
-    next();
+    console.log('AUTH DEBUG: token user id:', decoded.id)
+
+    const user = await User.findByPk(decoded.id)
+
+    if (!user) {
+      console.error(
+        'AUTH DEBUG: user not found for token id:',
+        decoded.id
+      )
+
+      return res.status(401).json({
+        success: false,
+        code: 'USER_NOT_FOUND',
+        message: 'User account no longer exists. Please login again.'
+      })
+    }
+
+    if (user.isActive === false) {
+      return res.status(403).json({
+        success: false,
+        code: 'ACCOUNT_INACTIVE',
+        message: 'Your account is inactive'
+      })
+    }
+
+    console.log('AUTH DEBUG: user loaded:', {
+      id: user.id,
+      email: user.email,
+      role: user.role
+    })
+
+    req.user = user
+    return next()
   } catch (error) {
+    console.error('Authentication error:', error.message)
+
     return res.status(401).json({
       success: false,
-      message: 'Invalid token'
-    });
+      code: 'INVALID_OR_EXPIRED_TOKEN',
+      message: 'Invalid or expired token. Please login again.'
+    })
   }
-};
+}
 
 exports.authorize = (...roles) => {
   return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      })
+    }
+
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({
         success: false,
+        code: 'INSUFFICIENT_PERMISSIONS',
         message: 'You do not have permission'
-      });
+      })
     }
-    next();
-  };
-};
+
+    return next()
+  }
+}
+
+exports.requireAdmin = exports.authorize('admin', 'super_admin')
+exports.requireSuperAdmin = exports.authorize('super_admin')

@@ -49,6 +49,22 @@ export default function ResumeListPage() {
     }
   }
 
+  const handleCopyShareLink = async (resume: any) => {
+    try {
+      setError('')
+
+      if (resume.visibility !== 'link') {
+        throw new Error('This resume is not set to link sharing')
+      }
+
+      const shareUrl = `${window.location.origin}/resume/share/${resume.id}`
+      await navigator.clipboard.writeText(shareUrl)
+      window.alert('Share link copied to clipboard')
+    } catch (err: any) {
+      setError(err.message || 'Failed to copy share link')
+    }
+  }
+
   const handleDelete = async (id: string) => {
     const confirmed = window.confirm('Are you sure you want to delete this resume?')
     if (!confirmed) return
@@ -77,6 +93,34 @@ export default function ResumeListPage() {
     } finally {
       setDeletingId('')
     }
+  }
+
+  const formatLabel = (value?: string) => {
+    if (!value) return 'Not set'
+
+    return value
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, (char) => char.toUpperCase())
+  }
+
+  const getVisibilityBadgeClasses = (visibility?: string) => {
+    if (visibility === 'link') {
+      return 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+    }
+
+    return 'bg-gray-100 text-gray-700 border border-gray-200'
+  }
+
+  const getStatusBadgeClasses = (status?: string) => {
+    if (status === 'published') {
+      return 'bg-green-50 text-green-700 border border-green-200'
+    }
+
+    if (status === 'completed') {
+      return 'bg-blue-50 text-blue-700 border border-blue-200'
+    }
+
+    return 'bg-amber-50 text-amber-700 border border-amber-200'
   }
 
   if (loading) {
@@ -136,29 +180,57 @@ export default function ResumeListPage() {
                 className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6"
               >
                 <div className="flex items-start justify-between gap-3 mb-4">
-                  <div>
-                    <h2 className="text-lg font-bold text-gray-900">
-                      {resume.title || 'Untitled Resume'}
-                    </h2>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <h2 className="text-lg font-bold text-gray-900 break-words">
+                        {resume.title || 'Untitled Resume'}
+                      </h2>
+
+                      {resume.isDefault ? (
+                        <span className="px-2.5 py-1 rounded-full bg-violet-50 text-violet-700 border border-violet-200 text-xs font-semibold">
+                          Default
+                        </span>
+                      ) : null}
+                    </div>
+
                     <p className="text-sm text-gray-500 capitalize">
                       Template: {resume.template || 'classic'}
                     </p>
                   </div>
 
-                  <span className="px-2 py-1 rounded-full bg-gray-100 text-gray-600 text-xs capitalize">
+                  <span
+                    className={
+                      'px-2.5 py-1 rounded-full text-xs font-semibold capitalize whitespace-nowrap ' +
+                      getStatusBadgeClasses(resume.status)
+                    }
+                  >
                     {resume.status || 'draft'}
                   </span>
                 </div>
 
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <span className="px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-xs font-medium">
+                    Sector: {formatLabel(resume.sector || 'general')}
+                  </span>
+
+                  <span
+                    className={
+                      'px-2.5 py-1 rounded-full text-xs font-medium ' +
+                      getVisibilityBadgeClasses(resume.visibility)
+                    }
+                  >
+                    Visibility: {resume.visibility === 'link' ? 'Link' : 'Private'}
+                  </span>
+                </div>
+
                 <div className="space-y-2 text-sm text-gray-500 mb-5">
+                  <p>Name: {resume.personalInfo?.fullName || 'Not added'}</p>
+                  <p>Role: {resume.personalInfo?.jobTitle || 'Not added'}</p>
                   <p>
-                    Name: {resume.personalInfo?.fullName || 'Not added'}
-                  </p>
-                  <p>
-                    Role: {resume.personalInfo?.jobTitle || 'Not added'}
-                  </p>
-                  <p>
-                    Updated: {new Date(resume.updatedAt).toLocaleDateString()}
+                    Updated:{' '}
+                    {resume.updatedAt
+                      ? new Date(resume.updatedAt).toLocaleDateString()
+                      : 'Not available'}
                   </p>
                 </div>
 
@@ -169,6 +241,15 @@ export default function ResumeListPage() {
                   >
                     Edit
                   </Link>
+
+                  {resume.visibility === 'link' ? (
+                    <button
+                      onClick={() => handleCopyShareLink(resume)}
+                      className="px-4 py-2 bg-emerald-50 text-emerald-700 text-sm font-medium rounded-xl hover:bg-emerald-100"
+                    >
+                      Copy Link
+                    </button>
+                  ) : null}
 
                   <button
                     onClick={() => handleDelete(resume.id)}

@@ -10,6 +10,9 @@ const API_BASE = 'http://localhost:5000/api/v1'
 const emptyResume = {
   title: 'My Resume',
   template: 'classic',
+  sector: 'general',
+  visibility: 'private',
+  isDefault: false,
   targetJobTitle: '',
   targetJobDescription: '',
   personalInfo: {
@@ -135,6 +138,9 @@ export default function ResumeEditorPage() {
           : emptyResume.certifications,
         languages: loaded.languages?.length ? loaded.languages : emptyResume.languages,
         template: loaded.template || 'classic',
+        sector: loaded.sector || 'general',
+        visibility: loaded.visibility || 'private',
+        isDefault: typeof loaded.isDefault === 'boolean' ? loaded.isDefault : false,
         targetJobTitle: loaded.targetJobTitle || '',
         targetJobDescription: loaded.targetJobDescription || ''
       })
@@ -174,6 +180,30 @@ export default function ResumeEditorPage() {
       throw err
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleCopyShareLink = async () => {
+    try {
+      setError('')
+      setMessage('')
+
+      if (!resumeId) {
+        throw new Error('Please save the resume first')
+      }
+
+      if (resume.visibility !== 'link') {
+        throw new Error('Set visibility to "link" before copying the share URL')
+      }
+
+      const shareUrl = `${window.location.origin}/resume/share/${resumeId}`
+
+      await navigator.clipboard.writeText(shareUrl)
+
+      setMessage('Share link copied to clipboard')
+      setTimeout(() => setMessage(''), 2500)
+    } catch (err: any) {
+      setError(err.message || 'Failed to copy share link')
     }
   }
 
@@ -747,6 +777,14 @@ export default function ResumeEditorPage() {
             >
               {saving ? 'Saving...' : 'Save Resume'}
             </button>
+            
+            <button
+              onClick={handleCopyShareLink}
+              disabled={!resumeId || resume.visibility !== 'link'}
+              className="px-5 py-3 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 disabled:opacity-50"
+            >
+              Copy Share Link
+            </button>
 
             <button
               onClick={handleDownloadPdf}
@@ -817,9 +855,60 @@ export default function ResumeEditorPage() {
                   </div>
 
                   <p className="text-xs text-amber-600 mt-2">
-                    Classic is recommended for ATS and job applications. Modern is better for visual sharing or portfolio-style use.
+                    Classic is recommended for ATS and job applications. Modern is better
+                    for visual sharing or portfolio-style use.
                   </p>
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Sector
+                  </label>
+                  <select
+                    value={resume.sector || 'general'}
+                    onChange={(e) => setResume({ ...resume, sector: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500 bg-white"
+                  >
+                    <option value="general">General</option>
+                    <option value="information_technology">Information Technology</option>
+                    <option value="sales_marketing">Sales & Marketing</option>
+                    <option value="finance">Finance</option>
+                    <option value="healthcare">Healthcare</option>
+                    <option value="manufacturing">Manufacturing</option>
+                    <option value="retail">Retail</option>
+                    <option value="hospitality">Hospitality</option>
+                    <option value="logistics">Logistics</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Visibility
+                  </label>
+                  <select
+                    value={resume.visibility || 'private'}
+                    onChange={(e) => setResume({ ...resume, visibility: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500 bg-white"
+                  >
+                    <option value="private">Private</option>
+                    <option value="link">Anyone with the link</option>
+                  </select>
+                </div>
+
+                <label className="flex items-start gap-3 p-4 border border-gray-200 rounded-xl cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={!!resume.isDefault}
+                    onChange={(e) => setResume({ ...resume, isDefault: e.target.checked })}
+                    className="mt-1 h-4 w-4"
+                  />
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">Use as default resume</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      This resume will be used as your primary default resume in the system.
+                    </p>
+                  </div>
+                </label>
               </div>
             </section>
 

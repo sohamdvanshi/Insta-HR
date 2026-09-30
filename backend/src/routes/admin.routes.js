@@ -1,15 +1,29 @@
-const express = require('express');
-const router = express.Router();
-const adminController = require('../controllers/admin.controller');
-const { protect, authorize } = require('../middleware/auth');
+const express = require('express')
+const router = express.Router()
 
-router.use(protect, authorize('admin'));
+const adminController = require('../controllers/admin.controller')
+const {
+  protect,
+  authorize
+} = require('../middleware/auth')
 
-router.get('/stats', adminController.getStats);
-router.get('/jobs', adminController.getAllJobs);
-router.put('/jobs/:id/status', adminController.updateJobStatus);
-router.get('/users', adminController.getAllUsers);
-router.put('/users/:id/role', adminController.updateUserRole);
-router.put('/users/:id/toggle', adminController.toggleUserActive);
+// Existing admin endpoints remain available to admin and super_admin.
+router.use(
+  protect,
+  authorize('admin', 'super_admin')
+)
 
-module.exports = router;
+router.get('/stats', adminController.getStats)
+router.get('/jobs', adminController.getAllJobs)
+router.put('/jobs/:id/status', adminController.updateJobStatus)
+router.get('/users', adminController.getAllUsers)
+router.put('/users/:id/toggle', adminController.toggleUserActive)
+
+// Only super_admin may change roles, including assigning super_admin.
+router.put(
+  '/users/:id/role',
+  authorize('super_admin'),
+  adminController.updateUserRole
+)
+
+module.exports = router

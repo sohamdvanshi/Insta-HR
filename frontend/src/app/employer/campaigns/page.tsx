@@ -1,238 +1,284 @@
-'use client';
+'use client'
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react'
+import type { FormEvent } from 'react'
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'
+
+type RecipientStatus = 'applied' | 'shortlisted' | 'hired' | 'rejected'
 
 type Job = {
-  id: string;
-  title: string;
-  companyName?: string;
-};
+  id: string
+  title: string
+  companyName?: string
+}
 
 type CandidateApplication = {
-  id: string;
+  id: string
   candidate?: {
-    id: string;
-    email: string;
-    fullName?: string;
-  };
-};
+    id: string
+    email: string
+    fullName?: string
+    candidateName?: string
+  }
+}
 
 type Campaign = {
-  id: string;
-  subject: string;
-  message: string;
-  recipientCount: number;
-  sentCount: number;
-  failedCount: number;
-  status: 'draft' | 'sending' | 'sent' | 'failed';
-  sentAt?: string | null;
-  createdAt?: string;
+  id: string
+  subject: string
+  message: string
+  recipientStatus?: RecipientStatus
+  recipientCount: number
+  sentCount: number
+  failedCount: number
+  status: 'draft' | 'sending' | 'sent' | 'failed'
+  sentAt?: string | null
+  createdAt?: string
   job?: {
-    id: string;
-    title: string;
-    companyName?: string;
-  };
-};
+    id: string
+    title: string
+    companyName?: string
+  }
+}
+
+const RECIPIENT_OPTIONS: Array<{
+  value: RecipientStatus
+  label: string
+}> = [
+  { value: 'applied', label: 'Applied Candidates' },
+  { value: 'shortlisted', label: 'Shortlisted Candidates' },
+  { value: 'hired', label: 'Hired Candidates' },
+  { value: 'rejected', label: 'Rejected Candidates' }
+]
+
+const getRecipientLabel = (status?: RecipientStatus) => {
+  return RECIPIENT_OPTIONS.find((option) => option.value === status)?.label || 'Shortlisted Candidates'
+}
 
 export default function EmployerCampaignsPage() {
-  const [token, setToken] = useState('');
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [selectedJobId, setSelectedJobId] = useState('');
-  const [shortlistedCount, setShortlistedCount] = useState(0);
-  const [subject, setSubject] = useState('');
-  const [message, setMessage] = useState('');
-  const [loadingJobs, setLoadingJobs] = useState(false);
-  const [loadingCampaigns, setLoadingCampaigns] = useState(false);
-  const [loadingShortlisted, setLoadingShortlisted] = useState(false);
-  const [creating, setCreating] = useState(false);
-  const [sendingCampaignId, setSendingCampaignId] = useState('');
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [token, setToken] = useState('')
+  const [jobs, setJobs] = useState<Job[]>([])
+  const [campaigns, setCampaigns] = useState<Campaign[]>([])
+  const [selectedJobId, setSelectedJobId] = useState('')
+  const [recipientStatus, setRecipientStatus] = useState<RecipientStatus>('shortlisted')
+  const [recipientCount, setRecipientCount] = useState(0)
+  const [subject, setSubject] = useState('')
+  const [message, setMessage] = useState('')
+  const [loadingJobs, setLoadingJobs] = useState(false)
+  const [loadingCampaigns, setLoadingCampaigns] = useState(false)
+  const [loadingRecipients, setLoadingRecipients] = useState(false)
+  const [creating, setCreating] = useState(false)
+  const [sendingCampaignId, setSendingCampaignId] = useState('')
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
 
   useEffect(() => {
-    const storedToken = localStorage.getItem('token') || localStorage.getItem('accessToken') || '';
-    setToken(storedToken);
-  }, []);
+    const storedToken = (
+      localStorage.getItem('token') ||
+      localStorage.getItem('accessToken') ||
+      localStorage.getItem('authToken') ||
+      ''
+    )
+
+    setToken(storedToken)
+  }, [])
 
   useEffect(() => {
-    if (!token) return;
-    fetchEmployerJobs();
-    fetchCampaigns();
-  }, [token]);
+    if (!token) return
+
+    fetchEmployerJobs()
+    fetchCampaigns()
+  }, [token])
 
   useEffect(() => {
     if (!token || !selectedJobId) {
-      setShortlistedCount(0);
-      return;
+      setRecipientCount(0)
+      return
     }
-    fetchShortlistedCandidates(selectedJobId);
-  }, [token, selectedJobId]);
+
+    fetchRecipients(selectedJobId, recipientStatus)
+  }, [token, selectedJobId, recipientStatus])
 
   const selectedJob = useMemo(
-    () => jobs.find(job => job.id === selectedJobId),
+    () => jobs.find((job) => job.id === selectedJobId),
     [jobs, selectedJobId]
-  );
+  )
 
   const authHeaders = (json = true) => ({
     ...(json ? { 'Content-Type': 'application/json' } : {}),
-    Authorization: `Bearer ${token}`,
-  });
+    Authorization: `Bearer ${token}`
+  })
 
   const fetchEmployerJobs = async () => {
     try {
-      setLoadingJobs(true);
-      setError('');
+      setLoadingJobs(true)
+      setError('')
 
       const res = await fetch(`${API_BASE}/employer/jobs`, {
-        headers: authHeaders(false),
-      });
+        headers: authHeaders(false)
+      })
 
-      const data = await res.json();
+      const data = await res.json()
 
       if (!res.ok) {
-        throw new Error(data.message || 'Failed to fetch jobs');
+        throw new Error(data.message || 'Failed to fetch jobs')
       }
 
-      const jobList = data.data || data.jobs || [];
-      setJobs(jobList);
-    } catch (err: any) {
-      setError(err.message || 'Failed to fetch jobs');
+      const jobList = data.data || data.jobs || []
+      setJobs(jobList)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch jobs')
     } finally {
-      setLoadingJobs(false);
+      setLoadingJobs(false)
     }
-  };
+  }
 
   const fetchCampaigns = async () => {
     try {
-      setLoadingCampaigns(true);
-      setError('');
+      setLoadingCampaigns(true)
+      setError('')
 
       const res = await fetch(`${API_BASE}/employer/campaigns`, {
-        headers: authHeaders(false),
-      });
+        headers: authHeaders(false)
+      })
 
-      const data = await res.json();
+      const data = await res.json()
 
       if (!res.ok) {
-        throw new Error(data.message || 'Failed to fetch campaigns');
+        throw new Error(data.message || 'Failed to fetch campaigns')
       }
 
-      setCampaigns(data.data || []);
-    } catch (err: any) {
-      setError(err.message || 'Failed to fetch campaigns');
+      setCampaigns(data.data || [])
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch campaigns')
     } finally {
-      setLoadingCampaigns(false);
+      setLoadingCampaigns(false)
     }
-  };
+  }
 
-  const fetchShortlistedCandidates = async (jobId: string) => {
+  const fetchRecipients = async (
+    jobId: string,
+    status: RecipientStatus
+  ) => {
     try {
-      setLoadingShortlisted(true);
-      setError('');
+      setLoadingRecipients(true)
+      setError('')
 
-      const res = await fetch(`${API_BASE}/employer/campaigns/jobs/${jobId}/shortlisted-candidates`, {
-        headers: authHeaders(false),
-      });
+      const params = new URLSearchParams({ status })
+      const res = await fetch(
+        `${API_BASE}/employer/campaigns/jobs/${jobId}/candidates?${params.toString()}`,
+        {
+          headers: authHeaders(false)
+        }
+      )
 
-      const data = await res.json();
+      const data = await res.json()
 
       if (!res.ok) {
-        throw new Error(data.message || 'Failed to fetch shortlisted candidates');
+        throw new Error(data.message || `Failed to fetch ${status} candidates`)
       }
 
-      const applications: CandidateApplication[] = data.data || [];
-      setShortlistedCount(applications.length);
-    } catch (err: any) {
-      setShortlistedCount(0);
-      setError(err.message || 'Failed to fetch shortlisted candidates');
+      const applications: CandidateApplication[] = data.data || []
+      setRecipientCount(applications.length)
+    } catch (err) {
+      setRecipientCount(0)
+      setError(err instanceof Error ? err.message : 'Failed to fetch candidates')
     } finally {
-      setLoadingShortlisted(false);
+      setLoadingRecipients(false)
     }
-  };
+  }
 
-  const handleCreateCampaign = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCreateCampaign = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
 
     if (!selectedJobId || !subject.trim() || !message.trim()) {
-      setError('Please select a job and fill in subject and message.');
-      return;
+      setError('Please select a job and fill in subject and message.')
+      return
     }
 
     try {
-      setCreating(true);
-      setError('');
-      setSuccess('');
+      setCreating(true)
+      setError('')
+      setSuccess('')
 
       const res = await fetch(`${API_BASE}/employer/campaigns`, {
         method: 'POST',
         headers: authHeaders(),
         body: JSON.stringify({
           jobId: selectedJobId,
-          subject,
-          message,
-        }),
-      });
+          subject: subject.trim(),
+          message: message.trim(),
+          recipientStatus
+        })
+      })
 
-      const data = await res.json();
+      const data = await res.json()
 
       if (!res.ok) {
-        throw new Error(data.message || 'Failed to create campaign');
+        throw new Error(data.message || 'Failed to create campaign')
       }
 
-      setSuccess('Campaign created successfully.');
-      setSubject('');
-      setMessage('');
-      await fetchCampaigns();
-    } catch (err: any) {
-      setError(err.message || 'Failed to create campaign');
+      setSuccess(
+        `Campaign created for ${getRecipientLabel(recipientStatus).toLowerCase()}.`
+      )
+      setSubject('')
+      setMessage('')
+      await fetchCampaigns()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create campaign')
     } finally {
-      setCreating(false);
+      setCreating(false)
     }
-  };
+  }
 
-  const handleSendCampaign = async (campaignId: string, recipientCount: number) => {
-    if (recipientCount === 0) {
-      setError('This campaign has no shortlisted candidates to send to.');
-      return;
+  const handleSendCampaign = async (
+    campaignId: string,
+    campaignRecipientCount: number,
+    campaignRecipientStatus?: RecipientStatus
+  ) => {
+    if (campaignRecipientCount === 0) {
+      setError('This campaign has no candidates in the selected category.')
+      return
     }
 
-    const confirmSend = window.confirm('Send this campaign to shortlisted candidates now?');
-    if (!confirmSend) return;
+    const targetLabel = getRecipientLabel(campaignRecipientStatus).toLowerCase()
+    const confirmSend = window.confirm(
+      `Send this campaign to ${targetLabel} now?`
+    )
+
+    if (!confirmSend) return
 
     try {
-      setSendingCampaignId(campaignId);
-      setError('');
-      setSuccess('');
+      setSendingCampaignId(campaignId)
+      setError('')
+      setSuccess('')
 
       const res = await fetch(`${API_BASE}/employer/campaigns/${campaignId}/send`, {
         method: 'POST',
-        headers: authHeaders(false),
-      });
+        headers: authHeaders(false)
+      })
 
-      const data = await res.json();
+      const data = await res.json()
 
       if (!res.ok) {
-        throw new Error(data.message || 'Failed to send campaign');
+        throw new Error(data.message || 'Failed to send campaign')
       }
 
-      const totalRecipients = data?.data?.recipientCount ?? recipientCount ?? 0;
-      const sentCount = data?.data?.sentCount ?? 0;
-      const failedCount = data?.data?.failedCount ?? 0;
+      const totalRecipients = data?.data?.recipientCount ?? campaignRecipientCount
+      const sentCount = data?.data?.sentCount ?? 0
+      const failedCount = data?.data?.failedCount ?? 0
 
       setSuccess(
         `Campaign completed successfully. Recipients: ${totalRecipients}, Sent: ${sentCount}, Failed: ${failedCount}`
-      );
+      )
 
-      await fetchCampaigns();
-    } catch (err: any) {
-      setError(err.message || 'Failed to send campaign');
+      await fetchCampaigns()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to send campaign')
     } finally {
-      setSendingCampaignId('');
+      setSendingCampaignId('')
     }
-  };
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 px-4 py-8 md:px-8">
@@ -240,7 +286,7 @@ export default function EmployerCampaignsPage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Email Campaigns</h1>
           <p className="mt-2 text-sm text-gray-600">
-            Send email campaigns to shortlisted candidates for a specific job.
+            Send email campaigns to candidates based on their application status.
           </p>
         </div>
 
@@ -267,7 +313,7 @@ export default function EmployerCampaignsPage() {
             <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
               <h2 className="text-xl font-semibold text-gray-900">Create Campaign</h2>
               <p className="mt-1 text-sm text-gray-500">
-                Select a job, write a subject and message, then create the campaign.
+                Select a job, candidate category, subject and message.
               </p>
 
               <form onSubmit={handleCreateCampaign} className="mt-6 space-y-5">
@@ -277,11 +323,11 @@ export default function EmployerCampaignsPage() {
                   </label>
                   <select
                     value={selectedJobId}
-                    onChange={e => setSelectedJobId(e.target.value)}
+                    onChange={(event) => setSelectedJobId(event.target.value)}
                     className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
                   >
                     <option value="">Choose a job</option>
-                    {jobs.map(job => (
+                    {jobs.map((job) => (
                       <option key={job.id} value={job.id}>
                         {job.title} {job.companyName ? `- ${job.companyName}` : ''}
                       </option>
@@ -292,10 +338,29 @@ export default function EmployerCampaignsPage() {
                   )}
                 </div>
 
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-700">
+                    Send To
+                  </label>
+                  <select
+                    value={recipientStatus}
+                    onChange={(event) => setRecipientStatus(event.target.value as RecipientStatus)}
+                    className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
+                  >
+                    {RECIPIENT_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-                  <p className="text-sm font-medium text-gray-700">Shortlisted Candidates</p>
+                  <p className="text-sm font-medium text-gray-700">
+                    {getRecipientLabel(recipientStatus)}
+                  </p>
                   <p className="mt-1 text-2xl font-bold text-gray-900">
-                    {loadingShortlisted ? '...' : shortlistedCount}
+                    {loadingRecipients ? '...' : recipientCount}
                   </p>
                   {selectedJob && (
                     <p className="mt-1 text-xs text-gray-500">
@@ -311,7 +376,7 @@ export default function EmployerCampaignsPage() {
                   <input
                     type="text"
                     value={subject}
-                    onChange={e => setSubject(e.target.value)}
+                    onChange={(event) => setSubject(event.target.value)}
                     placeholder="Enter email subject"
                     className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
                   />
@@ -324,7 +389,7 @@ export default function EmployerCampaignsPage() {
                   <textarea
                     rows={8}
                     value={message}
-                    onChange={e => setMessage(e.target.value)}
+                    onChange={(event) => setMessage(event.target.value)}
                     placeholder="Write your campaign message here..."
                     className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
                   />
@@ -351,6 +416,7 @@ export default function EmployerCampaignsPage() {
                   </p>
                 </div>
                 <button
+                  type="button"
                   onClick={fetchCampaigns}
                   className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                 >
@@ -363,6 +429,7 @@ export default function EmployerCampaignsPage() {
                   <thead>
                     <tr className="text-left text-xs uppercase tracking-wide text-gray-500">
                       <th className="px-3 py-2">Job</th>
+                      <th className="px-3 py-2">Send To</th>
                       <th className="px-3 py-2">Subject</th>
                       <th className="px-3 py-2">Status</th>
                       <th className="px-3 py-2">Recipients</th>
@@ -374,21 +441,26 @@ export default function EmployerCampaignsPage() {
                   <tbody>
                     {loadingCampaigns ? (
                       <tr>
-                        <td colSpan={7} className="px-3 py-8 text-center text-sm text-gray-500">
+                        <td colSpan={8} className="px-3 py-8 text-center text-sm text-gray-500">
                           Loading campaigns...
                         </td>
                       </tr>
                     ) : campaigns.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="px-3 py-8 text-center text-sm text-gray-500">
+                        <td colSpan={8} className="px-3 py-8 text-center text-sm text-gray-500">
                           No campaigns created yet.
                         </td>
                       </tr>
                     ) : (
-                      campaigns.map(campaign => (
+                      campaigns.map((campaign) => (
                         <tr key={campaign.id} className="rounded-2xl bg-gray-50 text-sm text-gray-800">
                           <td className="rounded-l-2xl px-3 py-4 font-medium">
                             {campaign.job?.title || '—'}
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-4">
+                            <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold capitalize text-blue-700">
+                              {campaign.recipientStatus || 'shortlisted'}
+                            </span>
                           </td>
                           <td className="px-3 py-4">{campaign.subject}</td>
                           <td className="px-3 py-4">
@@ -397,10 +469,10 @@ export default function EmployerCampaignsPage() {
                                 campaign.status === 'sent'
                                   ? 'bg-green-100 text-green-700'
                                   : campaign.status === 'sending'
-                                  ? 'bg-yellow-100 text-yellow-700'
-                                  : campaign.status === 'failed'
-                                  ? 'bg-red-100 text-red-700'
-                                  : 'bg-gray-200 text-gray-700'
+                                    ? 'bg-yellow-100 text-yellow-700'
+                                    : campaign.status === 'failed'
+                                      ? 'bg-red-100 text-red-700'
+                                      : 'bg-gray-200 text-gray-700'
                               }`}
                             >
                               {campaign.status}
@@ -411,7 +483,12 @@ export default function EmployerCampaignsPage() {
                           <td className="px-3 py-4">{campaign.failedCount}</td>
                           <td className="rounded-r-2xl px-3 py-4">
                             <button
-                              onClick={() => handleSendCampaign(campaign.id, campaign.recipientCount)}
+                              type="button"
+                              onClick={() => handleSendCampaign(
+                                campaign.id,
+                                campaign.recipientCount,
+                                campaign.recipientStatus || 'shortlisted'
+                              )}
                               disabled={
                                 sendingCampaignId === campaign.id ||
                                 campaign.status === 'sent' ||
@@ -422,10 +499,10 @@ export default function EmployerCampaignsPage() {
                               {sendingCampaignId === campaign.id
                                 ? 'Sending...'
                                 : campaign.status === 'sent'
-                                ? 'Sent'
-                                : campaign.recipientCount === 0
-                                ? 'No Recipients'
-                                : 'Send Now'}
+                                  ? 'Sent'
+                                  : campaign.recipientCount === 0
+                                    ? 'No Recipients'
+                                    : 'Send Now'}
                             </button>
                           </td>
                         </tr>
@@ -439,5 +516,5 @@ export default function EmployerCampaignsPage() {
         </div>
       </div>
     </div>
-  );
+  )
 }

@@ -27,9 +27,19 @@ type PendingVerification = {
   email: string
 }
 
-const saveAuth = (token: string, user: User) => {
+const clearAuthStorage = () => {
   localStorage.removeItem('token')
   localStorage.removeItem('user')
+  localStorage.removeItem('authToken')
+  localStorage.removeItem('currentUser')
+  sessionStorage.removeItem('token')
+  sessionStorage.removeItem('user')
+  sessionStorage.removeItem('authToken')
+  sessionStorage.removeItem('currentUser')
+}
+
+const saveAuth = (token: string, user: User) => {
+  clearAuthStorage()
   localStorage.setItem('token', token)
   localStorage.setItem('user', JSON.stringify(user))
 }
@@ -51,6 +61,20 @@ const redirectByRole = (user?: User) => {
   }
 
   window.location.href = '/dashboard'
+}
+
+const readResponse = async (response: Response): Promise<LoginResponse> => {
+  const contentType = response.headers.get('content-type') || ''
+
+  if (contentType.includes('application/json')) {
+    return response.json()
+  }
+
+  const text = await response.text()
+  return {
+    success: false,
+    message: text || `Request failed with status ${response.status}`
+  }
 }
 
 export default function LoginPage() {
@@ -96,13 +120,13 @@ export default function LoginPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: pendingVerification?.userId || undefined,
-          email: pendingVerification?.email || formData.email
+          email: pendingVerification?.email || formData.email.trim().toLowerCase()
         })
       })
 
-      const data = await res.json()
+      const data = await readResponse(res)
 
-      if (data.success) {
+      if (res.ok && data.success) {
         setInfo(data.message || 'OTP resent successfully.')
         setPendingVerification({
           userId: data.userId || pendingVerification?.userId || '',
@@ -112,7 +136,8 @@ export default function LoginPage() {
         setError(data.message || 'Failed to resend OTP.')
       }
     } catch (err) {
-      setError('Failed to resend OTP. Please try again.')
+      console.error('Resend OTP request failed:', err)
+      setError('Cannot connect to the server. Please check that the backend is running.')
     } finally {
       setResendLoading(false)
     }
@@ -129,13 +154,34 @@ export default function LoginPage() {
       const res = await fetch(`${API_BASE}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          email: formData.email.trim().toLowerCase(),
+          password: formData.password
+        })
       })
 
-      const data: LoginResponse = await res.json()
+      const data: LoginResponse = await readResponse(res)
 
-      if (data.success && data.token && data.user) {
+      console.log('LOGIN STATUS:', res.status)
+      console.log('LOGIN RESPONSE:', data)
+
+      if (data.user) {
+        console.log('LOGIN USER:', {
+          id: data.user.id,
+          email: data.user.email,
+          role: data.user.role
+        })
+      }
+
+      if (res.ok && data.success && data.token && data.user) {
         saveAuth(data.token, data.user)
+
+        console.log('AUTH SAVED:', {
+          id: data.user.id,
+          email: data.user.email,
+          role: data.user.role
+        })
+
         redirectByRole(data.user)
         return
       }
@@ -144,14 +190,15 @@ export default function LoginPage() {
         setError(data.message || 'Please verify your email before logging in.')
         setPendingVerification({
           userId: data.userId || '',
-          email: data.email || formData.email
+          email: data.email || formData.email.trim().toLowerCase()
         })
         return
       }
 
       setError(data.message || 'Login failed')
     } catch (err) {
-      setError('Something went wrong. Please try again.')
+      console.error('Login request failed:', err)
+      setError('Cannot connect to the server. Please check that the backend is running.')
     } finally {
       setLoading(false)
     }
@@ -179,16 +226,20 @@ export default function LoginPage() {
         })
       })
 
-      const data: LoginResponse = await res.json()
+      const data: LoginResponse = await readResponse(res)
 
-      if (data.success && data.token && data.user) {
+      console.log('GOOGLE LOGIN STATUS:', res.status)
+      console.log('GOOGLE LOGIN RESPONSE:', data)
+
+      if (res.ok && data.success && data.token && data.user) {
         saveAuth(data.token, data.user)
         redirectByRole(data.user)
       } else {
         setError(data.message || 'Google login failed')
       }
     } catch (err) {
-      setError('Google login failed. Please try again.')
+      console.error('Google login request failed:', err)
+      setError('Cannot connect to the server. Please check that the backend is running.')
     } finally {
       setGoogleLoading(false)
     }

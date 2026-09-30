@@ -4,10 +4,13 @@ const {
   createResume,
   getMyResumes,
   getResumeById,
+  getPublicResumeById,
   updateResume,
   deleteResume
 } = require('../controllers/resume.controller')
 const { protect } = require('../middleware/auth')
+
+router.get('/public/:id', getPublicResumeById)
 
 router.use(protect)
 

@@ -1,175 +1,548 @@
-const { Job, Application, CandidateProfile, User } = require('../models/index');
+const {
+  sequelize,
+  Job,
+  Application,
+  CandidateProfile,
+  User
+} = require('../models')
+
+const {
+  DEFAULT_REFERRAL_REWARD_POINTS,
+  awardReferralReward
+} = require('../services/referralReward.service')
+
+const VALID_APPLICATION_STATUSES = [
+  'applied',
+  'shortlisted',
+  'interview',
+  'hired',
+  'rejected'
+]
+
+const BACKEND_BASE_URL = (
+  process.env.BACKEND_BASE_URL ||
+  process.env.API_BASE_URL ||
+  'http://localhost:5000'
+).replace(/\/$/, '')
 
 function normalizeSkill(skill) {
-  return skill.toLowerCase().replace(/[^a-z0-9+#.]/g, '').trim();
+  return String(skill || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9+#.]/g, '')
+    .trim()
 }
 
 function skillMatchScore(jobSkills = [], candidateSkills = []) {
-  if (!jobSkills.length) return 50;
-  const normJob = jobSkills.map(normalizeSkill);
-  const normCand = candidateSkills.map(normalizeSkill);
-  const matched = normJob.filter(s => normCand.includes(s));
-  return Math.round((matched.length / normJob.length) * 100);
+  const job = jobSkills.map(normalizeSkill).filter(Boolean)
+  const candidate = new Set(
+    candidateSkills.map(normalizeSkill).filter(Boolean)
+  )
+
+  if (!job.length) return 50
+
+  const matched = job.filter((skill) => candidate.has(skill))
+  return Math.round((matched.length / job.length) * 100)
 }
 
 function getMatchedSkills(jobSkills = [], candidateSkills = []) {
-  const normJob = jobSkills.map(normalizeSkill);
-  const normCand = candidateSkills.map(normalizeSkill);
-  return jobSkills.filter((s, i) => normCand.includes(normJob[i]));
+  const candidate = new Set(
+    candidateSkills.map(normalizeSkill).filter(Boolean)
+  )
+
+  return jobSkills.filter((skill) =>
+    candidate.has(normalizeSkill(skill))
+  )
 }
 
 function getMissingSkills(jobSkills = [], candidateSkills = []) {
-  const normJob = jobSkills.map(normalizeSkill);
-  const normCand = candidateSkills.map(normalizeSkill);
-  return jobSkills.filter((s, i) => !normCand.includes(normJob[i]));
+  const candidate = new Set(
+    candidateSkills.map(normalizeSkill).filter(Boolean)
+  )
+
+  return jobSkills.filter(
+    (skill) => !candidate.has(normalizeSkill(skill))
+  )
 }
 
 function experienceMatchScore(jobExpMin = 0, candidateExp = 0) {
-  if (jobExpMin === 0) return 100;
-  if (candidateExp >= jobExpMin) return 100;
-  if (candidateExp === 0) return 10;
-  return Math.round((candidateExp / jobExpMin) * 80);
+  if (jobExpMin === 0) return 100
+  if (candidateExp >= jobExpMin) return 100
+  if (candidateExp === 0) return 10
+
+  return Math.min(
+    100,
+    Math.round((candidateExp / jobExpMin) * 80)
+  )
 }
 
-function keywordScore(jobDescription = '', candidateProfile = {}) {
-  if (!jobDescription) return 50;
-  const text = (
-    (candidateProfile.summary || '') + ' ' +
-    (candidateProfile.headline || '') + ' ' +
-    ((candidateProfile.skills || []).join(' ')) + ' ' +
-    ((candidateProfile.experience || []).map(e => (e.title || '') + ' ' + (e.company || '') + ' ' + (e.description || '')).join(' '))
-  ).toLowerCase();
+function keywordScore(jobDescription = '', profile = {}) {
+  if (!jobDescription) return 50
 
-  const stopWords = new Set(['the','a','an','and','or','in','on','at','to','for','of','with','is','are','be','will','can','has','have','that','this','from','by','as','we','you','your','our','their']);
-  const keywords = jobDescription.toLowerCase().split(/\W+/).filter(w => w.length > 3 && !stopWords.has(w));
-  const uniqueKw = [...new Set(keywords)];
-  if (!uniqueKw.length) return 50;
-  const matched = uniqueKw.filter(kw => text.includes(kw));
-  return Math.round((matched.length / uniqueKw.length) * 100);
+  const experienceText = Array.isArray(profile.experience)
+    ? profile.experience
+        .map((item) => [
+          item.title,
+          item.jobTitle,
+          item.company,
+          item.description
+        ].filter(Boolean).join(' '))
+        .join(' ')
+    : ''
+
+  const text = [
+    profile.summary,
+    profile.headline,
+    Array.isArray(profile.skills)
+      ? profile.skills.join(' ')
+      : '',
+    experienceText
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+
+  const stopWords = new Set([
+    'the', 'and', 'for', 'with', 'this', 'that',
+    'from', 'have', 'will', 'your', 'their',
+    'about', 'into', 'required', 'years'
+  ])
+
+  const keywords = [
+    ...new Set(
+      jobDescription
+        .toLowerCase()
+        .split(/\W+/)
+        .filter((word) =>
+          word.length > 3 && !stopWords.has(word)
+        )
+    )
+  ]
+
+  if (!keywords.length) return 50
+
+  const matched = keywords.filter((keyword) =>
+    text.includes(keyword)
+  )
+
+  return Math.round((matched.length / keywords.length) * 100)
 }
 
-function overallScore(skillPct, expPct, kwPct) {
-  return Math.round(skillPct * 0.5 + expPct * 0.3 + kwPct * 0.2);
+function overallScore(skill, experience, keyword) {
+  return Math.round(
+    skill * 0.5 + experience * 0.3 + keyword * 0.2
+  )
 }
 
 function getLabel(score) {
-  if (score >= 80) return 'Excellent Match';
-  if (score >= 60) return 'Good Match';
-  if (score >= 40) return 'Partial Match';
-  return 'Low Match';
+  if (score >= 80) return 'Excellent Match'
+  if (score >= 60) return 'Good Match'
+  if (score >= 40) return 'Partial Match'
+  return 'Low Match'
 }
 
 function getLabelColor(score) {
-  if (score >= 80) return 'green';
-  if (score >= 60) return 'blue';
-  if (score >= 40) return 'yellow';
-  return 'red';
+  if (score >= 80) return 'green'
+  if (score >= 60) return 'blue'
+  if (score >= 40) return 'yellow'
+  return 'red'
+}
+
+function getJobOwnerId(job) {
+  return job.employerId || job.userId || job.createdBy
+}
+
+function getProfileData(profile) {
+  if (!profile) return {}
+  return typeof profile.toJSON === 'function'
+    ? profile.toJSON()
+    : profile
+}
+
+function getApplicationData(application) {
+  return typeof application.toJSON === 'function'
+    ? application.toJSON()
+    : application
+}
+
+function makeAbsoluteResumeUrl(resumeUrl) {
+  if (!resumeUrl) return null
+
+  if (/^https?:\/\//i.test(resumeUrl)) {
+    return resumeUrl
+  }
+
+  return `${BACKEND_BASE_URL}/${String(resumeUrl).replace(/^\/+/, '')}`
+}
+
+function buildScreeningComment({
+  overall,
+  matchedSkills,
+  missingSkills,
+  candidateExp,
+  jobExpMin,
+  keywordPct,
+  resumeUploaded
+}) {
+  const reasons = []
+
+  if (matchedSkills.length) {
+    reasons.push(
+      `Matched skills: ${matchedSkills.slice(0, 5).join(', ')}`
+    )
+  } else {
+    reasons.push('No listed required skills matched')
+  }
+
+  if (missingSkills.length) {
+    reasons.push(
+      `Missing skills: ${missingSkills.slice(0, 5).join(', ')}`
+    )
+  } else if (matchedSkills.length) {
+    reasons.push('All listed required skills matched')
+  }
+
+  if (jobExpMin > 0) {
+    reasons.push(
+      candidateExp >= jobExpMin
+        ? `Experience meets the ${jobExpMin}-year minimum`
+        : `${candidateExp} years listed against a ${jobExpMin}-year minimum`
+    )
+  }
+
+  reasons.push(
+    keywordPct >= 70
+      ? 'Strong keyword relevance'
+      : keywordPct >= 40
+        ? 'Moderate keyword relevance'
+        : 'Limited keyword relevance'
+  )
+
+  reasons.push(
+    resumeUploaded
+      ? 'Application resume is available to the employer'
+      : 'No resume was uploaded with this application'
+  )
+
+  return `${getLabel(overall)}. ${reasons.join('. ')}.`
 }
 
 exports.screenCandidates = async (req, res) => {
   try {
-    const { jobId } = req.params;
-    const job = await Job.findByPk(jobId);
-    if (!job) return res.status(404).json({ success: false, message: 'Job not found' });
+    const { jobId } = req.params
+    const job = await Job.findByPk(jobId)
 
-    // Authorization: admin can screen any job, employer can screen their own
-    const jobOwnerId = job.employerId || job.userId || job.createdBy;
-    console.log('Auth check - job owner:', jobOwnerId, '| req.user.id:', req.user.id, '| role:', req.user.role);
-    if (req.user.role !== 'admin' && String(jobOwnerId) !== String(req.user.id)) {
-      console.log('Auth FAILED - job does not belong to this employer');
-      return res.status(403).json({ success: false, message: 'Not authorized - this job does not belong to you' });
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        message: 'Job not found'
+      })
+    }
+
+    const ownerId = getJobOwnerId(job)
+    if (
+      req.user.role !== 'admin' &&
+      String(ownerId) !== String(req.user.id)
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to screen this job'
+      })
     }
 
     const applications = await Application.findAll({
       where: { jobId },
-      // FIX #1: Use correct association alias (candidate, not candidateId)
-      include: [{ model: User, as: 'candidate', attributes: ['id', 'email'] }]
-    });
+      include: [
+        {
+          model: User,
+          as: 'candidate',
+          attributes: ['id', 'email'],
+          required: false
+        }
+      ],
+      order: [['createdAt', 'DESC']]
+    })
 
-    if (!applications.length) {
-      // FIX #1: Use correct Job field names: requiredSkills & minExperienceYears
-      return res.json({ success: true, data: [], message: 'No applications yet', summary: {
-        total: 0, excellent: 0, good: 0, partial: 0, low: 0, avgScore: 0,
-        jobTitle: job.title, jobSkills: job.requiredSkills || [], jobExpMin: job.minExperienceYears || 0
-      }});
-    }
+    const jobSkills = Array.isArray(job.requiredSkills)
+      ? job.requiredSkills
+      : []
+    const jobExpMin = Number(job.minExperienceYears || 0)
 
-    // FIX #1: applications use candidateId, not userId
-    const candidateIds = applications.map(a => a.candidateId);
-    const profiles = await CandidateProfile.findAll({ where: { userId: candidateIds } });
-    const profileMap = {};
-    profiles.forEach(p => { profileMap[p.userId] = p; });
+    const candidateIds = [
+      ...new Set(
+        applications
+          .map((application) => application.candidateId)
+          .filter(Boolean)
+      )
+    ]
 
-    // FIX #1: Use correct Job field names
-    const jobExpMin = job.minExperienceYears || 0;
-    const jobSkills = job.requiredSkills || [];
+    const profiles = await CandidateProfile.findAll({
+      where: { userId: candidateIds }
+    })
 
-    const results = applications.map(app => {
-      // FIX #1: look up profile by candidateId
-      const profile = profileMap[app.candidateId] || {};
-      const user = app.candidate || {};
-      const profileData = profile.toJSON ? profile.toJSON() : profile;
+    const profileMap = new Map(
+      profiles.map((profile) => [
+        String(profile.userId),
+        getProfileData(profile)
+      ])
+    )
 
-      const candidateSkills = profileData.skills || [];
-      const candidateExp = profileData.yearsOfExperience || 0;
-
-      const skillPct = skillMatchScore(jobSkills, candidateSkills);
-      const expPct = experienceMatchScore(jobExpMin, candidateExp);
-      const kwPct = keywordScore(job.description, profileData);
-      const overall = overallScore(skillPct, expPct, kwPct);
+    const results = applications.map((application) => {
+      const applicationData = getApplicationData(application)
+      const profile = profileMap.get(
+        String(application.candidateId)
+      ) || {}
+      const user = application.candidate || {}
+      const candidateSkills = Array.isArray(profile.skills)
+        ? profile.skills
+        : []
+      const candidateExp = Number(
+        profile.yearsOfExperience || 0
+      )
+      const resumeUrl = makeAbsoluteResumeUrl(
+        applicationData.resumeUrl
+      )
+      const resumeUploaded = Boolean(
+        resumeUrl ||
+        applicationData.resumeFilename ||
+        applicationData.resumeText
+      )
+      const skillMatch = skillMatchScore(
+        jobSkills,
+        candidateSkills
+      )
+      const experienceMatch = experienceMatchScore(
+        jobExpMin,
+        candidateExp
+      )
+      const keywordRelevance = keywordScore(
+        job.description || '',
+        profile
+      )
+      const overall = overallScore(
+        skillMatch,
+        experienceMatch,
+        keywordRelevance
+      )
+      const matchedSkills = getMatchedSkills(
+        jobSkills,
+        candidateSkills
+      )
+      const missingSkills = getMissingSkills(
+        jobSkills,
+        candidateSkills
+      )
+      const screeningComment = buildScreeningComment({
+        overall,
+        matchedSkills,
+        missingSkills,
+        candidateExp,
+        jobExpMin,
+        keywordPct: keywordRelevance,
+        resumeUploaded
+      })
 
       return {
-        applicationId: app.id,
-        applicationStatus: app.status || 'pending',
-        // FIX #1: use candidateId
-        userId: app.candidateId,
-        name: user.email ? user.email.split('@')[0] : 'Unknown',
+        applicationId: application.id,
+        applicationStatus:
+          applicationData.status === 'pending'
+            ? 'applied'
+            : applicationData.status || 'applied',
+        userId: application.candidateId,
+        name: user.email
+          ? user.email.split('@')[0]
+          : 'Unknown',
         email: user.email || '',
-        photoUrl: profileData.photoUrl || null,
-        headline: profileData.headline || '',
-        currentLocation: profileData.currentLocation || '',
+        photoUrl: profile.photoUrl || null,
+        headline: profile.headline || '',
+        currentLocation: profile.currentLocation || '',
         yearsOfExperience: candidateExp,
-        resumeUrl: profileData.resumeUrl || null,
-        scores: { skillMatch: skillPct, experienceMatch: expPct, keywordRelevance: kwPct, overall },
-        matchedSkills: getMatchedSkills(jobSkills, candidateSkills),
-        missingSkills: getMissingSkills(jobSkills, candidateSkills),
+        resumeUrl,
+        resumeFilename:
+          applicationData.resumeFilename || null,
+        resumeUploaded,
+        resumeSource: resumeUploaded
+          ? 'application'
+          : null,
+        scores: {
+          skillMatch,
+          experienceMatch,
+          keywordRelevance,
+          overall
+        },
+        matchedSkills,
+        missingSkills,
+        screeningComment,
         label: getLabel(overall),
         labelColor: getLabelColor(overall),
-        appliedAt: app.createdAt
-      };
-    });
-
-    results.sort((a, b) => b.scores.overall - a.scores.overall);
+        appliedAt: application.createdAt
+      }
+    }).sort((a, b) =>
+      b.scores.overall - a.scores.overall
+    )
 
     const summary = {
       total: results.length,
-      excellent: results.filter(r => r.scores.overall >= 80).length,
-      good: results.filter(r => r.scores.overall >= 60 && r.scores.overall < 80).length,
-      partial: results.filter(r => r.scores.overall >= 40 && r.scores.overall < 60).length,
-      low: results.filter(r => r.scores.overall < 40).length,
-      avgScore: Math.round(results.reduce((s, r) => s + r.scores.overall, 0) / results.length),
+      excellent: results.filter((item) =>
+        item.scores.overall >= 80
+      ).length,
+      good: results.filter((item) =>
+        item.scores.overall >= 60 &&
+        item.scores.overall < 80
+      ).length,
+      partial: results.filter((item) =>
+        item.scores.overall >= 40 &&
+        item.scores.overall < 60
+      ).length,
+      low: results.filter((item) =>
+        item.scores.overall < 40
+      ).length,
+      avgScore: results.length
+        ? Math.round(
+            results.reduce(
+              (total, item) =>
+                total + item.scores.overall,
+              0
+            ) / results.length
+          )
+        : 0,
       jobTitle: job.title,
-      // FIX #1: correct field names
       jobSkills,
       jobExpMin
-    };
+    }
 
-    res.json({ success: true, data: results, summary });
+    return res.json({
+      success: true,
+      data: results,
+      summary
+    })
   } catch (error) {
-    console.error('AI Screening error:', error);
-    res.status(500).json({ success: false, message: error.message });
+    console.error('AI Screening error:', error)
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'AI screening failed'
+    })
   }
-};
+}
 
 exports.updateApplicationStatus = async (req, res) => {
+  let transaction = null
+  let finished = false
+
   try {
-    const { applicationId } = req.params;
-    const { status } = req.body;
-    const app = await Application.findByPk(applicationId);
-    if (!app) return res.status(404).json({ success: false, message: 'Application not found' });
-    await app.update({ status });
-    res.json({ success: true, message: 'Status updated', data: app });
+    const { applicationId } = req.params
+    let { status } = req.body
+
+    if (status === 'pending') status = 'applied'
+
+    if (!VALID_APPLICATION_STATUSES.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid status. Allowed values: ${VALID_APPLICATION_STATUSES.join(', ')}`
+      })
+    }
+
+    transaction = await sequelize.transaction()
+
+    const application = await Application.findByPk(
+      applicationId,
+      {
+        transaction,
+        lock: transaction.LOCK.UPDATE
+      }
+    )
+
+    if (!application) {
+      await transaction.rollback()
+      finished = true
+      return res.status(404).json({
+        success: false,
+        message: 'Application not found'
+      })
+    }
+
+    const job = await Job.findByPk(application.jobId, {
+      transaction
+    })
+
+    if (!job) {
+      await transaction.rollback()
+      finished = true
+      return res.status(404).json({
+        success: false,
+        message: 'Related job not found'
+      })
+    }
+
+    const ownerId = getJobOwnerId(job)
+    if (
+      req.user.role !== 'admin' &&
+      String(ownerId) !== String(req.user.id)
+    ) {
+      await transaction.rollback()
+      finished = true
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to update this application'
+      })
+    }
+
+    const previousStatus = application.status
+    await application.update({ status }, { transaction })
+
+    let reward = {
+      rewarded: false,
+      alreadyRewarded: false,
+      points: 0,
+      transaction: null
+    }
+
+    if (status === 'hired' && previousStatus !== 'hired') {
+      reward = await awardReferralReward({
+        applicationId: application.id,
+        transaction,
+        points: DEFAULT_REFERRAL_REWARD_POINTS,
+        createdBy: req.user.id,
+        reason: 'Referral bonus for hired candidate'
+      })
+    }
+
+    await transaction.commit()
+    finished = true
+
+    return res.json({
+      success: true,
+      message: reward.rewarded
+        ? 'Status updated and referral reward credited'
+        : 'Status updated',
+      reward: reward.rewarded || reward.alreadyRewarded
+        ? {
+            points: reward.points,
+            alreadyRewarded: reward.alreadyRewarded,
+            transactionId: reward.transaction?.id || null
+          }
+        : null,
+      data: application
+    })
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    if (transaction && !finished) {
+      try {
+        await transaction.rollback()
+      } catch (rollbackError) {
+        console.error(
+          'AI status rollback error:',
+          rollbackError.message
+        )
+      }
+    }
+
+    console.error(
+      'Update application status error:',
+      error
+    )
+
+    return res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || 'Internal server error'
+    })
   }
-};
+}
