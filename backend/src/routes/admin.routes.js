@@ -1,29 +1,12 @@
-const express = require('express')
-const router = express.Router()
-
-const adminController = require('../controllers/admin.controller')
-const {
-  protect,
-  authorize
-} = require('../middleware/auth')
-
-// Existing admin endpoints remain available to admin and super_admin.
-router.use(
-  protect,
-  authorize('admin', 'super_admin')
-)
-
-router.get('/stats', adminController.getStats)
-router.get('/jobs', adminController.getAllJobs)
-router.put('/jobs/:id/status', adminController.updateJobStatus)
-router.get('/users', adminController.getAllUsers)
-router.put('/users/:id/toggle', adminController.toggleUserActive)
-
-// Only super_admin may change roles, including assigning super_admin.
-router.put(
-  '/users/:id/role',
-  authorize('super_admin'),
-  adminController.updateUserRole
-)
-
+const router = require('express').Router()
+const c = require('../controllers/admin.controller')
+const { protect, authorize } = require('../middleware/auth')
+router.use(protect, authorize('admin', 'super_admin'))
+router.use('/campaigns', require('./bulkEmailCampaign.routes'))
+router.get('/stats', c.getStats)
+router.get('/jobs', c.getAllJobs)
+router.put('/jobs/:id/status', c.updateJobStatus)
+router.get('/users', c.getAllUsers)
+router.put('/users/:id/toggle', c.toggleUserActive)
+router.put('/users/:id/role', authorize('super_admin'), c.updateUserRole)
 module.exports = router

@@ -1,380 +1,78 @@
-const { BulkEmailCampaign, Job, Application, User, CandidateProfile } = require('../models')
+const { Op } = require('sequelize')
+const { BulkEmailCampaign, Job, Application, User, LoyaltyPointTransaction } = require('../models')
 const { sendBulkCampaignEmail } = require('../services/email/emailService')
-
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
-
-const ALLOWED_RECIPIENT_STATUSES = ['applied', 'shortlisted', 'hired', 'rejected']
-
-const normalizeRecipientStatus = (value) => {
-  if (!value) return 'shortlisted'
-
-  const status = String(value).toLowerCase().trim()
-  return ALLOWED_RECIPIENT_STATUSES.includes(status) ? status : null
+const { staff, fail, render, escapeHtml } = require('../utils/phase2')
+const statuses = ['applied', 'shortlisted', 'hired', 'rejected']
+const templates = {
+  referral_status: { subject: 'Referral update: {{jobTitle}}', message: 'Hello {{name}}, your {{referralCount}} referral application(s) for {{jobTitle}} currently have status {{referralStatus}}. Your loyalty balance is {{points}} points. Credited points are not a cash payout.' },
+  loyalty_balance: { subject: 'Your Insta-HR loyalty balance', message: 'Hello {{name}}, your current balance is {{points}} points. Referral code: {{referralCode}}. View your referral and redemption history in your account.' }
 }
-
-const buildCandidateName = (candidate) => {
-  if (!candidate) return 'Candidate'
-
-  const profile = candidate.candidateProfile
-  const name = [profile?.firstName, profile?.lastName]
-    .filter(Boolean)
-    .join(' ')
-    .trim()
-
-  return name || candidate.email || 'Candidate'
+const wrap = fn => async (req, res) => {
+  try { return await fn(req, res) } catch (e) { console.error('Campaign request failed:', e); return res.status(e.statusCode || 500).json({ success: false, message: e.statusCode ? e.message : 'Campaign request failed' }) }
 }
-
-const getRecipientWhere = ({ jobId, recipientStatus }) => {
-  if (recipientStatus === 'shortlisted') {
-    return { jobId, status: 'shortlisted' }
-  }
-
-  if (recipientStatus === 'applied') {
-    return { jobId, status: 'applied' }
-  }
-
-  if (recipientStatus === 'hired') {
-    return { jobId, status: 'hired' }
-  }
-
-  if (recipientStatus === 'rejected') {
-    return { jobId, status: 'rejected' }
-  }
-
-  return { jobId, status: 'shortlisted' }
+const jobFor = async (req, id) => {
+  const job = await Job.findByPk(id)
+  if (!job) throw fail('Job not found', 404)
+  if (!staff(req.user) && String(job.employerId) !== String(req.user.id)) throw fail('Not authorized', 403)
+  return job
 }
-
-exports.createCampaign = async (req, res) => {
-  try {
-    const { jobId, subject, message, recipientStatus } = req.body
-
-    if (!jobId || !subject || !message) {
-      return res.status(400).json({
-        success: false,
-        message: 'jobId, subject, and message are required'
-      })
-    }
-
-    const selectedRecipientStatus = normalizeRecipientStatus(recipientStatus)
-    if (!selectedRecipientStatus) {
-      return res.status(400).json({
-        success: false,
-        message: 'recipientStatus must be one of applied, shortlisted, hired, or rejected'
-      })
-    }
-
-    const job = await Job.findByPk(jobId)
-    if (!job || job.employerId !== req.user.id) {
-      return res.status(404).json({
-        success: false,
-        message: 'Job not found or unauthorized'
-      })
-    }
-
-    const recipientCount = await Application.count({
-      where: getRecipientWhere({ jobId, recipientStatus: selectedRecipientStatus })
-    })
-
-    const campaign = await BulkEmailCampaign.create({
-      employerId: req.user.id,
-      jobId,
-      subject,
-      message,
-      recipientCount,
-      recipientStatus: selectedRecipientStatus,
-      status: 'draft',
-      sentCount: 0,
-      failedCount: 0
-    })
-
-    return res.status(201).json({
-      success: true,
-      message: 'Campaign created successfully',
-      data: campaign
-    })
-  } catch (error) {
-    console.error('createCampaign error:', error)
-    return res.status(500).json({
-      success: false,
-      message: error.message
-    })
-  }
+const selection = (status = 'shortlisted', audience = 'applicants') => {
+  if (!statuses.includes(status) || !['applicants', 'referrers'].includes(audience)) throw fail('Invalid campaign audience or status')
+  return { status, audience }
 }
-
-exports.getMyCampaigns = async (req, res) => {
-  try {
-    const campaigns = await BulkEmailCampaign.findAll({
-      where: {
-        employerId: req.user.id
-      },
-      include: [
-        {
-          model: Job,
-          as: 'job',
-          attributes: ['id', 'title', 'companyName']
-        }
-      ],
-      order: [['createdAt', 'DESC']]
-    })
-
-    return res.json({
-      success: true,
-      count: campaigns.length,
-      data: campaigns
-    })
-  } catch (error) {
-    console.error('getMyCampaigns error:', error)
-    return res.status(500).json({
-      success: false,
-      message: error.message
-    })
-  }
+const recipients = async (jobId, status, audience) => {
+  const apps = await Application.findAll({ attributes: ['candidateId', 'referredByUserId'], where: { jobId, status, ...(audience === 'referrers' ? { referredByUserId: { [Op.ne]: null } } : {}) } })
+  const counts = new Map()
+  for (const app of apps) { const id = audience === 'referrers' ? app.referredByUserId : app.candidateId; if (id) counts.set(String(id), (counts.get(String(id)) || 0) + 1) }
+  if (counts.size > 500) throw fail('Campaign exceeds 500 recipients; narrow the selection')
+  const users = await User.findAll({ where: { id: [...counts.keys()], isActive: true, isEmailVerified: true }, attributes: ['id', 'email', 'referralCode'] })
+  return users.map(u => ({ id: u.id, email: u.email, name: u.email.split('@')[0], referralCode: u.referralCode || '', referralCount: counts.get(String(u.id)) }))
 }
-
-exports.getCandidatesForJobByStatus = async (req, res) => {
-  try {
-    const { jobId } = req.params
-    const requestedStatus = normalizeRecipientStatus(req.query.status)
-
-    if (!requestedStatus) {
-      return res.status(400).json({
-        success: false,
-        message: 'status must be one of applied, shortlisted, hired, or rejected'
-      })
-    }
-
-    const job = await Job.findByPk(jobId)
-    if (!job || job.employerId !== req.user.id) {
-      return res.status(404).json({
-        success: false,
-        message: 'Job not found or unauthorized'
-      })
-    }
-
-    const applications = await Application.findAll({
-      where: {
-        jobId,
-        status: requestedStatus
-      },
-      include: [
-        {
-          model: User,
-          as: 'candidate',
-          attributes: ['id', 'email', 'phone', 'role'],
-          include: [
-            {
-              model: CandidateProfile,
-              as: 'candidateProfile',
-              attributes: ['firstName', 'lastName']
-            }
-          ]
-        }
-      ],
-      order: [['createdAt', 'DESC']]
-    })
-
-    const data = applications.map((application) => {
-      const item = application.toJSON()
-      return {
-        ...item,
-        candidateName: buildCandidateName(item.candidate)
-      }
-    })
-
-    return res.json({
-      success: true,
-      count: data.length,
-      data
-    })
-  } catch (error) {
-    console.error('getCandidatesForJobByStatus error:', error)
-    return res.status(500).json({
-      success: false,
-      message: error.message
-    })
+exports.getTemplates = wrap(async (req, res) => res.json({ success: true, data: templates }))
+exports.createCampaign = wrap(async (req, res) => {
+  const job = await jobFor(req, req.body.jobId)
+  const { status, audience } = selection(req.body.recipientStatus, req.body.audience)
+  const template = req.body.template ? templates[req.body.template] : null
+  if (req.body.template && !template) throw fail('Unknown template')
+  const subject = String(req.body.subject || template?.subject || '').trim()
+  const message = String(req.body.message || template?.message || '').trim()
+  if (!subject || subject.length > 255 || /[\r\n]/.test(subject) || !message || message.length > 10000) throw fail('Invalid subject or message')
+  const values = { name: '', points: 0, referralCode: '', referralCount: 0, referralStatus: status, jobTitle: job.title, companyName: job.companyName || '' }
+  render(subject, values); render(message, values)
+  const users = await recipients(job.id, status, audience)
+  const data = await BulkEmailCampaign.create({ employerId: job.employerId, jobId: job.id, subject, message, audience, recipientStatus: status, recipientCount: users.length, status: 'draft', sentCount: 0, failedCount: 0 })
+  return res.status(201).json({ success: true, data })
+})
+exports.getMyCampaigns = wrap(async (req, res) => {
+  const data = await BulkEmailCampaign.findAll({ where: staff(req.user) ? {} : { employerId: req.user.id }, include: [{ model: Job, as: 'job', attributes: ['id', 'title', 'companyName'] }], order: [['createdAt', 'DESC']], limit: 100 })
+  return res.json({ success: true, data })
+})
+const recipientList = forcedStatus => wrap(async (req, res) => {
+  const job = await jobFor(req, req.params.jobId)
+  const { status, audience } = selection(forcedStatus || req.query.status, req.query.audience)
+  const data = await recipients(job.id, status, audience)
+  return res.json({ success: true, count: data.length, data: data.map(({ referralCode, ...x }) => x) })
+})
+exports.getCandidatesForJobByStatus = recipientList()
+exports.getShortlistedCandidatesForJob = recipientList('shortlisted')
+exports.sendCampaign = wrap(async (req, res) => {
+  const campaign = await BulkEmailCampaign.findByPk(req.params.id)
+  if (!campaign) throw fail('Campaign not found', 404)
+  const job = await jobFor(req, campaign.jobId)
+  const users = await recipients(job.id, campaign.recipientStatus, campaign.audience)
+  if (!users.length) throw fail('No eligible recipients')
+  const [claimed] = await BulkEmailCampaign.update({ status: 'sending', recipientCount: users.length }, { where: { id: campaign.id, status: 'draft' } })
+  if (!claimed) throw fail('Campaign already sent, sending, or failed; create a new draft to retry', 409)
+  let sentCount = 0, failedCount = 0
+  for (const user of users) {
+    try {
+      const points = Number(await LoyaltyPointTransaction.sum('points', { where: { userId: user.id } }) || 0)
+      const values = { ...user, points, referralStatus: campaign.recipientStatus, jobTitle: job.title, companyName: job.companyName || 'InstaHire Employer' }
+      await sendBulkCampaignEmail({ to: user.email, candidateName: user.name, subject: render(campaign.subject, values), message: escapeHtml(render(campaign.message, values)), jobTitle: job.title, companyName: values.companyName })
+      sentCount++
+    } catch (e) { failedCount++; console.error('Campaign recipient failed:', campaign.id, user.id, e.message) }
+    await campaign.update({ sentCount, failedCount })
   }
-}
-
-exports.getShortlistedCandidatesForJob = async (req, res) => {
-  try {
-    const { jobId } = req.params
-
-    const job = await Job.findByPk(jobId)
-    if (!job || job.employerId !== req.user.id) {
-      return res.status(404).json({
-        success: false,
-        message: 'Job not found or unauthorized'
-      })
-    }
-
-    const applications = await Application.findAll({
-      where: {
-        jobId,
-        status: 'shortlisted'
-      },
-      include: [
-        {
-          model: User,
-          as: 'candidate',
-          attributes: ['id', 'email', 'phone', 'role'],
-          include: [
-            {
-              model: CandidateProfile,
-              as: 'candidateProfile',
-              attributes: ['firstName', 'lastName']
-            }
-          ]
-        }
-      ],
-      order: [['createdAt', 'DESC']]
-    })
-
-    const data = applications.map((application) => {
-      const item = application.toJSON()
-      return {
-        ...item,
-        candidateName: buildCandidateName(item.candidate)
-      }
-    })
-
-    return res.json({
-      success: true,
-      count: data.length,
-      data
-    })
-  } catch (error) {
-    console.error('getShortlistedCandidatesForJob error:', error)
-    return res.status(500).json({
-      success: false,
-      message: error.message
-    })
-  }
-}
-
-exports.sendCampaign = async (req, res) => {
-  try {
-    const { id } = req.params
-
-    const campaign = await BulkEmailCampaign.findByPk(id)
-    if (!campaign) {
-      return res.status(404).json({
-        success: false,
-        message: 'Campaign not found'
-      })
-    }
-
-    if (campaign.employerId !== req.user.id) {
-      return res.status(403).json({
-        success: false,
-        message: 'Unauthorized'
-      })
-    }
-
-    const job = await Job.findByPk(campaign.jobId)
-    if (!job || job.employerId !== req.user.id) {
-      return res.status(404).json({
-        success: false,
-        message: 'Job not found or unauthorized'
-      })
-    }
-
-    const targetStatus = normalizeRecipientStatus(campaign.recipientStatus) || 'shortlisted'
-    const applications = await Application.findAll({
-      where: getRecipientWhere({
-        jobId: campaign.jobId,
-        recipientStatus: targetStatus
-      }),
-      include: [
-        {
-          model: User,
-          as: 'candidate',
-          attributes: ['id', 'email', 'phone', 'role'],
-          include: [
-            {
-              model: CandidateProfile,
-              as: 'candidateProfile',
-              attributes: ['firstName', 'lastName']
-            }
-          ]
-        }
-      ],
-      order: [['createdAt', 'DESC']]
-    })
-
-    if (!applications.length) {
-      return res.status(400).json({
-        success: false,
-        message: `No ${targetStatus} candidates found for this job`
-      })
-    }
-
-    await campaign.update({
-      status: 'sending',
-      recipientCount: applications.length,
-      sentCount: 0,
-      failedCount: 0
-    })
-
-    let sentCount = 0
-    let failedCount = 0
-    const batchSize = 20
-
-    for (let i = 0; i < applications.length; i += batchSize) {
-      const batch = applications.slice(i, i + batchSize)
-
-      for (const application of batch) {
-        try {
-          const candidate = application.candidate
-          if (!candidate?.email) {
-            failedCount++
-            continue
-          }
-
-          await sendBulkCampaignEmail({
-            to: candidate.email,
-            candidateName: buildCandidateName(candidate),
-            subject: campaign.subject,
-            message: campaign.message,
-            jobTitle: job.title,
-            companyName: job.companyName || 'InstaHire Employer'
-          })
-
-          sentCount++
-          console.log(`✅ Bulk email sent to ${candidate.email}`)
-        } catch (error) {
-          failedCount++
-          console.error(
-            `❌ Failed bulk email for ${application.candidate?.email}:`,
-            error.message
-          )
-        }
-      }
-
-      await sleep(1500)
-    }
-
-    await campaign.update({
-      sentCount,
-      failedCount,
-      status: 'sent',
-      sentAt: new Date()
-    })
-
-    return res.json({
-      success: true,
-      message: 'Campaign sent successfully',
-      data: {
-        recipientStatus: targetStatus,
-        recipientCount: applications.length,
-        sentCount,
-        failedCount
-      }
-    })
-  } catch (error) {
-    console.error('sendCampaign error:', error)
-    return res.status(500).json({
-      success: false,
-      message: error.message
-    })
-  }
-}
+  await campaign.update({ sentCount, failedCount, status: failedCount ? 'failed' : 'sent', sentAt: new Date() })
+  return res.json({ success: true, data: { recipientCount: users.length, sentCount, failedCount, status: failedCount ? 'failed' : 'sent' } })
+})

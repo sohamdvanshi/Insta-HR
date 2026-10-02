@@ -1,499 +1,62 @@
 const { Op } = require('sequelize')
-const {
-  Application,
-  User,
-  Job,
-  LoyaltyPointTransaction
-} = require('../models')
-const {
-  DEFAULT_REFERRAL_REWARD_POINTS,
-  awardReferralReward
-} = require('../services/referralReward.service')
-
-const isAdmin = (req) => req.user?.role === 'admin'
-const isEmployer = (req) => req.user?.role === 'employer'
-const isCandidate = (req) => req.user?.role === 'candidate'
-const getId = (value) => (value ? String(value) : null)
-const serialize = (value) => (
-  value && typeof value.toJSON === 'function'
-    ? value.toJSON()
-    : value || null
-)
-
-const applicationIncludes = [
-  {
-    model: User,
-    as: 'candidate',
-    attributes: ['id', 'email', 'phone', 'role'],
-    required: false
-  },
-  {
-    model: User,
-    as: 'referrer',
-    attributes: ['id', 'email', 'phone', 'role', 'referralCode'],
-    required: false
-  },
-  {
-    model: Job,
-    as: 'job',
-    attributes: ['id', 'title', 'employerId'],
-    required: false
-  }
-]
-
-const getApplicationStatusFilter = (status) => {
-  const allowed = [
-    'applied',
-    'shortlisted',
-    'interview',
-    'rejected',
-    'hired'
-  ]
-
-  if (!status) return null
-
-  if (!allowed.includes(status)) {
-    const error = new Error('Invalid application status')
-    error.statusCode = 400
-    throw error
-  }
-
-  return status
+const { Application, User, Job, LoyaltyPointTransaction } = require('../models')
+const { awardReferralReward, DEFAULT_REFERRAL_REWARD_POINTS } = require('../services/referralReward.service')
+const { staff, fail, positiveInt } = require('../utils/phase2')
+const { writeAuditLog } = require('../utils/auditLogger')
+const statuses = ['applied', 'shortlisted', 'interview', 'rejected', 'hired']
+const includes = [{ model: User, as: 'candidate', attributes: ['id', 'email'], required: false }, { model: User, as: 'referrer', attributes: ['id', 'email', 'referralCode'], required: false }, { model: Job, as: 'job', attributes: ['id', 'title', 'employerId'], required: false }]
+const attributes = ['id', 'jobId', 'candidateId', 'referredByUserId', 'referralCodeUsed', 'status', 'referralRewarded', 'referralRewardedAt', 'referralRewardPoints', 'createdAt']
+const format = app => {
+  const x = app.toJSON()
+  return { ...x, applicationStatus: x.status, referralCode: x.referralCodeUsed, rewardPoints: Number(x.referralRewardPoints || 0), rewardedAt: x.referralRewardedAt, referralStatus: x.referralRewarded ? 'rewarded' : x.status, rewardStatus: x.referralRewarded ? 'credited' : x.status === 'hired' ? 'eligible' : x.status === 'rejected' ? 'not_eligible' : 'pending' }
 }
-
-const getReferralStatus = (application) => {
-  const status = application.status || 'applied'
-  const rewarded = Boolean(application.referralRewarded)
-
-  if (status === 'hired') {
-    return rewarded ? 'rewarded' : 'eligible'
-  }
-
-  return status
+const handle = fn => async (req, res) => {
+  try { return await fn(req, res) } catch (e) { console.error('Referral request failed:', e); return res.status(e.statusCode || 500).json({ success: false, message: e.statusCode ? e.message : 'Referral request failed' }) }
 }
-
-const getRewardStatus = (application) => {
-  const status = application.status || 'applied'
-  const rewarded = Boolean(application.referralRewarded)
-
-  if (rewarded) return 'paid'
-  if (status === 'hired') return 'eligible'
-  if (status === 'rejected') return 'not_eligible'
-
-  return 'pending'
-}
-
-const getCandidateName = (candidate) => {
-  if (!candidate) return null
-
-  if (candidate.name) return candidate.name
-
-  const profile = candidate.candidateProfile
-  if (!profile) return null
-
-  return [profile.firstName, profile.lastName]
-    .filter(Boolean)
-    .join(' ') || null
-}
-
-const serializeTrackedReferral = (application) => {
-  const item = serialize(application)
-  const candidate = item.candidate || null
-  const referrer = item.referrer || null
-  const job = item.job || null
-
-  return {
-    ...item,
-
-    // Fields used by the employer referral tracking page.
-    applicationStatus: item.status || 'applied',
-    referralStatus: getReferralStatus(item),
-    rewardStatus: getRewardStatus(item),
-    rewardPoints: Number(item.referralRewardPoints || 0),
-    rewardedAt: item.referralRewardedAt || null,
-    referralCode: item.referralCodeUsed || referrer?.referralCode || null,
-
-    candidate: candidate
-      ? {
-          id: candidate.id,
-          email: candidate.email,
-          phone: candidate.phone,
-          name: getCandidateName(candidate)
-        }
-      : null,
-
-    referrer: referrer
-      ? {
-          id: referrer.id,
-          email: referrer.email,
-          phone: referrer.phone,
-          role: referrer.role,
-          name: referrer.name || null,
-          referralCode: referrer.referralCode || null
-        }
-      : null,
-
-    job: job
-      ? {
-          id: job.id,
-          title: job.title,
-          employerId: job.employerId
-        }
-      : null
-  }
-}
-
-exports.getMyReferralCode = async (req, res) => {
-  try {
-    if (!isCandidate(req)) {
-      return res.status(403).json({
-        success: false,
-        message: 'Only candidates have referral codes'
-      })
-    }
-
-    const user = await User.findByPk(req.user.id, {
-      attributes: ['id', 'email', 'role', 'referralCode']
-    })
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      })
-    }
-
-    return res.json({
-      success: true,
-      data: {
-        referralCode: user.referralCode || null
-      }
-    })
-  } catch (error) {
-    console.error('getMyReferralCode error:', error)
-    return res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to fetch referral code'
-    })
-  }
-}
-
-exports.getMyReferrals = async (req, res) => {
-  try {
-    if (!isCandidate(req)) {
-      return res.status(403).json({
-        success: false,
-        message: 'Only candidates can view their referrals'
-      })
-    }
-
-    const status = getApplicationStatusFilter(req.query.status)
-    const where = { referredByUserId: req.user.id }
-
-    if (status) where.status = status
-
-    const applications = await Application.findAll({
-      where,
-      include: applicationIncludes,
-      order: [['createdAt', 'DESC']]
-    })
-
-    const data = applications.map((application) => {
-      const item = serialize(application)
-      const rewarded = Boolean(item.referralRewarded)
-
-      return {
-        ...item,
-        referralCode: item.referralCodeUsed || null,
-        referralStatus: item.status === 'hired'
-          ? rewarded ? 'rewarded' : 'eligible'
-          : item.status,
-        rewardStatus: rewarded
-          ? 'paid'
-          : item.status === 'hired'
-            ? 'eligible'
-            : 'not_eligible',
-        rewardPoints: Number(item.referralRewardPoints || 0)
-      }
-    })
-
-    return res.json({
-      success: true,
-      count: data.length,
-      data
-    })
-  } catch (error) {
-    console.error('getMyReferrals error:', error)
-    return res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to fetch referrals'
-    })
-  }
-}
-
-exports.getMyLoyaltyPoints = async (req, res) => {
-  try {
-    if (!isCandidate(req)) {
-      return res.status(403).json({
-        success: false,
-        message: 'Only candidates can view loyalty points'
-      })
-    }
-
-    const transactions = await LoyaltyPointTransaction.findAll({
-      where: { userId: req.user.id },
-      include: [
-        {
-          model: Application,
-          as: 'application',
-          attributes: ['id', 'jobId', 'status', 'referralCodeUsed'],
-          required: false,
-          include: [
-            {
-              model: Job,
-              as: 'job',
-              attributes: ['id', 'title'],
-              required: false
-            }
-          ]
-        }
-      ],
-      order: [['createdAt', 'DESC']]
-    })
-
-    const balance = transactions.reduce(
-      (total, transaction) => total + Number(transaction.points || 0),
-      0
-    )
-
-    return res.json({
-      success: true,
-      balance,
-      transactions: transactions.map(serialize)
-    })
-  } catch (error) {
-    console.error('getMyLoyaltyPoints error:', error)
-    return res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to fetch loyalty points'
-    })
-  }
-}
-
-const getTrackedReferrals = async (req, res, adminOnly = false) => {
-  if (adminOnly ? !isAdmin(req) : !isEmployer(req) && !isAdmin(req)) {
-    return res.status(403).json({
-      success: false,
-      message: adminOnly
-        ? 'Only admins can view all referrals'
-        : 'Only employers and admins can view referrals'
-    })
-  }
-
-  const status = getApplicationStatusFilter(req.query.status)
-  const where = {
-    referredByUserId: {
-      [Op.ne]: null
-    }
-  }
-
-  if (status) where.status = status
-
-  const include = applicationIncludes.map((item) => ({ ...item }))
-
-  if (isEmployer(req)) {
-    const index = include.findIndex((item) => item.as === 'job')
-    const employerJob = {
-      model: Job,
-      as: 'job',
-      attributes: ['id', 'title', 'employerId'],
-      where: {
-        employerId: req.user.id
-      },
-      required: true
-    }
-
-    if (index >= 0) include[index] = employerJob
-    else include.push(employerJob)
-  }
-
-  const applications = await Application.findAll({
-    where,
-    include,
-    order: [['createdAt', 'DESC']]
-  })
-
-  const data = applications.map(serializeTrackedReferral)
-
-  return res.json({
-    success: true,
-    count: data.length,
-    data
-  })
-}
-
-exports.getEmployerReferrals = async (req, res) => {
-  try {
-    return await getTrackedReferrals(req, res, false)
-  } catch (error) {
-    console.error('getEmployerReferrals error:', error)
-    return res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to fetch employer referrals'
-    })
-  }
-}
-
-exports.getAdminReferrals = async (req, res) => {
-  try {
-    return await getTrackedReferrals(req, res, true)
-  } catch (error) {
-    console.error('getAdminReferrals error:', error)
-    return res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to fetch admin referrals'
-    })
-  }
-}
-
-exports.awardReferralPoints = async (req, res) => {
-  try {
-    if (!isAdmin(req)) {
-      return res.status(403).json({
-        success: false,
-        message: 'Only admins can award referral points'
-      })
-    }
-
-    const application = await Application.findByPk(
-      req.params.applicationId
-    )
-
-    if (!application) {
-      return res.status(404).json({
-        success: false,
-        message: 'Application not found'
-      })
-    }
-
-    if (!application.referredByUserId) {
-      return res.status(400).json({
-        success: false,
-        message: 'This application has no referrer'
-      })
-    }
-
-    if (application.status !== 'hired') {
-      return res.status(400).json({
-        success: false,
-        message: 'Points can only be awarded after the candidate is hired'
-      })
-    }
-
-    const requestedPoints = Number(req.body?.points)
-    const points = Number.isInteger(requestedPoints) && requestedPoints > 0
-      ? requestedPoints
-      : DEFAULT_REFERRAL_REWARD_POINTS
-
-    const result = await awardReferralReward({
-      applicationId: application.id,
-      points,
-      createdBy: req.user.id,
-      reason: req.body?.reason || 'Referral bonus for hired candidate'
-    })
-
-    if (result.alreadyRewarded) {
-      return res.status(409).json({
-        success: false,
-        message: 'Referral points have already been awarded',
-        data: {
-          applicationId: application.id,
-          userId: application.referredByUserId,
-          points: result.points,
-          transaction: serialize(result.transaction)
-        }
-      })
-    }
-
-    if (!result.rewarded) {
-      return res.status(400).json({
-        success: false,
-        message: result.reason || 'Referral points were not awarded'
-      })
-    }
-
-    return res.status(201).json({
-      success: true,
-      message: 'Referral points awarded successfully',
-      data: {
-        applicationId: application.id,
-        userId: application.referredByUserId,
-        points: result.points,
-        transaction: serialize(result.transaction)
-      }
-    })
-  } catch (error) {
-    console.error('awardReferralPoints error:', error)
-    return res.status(error.statusCode || 500).json({
-      success: false,
-      message: error.message || 'Failed to award referral points'
-    })
-  }
-}
-
-exports.createReferral = async (req, res) => {
-  return res.status(410).json({
-    success: false,
-    message: 'Manual referral creation is no longer supported. Use the referrer referralCode while applying for a job.'
-  })
-}
-
-exports.updateReferralStatus = async (req, res) => {
-  return res.status(410).json({
-    success: false,
-    message: 'Referral status is now controlled by the related application status.'
-  })
-}
-
-exports.getReferralById = async (req, res) => {
-  try {
-    const application = await Application.findByPk(req.params.id, {
-      include: applicationIncludes
-    })
-
-    if (!application) {
-      return res.status(404).json({
-        success: false,
-        message: 'Referred application not found'
-      })
-    }
-
-    const canView = (
-      isAdmin(req) ||
-      getId(application.referredByUserId) === getId(req.user.id) ||
-      getId(application.candidateId) === getId(req.user.id) ||
-      (
-        isEmployer(req) &&
-        getId(application.job?.employerId) === getId(req.user.id)
-      )
-    )
-
-    if (!canView) {
-      return res.status(403).json({
-        success: false,
-        message: 'Not authorized to view this referral'
-      })
-    }
-
-    return res.json({
-      success: true,
-      data: serialize(application)
-    })
-  } catch (error) {
-    console.error('getReferralById error:', error)
-    return res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to fetch referral'
-    })
-  }
-}
+exports.getMyReferralCode = handle(async (req, res) => {
+  if (req.user.role !== 'candidate') throw fail('Candidates only', 403)
+  const user = await User.findByPk(req.user.id, { attributes: ['referralCode'] })
+  return res.json({ success: true, data: { referralCode: user?.referralCode || null } })
+})
+exports.getMyLoyaltyPoints = handle(async (req, res) => {
+  if (req.user.role !== 'candidate') throw fail('Candidates only', 403)
+  const transactions = await LoyaltyPointTransaction.findAll({ where: { userId: req.user.id }, order: [['createdAt', 'DESC']] })
+  return res.json({ success: true, balance: transactions.reduce((s, x) => s + Number(x.points), 0), transactions })
+})
+const list = (mode) => handle(async (req, res) => {
+  if (mode === 'admin' && !staff(req.user)) throw fail('Admins only', 403)
+  if (mode === 'employer' && !staff(req.user) && req.user.role !== 'employer') throw fail('Not authorized', 403)
+  if (mode === 'mine' && req.user.role !== 'candidate') throw fail('Candidates only', 403)
+  if (req.query.status && !statuses.includes(req.query.status)) throw fail('Invalid application status')
+  const where = { referredByUserId: mode === 'mine' ? req.user.id : { [Op.ne]: null } }
+  if (req.query.status) where.status = req.query.status
+  const include = includes.map(x => ({ ...x }))
+  if (req.user.role === 'employer') Object.assign(include[2], { required: true, where: { employerId: req.user.id } })
+  const page = positiveInt(req.query.page || 1)
+  const limit = positiveInt(req.query.limit || 50, 200)
+  const result = await Application.findAndCountAll({ attributes, where, include, distinct: true, order: [['createdAt', 'DESC']], offset: (page - 1) * limit, limit })
+  return res.json({ success: true, count: result.count, pagination: { page, limit, total: result.count }, data: result.rows.map(format) })
+})
+exports.getMyReferrals = list('mine')
+exports.getEmployerReferrals = list('employer')
+exports.getAdminReferrals = list('admin')
+exports.awardReferralPoints = handle(async (req, res) => {
+  if (!staff(req.user)) throw fail('Admins only', 403)
+  const points = req.body.points === undefined ? DEFAULT_REFERRAL_REWARD_POINTS : positiveInt(req.body.points)
+  const reason = String(req.body.reason || '').trim()
+  if (!reason || reason.length > 255) throw fail('A reason of 1-255 characters is required')
+  const result = await awardReferralReward({ applicationId: req.params.applicationId, points, reason, createdBy: req.user.id })
+  if (result.alreadyRewarded) throw fail('Referral points already credited', 409)
+  if (!result.rewarded) throw fail(result.reason || 'Referral not eligible')
+  try { await writeAuditLog({ req, action: 'REFERRAL_MANUAL_REWARD', entityType: 'Application', entityId: req.params.applicationId, targetUserId: result.application?.referredByUserId, metadata: { points, reason, transactionId: result.transaction?.id } }) } catch (e) { console.error('Reward audit failed:', e.message) }
+  return res.status(201).json({ success: true, message: 'Referral points credited', data: { points, transactionId: result.transaction?.id } })
+})
+exports.getReferralById = handle(async (req, res) => {
+  const app = await Application.findByPk(req.params.id, { attributes, include: includes })
+  if (!app || !app.referredByUserId) throw fail('Referral not found', 404)
+  const allowed = staff(req.user) || String(app.candidateId) === String(req.user.id) || String(app.referredByUserId) === String(req.user.id) || (req.user.role === 'employer' && String(app.job?.employerId) === String(req.user.id))
+  if (!allowed) throw fail('Not authorized', 403)
+  return res.json({ success: true, data: format(app) })
+})
+exports.createReferral = (req, res) => res.status(410).json({ success: false, message: 'Use a referral code when applying' })
+exports.updateReferralStatus = (req, res) => res.status(410).json({ success: false, message: 'Referral status follows application status' })
