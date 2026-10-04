@@ -1,6 +1,8 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { API_BASE } from '@/lib/resume'
 
 declare global {
   interface Window {
@@ -141,7 +143,7 @@ export default function SubscriptionPage() {
     }
 
     try {
-      const res = await fetch('http://localhost:5000/api/v1/payments/subscription', {
+      const res = await fetch(`${API_BASE}/payments/subscription`, {
         headers: { Authorization: 'Bearer ' + token }
       })
       const data = await res.json()
@@ -165,7 +167,7 @@ export default function SubscriptionPage() {
     }
 
     try {
-      const res = await fetch('http://localhost:5000/api/v1/payments/history', {
+      const res = await fetch(`${API_BASE}/payments/history`, {
         headers: { Authorization: 'Bearer ' + token }
       })
       const data = await res.json()
@@ -185,7 +187,7 @@ export default function SubscriptionPage() {
     }
 
     try {
-      const res = await fetch(`http://localhost:5000/api/v1/payments/${paymentId}/invoice`, {
+      const res = await fetch(`${API_BASE}/payments/${paymentId}/invoice`, {
         headers: {
           Authorization: 'Bearer ' + token
         }
@@ -219,15 +221,15 @@ export default function SubscriptionPage() {
       return
     }
 
-    if (user?.role !== 'employer') {
-      alert('Only employers can subscribe to plans. Please login as an employer.')
+    if (!['employer', 'candidate'].includes(user?.role) || (user?.role === 'candidate' && !['premium', 'enterprise'].includes(planId))) {
+      alert('Sign in as a candidate for Resume Premium or as an employer for hiring plans.')
       return
     }
 
     setProcessingPlan(planId)
 
     try {
-      const orderRes = await fetch('http://localhost:5000/api/v1/payments/create-order', {
+      const orderRes = await fetch(`${API_BASE}/payments/create-order`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -255,7 +257,7 @@ export default function SubscriptionPage() {
         image: '/logo.png',
         order_id: orderData.order.id,
         handler: async (response: any) => {
-          const verifyRes = await fetch('http://localhost:5000/api/v1/payments/verify', {
+          const verifyRes = await fetch(`${API_BASE}/payments/verify`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -335,6 +337,10 @@ export default function SubscriptionPage() {
       btn: 'bg-yellow-500 hover:bg-yellow-600 text-white',
       header: 'bg-yellow-50'
     },
+  }
+
+  if (user?.role === 'candidate') {
+    return <main className="min-h-screen bg-gray-50 px-6 pt-24"><div className="mx-auto max-w-2xl rounded-2xl border bg-white p-8"><Link href="/resume" className="text-blue-600">← My resumes</Link><h1 className="my-4 text-3xl font-bold">Resume Premium</h1><p className="mb-5 text-gray-600">Your first saved resume, all sector layouts, samples, PDF/JPG exports, and link sharing are free. An active Premium or Enterprise plan lets you save additional resumes for different roles.</p><p className="text-2xl font-semibold">₹3,999 / 30 days</p><p className="my-3 text-sm text-gray-600">Uses the existing Premium plan price. One-time payment; no automatic renewal. After expiry, existing resumes stay editable and shareable, but creating more requires renewal or reducing your saved resumes below the free limit.</p><p className="my-4">Current plan: {currentPlan}{expiresAt ? ` · expires ${new Date(expiresAt).toLocaleDateString()}` : ''}</p>{['premium', 'enterprise'].includes(currentPlan) ? <Link href="/resume/new" className="inline-block rounded-xl bg-blue-600 px-5 py-3 text-white">Create another resume</Link> : <button disabled={loading || !!processingPlan} onClick={() => handleSubscribe('premium')} className="rounded-xl bg-blue-600 px-5 py-3 text-white disabled:opacity-50">{processingPlan ? 'Opening checkout…' : 'Upgrade to Premium'}</button>}</div></main>
   }
 
   return (

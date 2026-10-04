@@ -37,7 +37,8 @@ const Resume = sequelize.define(
         'manufacturing',
         'retail',
         'hospitality',
-        'logistics'
+        'logistics',
+        'human_resources'
       ),
       allowNull: false,
       defaultValue: 'general'

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
-const API_BASE = 'http://localhost:5000/api/v1'
+import { API_BASE, candidateSession } from '@/lib/resume'
 
 export default function ResumeListPage() {
   const router = useRouter()
@@ -12,13 +12,10 @@ export default function ResumeListPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [deletingId, setDeletingId] = useState('')
+  const [entitlement, setEntitlement] = useState({ canCreate: false, isPremium: false })
 
   useEffect(() => {
-    const token = localStorage.getItem('token')
-    if (!token) {
-      router.replace('/login')
-      return
-    }
+    if (!candidateSession('/resume')) { setError('Please sign in with a candidate account to build resumes.'); setLoading(false); return }
 
     fetchResumes()
   }, [router])
@@ -42,6 +39,7 @@ export default function ResumeListPage() {
       }
 
       setResumes(data.data || [])
+      setEntitlement(data.entitlement)
     } catch (err: any) {
       setError(err.message || 'Failed to load resumes')
     } finally {
@@ -87,7 +85,7 @@ export default function ResumeListPage() {
         throw new Error(data.message || 'Failed to delete resume')
       }
 
-      setResumes((prev) => prev.filter((resume) => resume.id !== id))
+      await fetchResumes()
     } catch (err: any) {
       setError(err.message || 'Failed to delete resume')
     } finally {
@@ -144,13 +142,14 @@ export default function ResumeListPage() {
           </div>
 
           <Link
-            href="/resume/new"
+            href={entitlement.canCreate ? "/resume/new" : "/subscription"}
             className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors text-center"
           >
-            + Create New Resume
+            {entitlement.canCreate ? "+ Create New Resume" : "Upgrade for more resumes"}
           </Link>
         </div>
 
+        <div className="mb-6 rounded-xl bg-blue-50 p-5"><p>{entitlement.isPremium ? 'Premium: create additional resumes for different roles and sectors.' : 'One saved resume is free. Premium unlocks additional resumes; existing resumes remain editable after expiry.'}</p><Link href="/resume/samples" className="mt-2 inline-block font-semibold text-blue-700">Browse 20 sector resume samples →</Link></div>
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6">
             {error}

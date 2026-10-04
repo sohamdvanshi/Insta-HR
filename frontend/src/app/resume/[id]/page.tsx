@@ -1,11 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import html2pdf from 'html2pdf.js'
+import ResumePreview from '@/components/resume/ResumePreview'
+import { API_BASE, candidateSession, getSector, resumeCatalog, resumeRequest } from '@/lib/resume'
+import { downloadResume } from '@/lib/resumeExport'
 
-const API_BASE = 'http://localhost:5000/api/v1'
 
 const emptyResume = {
   title: 'My Resume',
@@ -85,10 +86,8 @@ export default function ResumeEditorPage() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    const token = localStorage.getItem('token')
-    if (!token) {
-      router.replace('/login')
-      return
+    if (!candidateSession(window.location.pathname)) {
+      setError('Please sign in with a candidate account to edit resumes.'); setLoading(false); return
     }
 
     if (resumeId) {
@@ -196,6 +195,7 @@ export default function ResumeEditorPage() {
         throw new Error('Set visibility to "link" before copying the share URL')
       }
 
+      await handleSave()
       const shareUrl = `${window.location.origin}/resume/share/${resumeId}`
 
       await navigator.clipboard.writeText(shareUrl)
@@ -550,76 +550,24 @@ export default function ResumeEditorPage() {
     setTimeout(() => setMessage(''), 2500)
   }
 
-  const handleDownloadPdf = async () => {
+  const handleDownload = async (format: 'pdf' | 'jpg') => {
+    if (downloading) return
     try {
-      setDownloading(true)
-      setError('')
-      setMessage('Preparing PDF...')
+      setDownloading(true); setError('')
+      if (!pdfRef.current) throw new Error('Resume preview unavailable')
+      await downloadResume(pdfRef.current, resume.title || 'resume', format)
+      setMessage(`${format.toUpperCase()} downloaded successfully`)
+    } catch (error) { setError(error instanceof Error ? error.message : 'Export failed') }
+    finally { setDownloading(false) }
+  }
 
-      if (resume.template === 'modern') {
-        const proceed = window.confirm(
-          'Modern template may be less ATS-friendly. Download anyway?'
-        )
-
-        if (!proceed) {
-          setDownloading(false)
-          setMessage('')
-          return
-        }
-      }
-
-      const element = pdfRef.current
-      if (!element) {
-        throw new Error('Resume preview not found')
-      }
-
-      const filename =
-        ((resume.title || 'resume')
-          .trim()
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/^-+|-+$/g, '') || 'resume') + '.pdf'
-
-      const options = {
-        margin: 0,
-        filename,
-        image: { type: 'jpeg' as const, quality: 0.98 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          backgroundColor: '#ffffff',
-          scrollX: 0,
-          scrollY: 0
-        },
-        jsPDF: {
-          unit: 'mm' as const,
-          format: 'a4' as const,
-          orientation: 'portrait' as const
-        },
-        pagebreak: {
-          mode: ['avoid-all', 'css', 'legacy'] as const,
-          before: '.force-page-break',
-          avoid: [
-            '.avoid-break',
-            '.resume-section',
-            '.exp-item',
-            '.edu-item',
-            '.project-item',
-            'li'
-          ]
-        }
-      }
-
-      await html2pdf().set(options).from(element).save()
-
-      setMessage('PDF downloaded successfully')
-      setTimeout(() => setMessage(''), 2500)
-    } catch (err: any) {
-      setError(err.message || 'Failed to download PDF')
-      setMessage('')
-    } finally {
-      setDownloading(false)
-    }
+  const importProfile = async () => {
+    if (!window.confirm('Replace personal details, summary, skills, education, and experience with your current profile? Other resume sections will stay unchanged.')) return
+    try {
+      const data = await resumeRequest('/profile-defaults')
+      setResume((previous: any) => ({ ...previous, ...data.data, personalInfo: { ...previous.personalInfo, ...data.data.personalInfo } }))
+      setMessage('Profile imported. Review and save your resume.')
+    } catch (error) { setError(error instanceof Error ? error.message : 'Profile import failed') }
   }
 
   const updatePersonalInfo = (field: string, value: string) => {
@@ -725,10 +673,6 @@ export default function ResumeEditorPage() {
     }))
   }
 
-  const cleanSkills = useMemo(
-    () => resume.skills.filter((item: string) => item.trim()),
-    [resume.skills]
-  )
 
   const hasATSData =
     atsData.topKeywords.length > 0 ||
@@ -737,7 +681,6 @@ export default function ResumeEditorPage() {
     atsData.summarySuggestions.length > 0 ||
     atsData.bulletSuggestions.length > 0
 
-  const isModern = resume.template === 'modern'
 
   if (loading) {
     return (
@@ -757,7 +700,7 @@ export default function ResumeEditorPage() {
             </Link>
             <h1 className="text-2xl font-bold text-gray-900 mt-2">Resume Builder</h1>
             <p className="text-gray-500">
-              Build, tailor, optimize, and download an ATS-friendly resume PDF
+              Build, tailor, and download your resume as PDF or JPG
             </p>
           </div>
 
@@ -771,7 +714,7 @@ export default function ResumeEditorPage() {
             </button>
 
             <button
-              onClick={handleSave}
+              onClick={() => { void handleSave().catch(() => {}) }}
               disabled={saving}
               className="px-5 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 disabled:opacity-50"
             >
@@ -780,14 +723,16 @@ export default function ResumeEditorPage() {
             
             <button
               onClick={handleCopyShareLink}
-              disabled={!resumeId || resume.visibility !== 'link'}
+              disabled={saving || !resumeId || resume.visibility !== 'link'}
               className="px-5 py-3 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 disabled:opacity-50"
             >
-              Copy Share Link
+              Save & Copy Share Link
             </button>
 
+            <button onClick={importProfile} className="px-5 py-3 rounded-xl border bg-white">Import profile</button>
+            <button onClick={() => handleDownload('jpg')} disabled={downloading} className="px-5 py-3 rounded-xl bg-blue-700 text-white disabled:opacity-50">Download JPG</button>
             <button
-              onClick={handleDownloadPdf}
+              onClick={() => handleDownload('pdf')}
               disabled={downloading}
               className="px-5 py-3 bg-gray-900 text-white font-semibold rounded-xl hover:bg-black disabled:opacity-50"
             >
@@ -826,38 +771,11 @@ export default function ResumeEditorPage() {
                     Template
                   </label>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setResume({ ...resume, template: 'classic' })}
-                      className={
-                        'px-4 py-3 rounded-xl border text-sm font-semibold ' +
-                        (resume.template === 'classic'
-                          ? 'border-blue-600 bg-blue-50 text-blue-700'
-                          : 'border-gray-200 text-gray-700')
-                      }
-                    >
-                      Classic
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setResume({ ...resume, template: 'modern' })}
-                      className={
-                        'px-4 py-3 rounded-xl border text-sm font-semibold ' +
-                        (resume.template === 'modern'
-                          ? 'border-blue-600 bg-blue-50 text-blue-700'
-                          : 'border-gray-200 text-gray-700')
-                      }
-                    >
-                      Modern
-                    </button>
-                  </div>
-
-                  <p className="text-xs text-amber-600 mt-2">
-                    Classic is recommended for ATS and job applications. Modern is better
-                    for visual sharing or portfolio-style use.
-                  </p>
+                  <select aria-label="Resume template" value={resume.template} onChange={event => setResume({ ...resume, template: event.target.value })} className="w-full rounded-xl border p-3">
+                    <option value="classic">Classic</option><option value="modern">Modern</option>
+                    {resumeCatalog.sectors.map(sector => <option key={sector.id} value={sector.template}>{sector.templateName}</option>)}
+                  </select>
+                  <p className="mt-2 text-sm text-gray-600">Sector layouts prioritise relevant sections. All templates are available for your first free resume.</p>
                 </div>
 
                 <div>
@@ -866,7 +784,7 @@ export default function ResumeEditorPage() {
                   </label>
                   <select
                     value={resume.sector || 'general'}
-                    onChange={(e) => setResume({ ...resume, sector: e.target.value })}
+                    onChange={(e) => setResume({ ...resume, sector: e.target.value, template: getSector(e.target.value).template })}
                     className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500 bg-white"
                   >
                     <option value="general">General</option>
@@ -878,9 +796,21 @@ export default function ResumeEditorPage() {
                     <option value="retail">Retail</option>
                     <option value="hospitality">Hospitality</option>
                     <option value="logistics">Logistics</option>
+                    <option value="human_resources">Human Resources</option>
                   </select>
                 </div>
 
+                <aside className="rounded-xl bg-blue-50 p-4 text-sm">
+                  <h3 className="font-semibold">{getSector(resume.sector).label} guidance</h3>
+                  {getSector(resume.sector).hints.map(hint => <p className="mt-2" key={hint}>{hint}</p>)}
+                  <details className="mt-3"><summary className="cursor-pointer font-medium">Example sections — adapt to your own background</summary>
+                    <p className="mt-2"><strong>Summary:</strong> {getSector(resume.sector).examples.summary}</p>
+                    <p className="mt-2"><strong>Skills:</strong> {getSector(resume.sector).examples.skills.join(', ')}</p>
+                    <p className="mt-2"><strong>Experience:</strong> {getSector(resume.sector).examples.experience[0].description}</p>
+                    <p className="mt-2"><strong>Education:</strong> {getSector(resume.sector).examples.education[0].degree}</p>
+                  </details>
+                  <Link className="mt-3 block text-blue-700 underline" href={`/resume/samples/${resume.sector || 'general'}-fresher`}>View sample</Link>
+                </aside>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Visibility
@@ -1620,565 +1550,13 @@ export default function ResumeEditorPage() {
             </section>
           </div>
 
-          <div className="flex justify-center">
-            <div
-              ref={pdfRef}
-              id="resume-sheet"
-              className={isModern ? 'resume-sheet modern-template' : 'resume-sheet classic-template'}
-            >
-              {isModern ? (
-                <div className="modern-layout">
-                  <aside className="modern-sidebar">
-                    <div className="mb-8 avoid-break">
-                      <h1 className="text-3xl font-bold leading-tight">
-                        {resume.personalInfo.fullName || 'Your Name'}
-                      </h1>
-                      <p className="mt-2 text-base opacity-90">
-                        {resume.personalInfo.jobTitle || 'Professional Title'}
-                      </p>
-                    </div>
-
-                    <div className="resume-section avoid-break">
-                      <h2 className="section-title sidebar-title">Contact</h2>
-                      <div className="space-y-2 text-sm">
-                        {resume.personalInfo.email ? <p>{resume.personalInfo.email}</p> : null}
-                        {resume.personalInfo.phone ? <p>{resume.personalInfo.phone}</p> : null}
-                        {resume.personalInfo.location ? <p>{resume.personalInfo.location}</p> : null}
-                        {resume.personalInfo.linkedin ? <p>{resume.personalInfo.linkedin}</p> : null}
-                        {resume.personalInfo.github ? <p>{resume.personalInfo.github}</p> : null}
-                        {resume.personalInfo.website ? <p>{resume.personalInfo.website}</p> : null}
-                      </div>
-                    </div>
-
-                    {cleanSkills.length > 0 ? (
-                      <div className="resume-section avoid-break">
-                        <h2 className="section-title sidebar-title">Skills</h2>
-                        <div className="flex flex-wrap gap-2">
-                          {cleanSkills.map((item: string, index: number) => (
-                            <span key={index} className="modern-pill">
-                              {item}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    ) : null}
-
-                    {resume.languages.some((item: string) => item.trim()) ? (
-                      <div className="resume-section avoid-break">
-                        <h2 className="section-title sidebar-title">Languages</h2>
-                        <div className="space-y-1 text-sm">
-                          {resume.languages
-                            .filter((item: string) => item.trim())
-                            .map((item: string, index: number) => (
-                              <p key={index}>{item}</p>
-                            ))}
-                        </div>
-                      </div>
-                    ) : null}
-
-                    {resume.certifications.some((item: string) => item.trim()) ? (
-                      <div className="resume-section avoid-break">
-                        <h2 className="section-title sidebar-title">Certifications</h2>
-                        <div className="space-y-1 text-sm">
-                          {resume.certifications
-                            .filter((item: string) => item.trim())
-                            .map((item: string, index: number) => (
-                              <p key={index}>{item}</p>
-                            ))}
-                        </div>
-                      </div>
-                    ) : null}
-                  </aside>
-
-                  <section className="modern-main">
-                    {resume.summary ? (
-                      <div className="resume-section avoid-break">
-                        <h2 className="section-title">Professional Summary</h2>
-                        <p className="resume-paragraph">{resume.summary}</p>
-                      </div>
-                    ) : null}
-
-                    {resume.experience.some((item: any) => item.jobTitle || item.company) ? (
-                      <div className="resume-section">
-                        <h2 className="section-title">Experience</h2>
-                        <div className="space-y-5">
-                          {resume.experience.map((item: any, index: number) => {
-                            if (!item.jobTitle && !item.company) return null
-
-                            const cleanBullets = (item.bullets || []).filter((b: string) =>
-                              b.trim()
-                            )
-
-                            return (
-                              <div key={index} className="exp-item avoid-break">
-                                <div className="flex items-start justify-between gap-3">
-                                  <div>
-                                    <h3 className="resume-item-title">
-                                      {item.jobTitle || 'Job Title'}
-                                    </h3>
-                                    <p className="resume-subtitle">
-                                      {item.company}
-                                      {item.location ? ` • ${item.location}` : ''}
-                                    </p>
-                                  </div>
-
-                                  <p className="resume-date">
-                                    {item.startDate}
-                                    {item.startDate || item.endDate ? ' - ' : ''}
-                                    {item.endDate || 'Present'}
-                                  </p>
-                                </div>
-
-                                {cleanBullets.length > 0 ? (
-                                  <ul className="resume-bullets">
-                                    {cleanBullets.map((bullet: string, bulletIndex: number) => (
-                                      <li key={bulletIndex}>{bullet}</li>
-                                    ))}
-                                  </ul>
-                                ) : item.description ? (
-                                  <p className="resume-paragraph mt-2">{item.description}</p>
-                                ) : null}
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    ) : null}
-
-                    {resume.projects.some((item: any) => item.name) ? (
-                      <div className="resume-section">
-                        <h2 className="section-title">Projects</h2>
-                        <div className="space-y-4">
-                          {resume.projects.map((item: any, index: number) => {
-                            if (!item.name) return null
-
-                            return (
-                              <div key={index} className="project-item avoid-break">
-                                <h3 className="resume-item-title">{item.name}</h3>
-                                {item.link ? <p className="resume-link">{item.link}</p> : null}
-                                {item.description ? (
-                                  <p className="resume-paragraph mt-1">{item.description}</p>
-                                ) : null}
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    ) : null}
-
-                    {resume.education.some((item: any) => item.institution || item.degree) ? (
-                      <div className="resume-section">
-                        <h2 className="section-title">Education</h2>
-                        <div className="space-y-4">
-                          {resume.education.map((item: any, index: number) => {
-                            if (!item.institution && !item.degree) return null
-
-                            return (
-                              <div key={index} className="edu-item avoid-break">
-                                <div className="flex items-start justify-between gap-3">
-                                  <div>
-                                    <h3 className="resume-item-title">
-                                      {item.degree || 'Degree'}
-                                      {item.fieldOfStudy ? ` - ${item.fieldOfStudy}` : ''}
-                                    </h3>
-                                    <p className="resume-subtitle">{item.institution}</p>
-                                  </div>
-
-                                  <p className="resume-date">
-                                    {item.startDate}
-                                    {item.startDate || item.endDate ? ' - ' : ''}
-                                    {item.endDate}
-                                  </p>
-                                </div>
-
-                                {item.description ? (
-                                  <p className="resume-paragraph mt-1">{item.description}</p>
-                                ) : null}
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    ) : null}
-                  </section>
-                </div>
-              ) : (
-                <div className="classic-layout">
-                  <header className="classic-header avoid-break">
-                    <h1 className="classic-name">
-                      {resume.personalInfo.fullName || 'Your Name'}
-                    </h1>
-                    <p className="classic-role">
-                      {resume.personalInfo.jobTitle || 'Professional Title'}
-                    </p>
-
-                    <div className="classic-contact">
-                      {resume.personalInfo.email ? <span>{resume.personalInfo.email}</span> : null}
-                      {resume.personalInfo.phone ? <span>{resume.personalInfo.phone}</span> : null}
-                      {resume.personalInfo.location ? (
-                        <span>{resume.personalInfo.location}</span>
-                      ) : null}
-                      {resume.personalInfo.linkedin ? (
-                        <span>{resume.personalInfo.linkedin}</span>
-                      ) : null}
-                      {resume.personalInfo.github ? <span>{resume.personalInfo.github}</span> : null}
-                      {resume.personalInfo.website ? (
-                        <span>{resume.personalInfo.website}</span>
-                      ) : null}
-                    </div>
-                  </header>
-
-                  {resume.summary ? (
-                    <section className="resume-section avoid-break">
-                      <h2 className="section-title">Professional Summary</h2>
-                      <p className="resume-paragraph">{resume.summary}</p>
-                    </section>
-                  ) : null}
-
-                  {resume.experience.some((item: any) => item.jobTitle || item.company) ? (
-                    <section className="resume-section">
-                      <h2 className="section-title">Experience</h2>
-                      <div className="space-y-5">
-                        {resume.experience.map((item: any, index: number) => {
-                          if (!item.jobTitle && !item.company) return null
-
-                          const cleanBullets = (item.bullets || []).filter((b: string) =>
-                            b.trim()
-                          )
-
-                          return (
-                            <div key={index} className="exp-item avoid-break">
-                              <div className="flex items-start justify-between gap-3">
-                                <div>
-                                  <h3 className="resume-item-title">
-                                    {item.jobTitle || 'Job Title'}
-                                  </h3>
-                                  <p className="resume-subtitle">
-                                    {item.company}
-                                    {item.location ? ` • ${item.location}` : ''}
-                                  </p>
-                                </div>
-
-                                <p className="resume-date">
-                                  {item.startDate}
-                                  {item.startDate || item.endDate ? ' - ' : ''}
-                                  {item.endDate || 'Present'}
-                                </p>
-                              </div>
-
-                              {cleanBullets.length > 0 ? (
-                                <ul className="resume-bullets">
-                                  {cleanBullets.map((bullet: string, bulletIndex: number) => (
-                                    <li key={bulletIndex}>{bullet}</li>
-                                  ))}
-                                </ul>
-                              ) : item.description ? (
-                                <p className="resume-paragraph mt-2">{item.description}</p>
-                              ) : null}
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </section>
-                  ) : null}
-
-                  {resume.projects.some((item: any) => item.name) ? (
-                    <section className="resume-section">
-                      <h2 className="section-title">Projects</h2>
-                      <div className="space-y-4">
-                        {resume.projects.map((item: any, index: number) => {
-                          if (!item.name) return null
-
-                          return (
-                            <div key={index} className="project-item avoid-break">
-                              <h3 className="resume-item-title">{item.name}</h3>
-                              {item.link ? <p className="resume-link">{item.link}</p> : null}
-                              {item.description ? (
-                                <p className="resume-paragraph mt-1">{item.description}</p>
-                              ) : null}
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </section>
-                  ) : null}
-
-                  {resume.education.some((item: any) => item.institution || item.degree) ? (
-                    <section className="resume-section">
-                      <h2 className="section-title">Education</h2>
-                      <div className="space-y-4">
-                        {resume.education.map((item: any, index: number) => {
-                          if (!item.institution && !item.degree) return null
-
-                          return (
-                            <div key={index} className="edu-item avoid-break">
-                              <div className="flex items-start justify-between gap-3">
-                                <div>
-                                  <h3 className="resume-item-title">
-                                    {item.degree || 'Degree'}
-                                    {item.fieldOfStudy ? ` - ${item.fieldOfStudy}` : ''}
-                                  </h3>
-                                  <p className="resume-subtitle">{item.institution}</p>
-                                </div>
-
-                                <p className="resume-date">
-                                  {item.startDate}
-                                  {item.startDate || item.endDate ? ' - ' : ''}
-                                  {item.endDate}
-                                </p>
-                              </div>
-
-                              {item.description ? (
-                                <p className="resume-paragraph mt-1">{item.description}</p>
-                              ) : null}
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </section>
-                  ) : null}
-
-                  {cleanSkills.length > 0 ? (
-                    <section className="resume-section avoid-break">
-                      <h2 className="section-title">Skills</h2>
-                      <div className="classic-skills">
-                        {cleanSkills.map((item: string, index: number) => (
-                          <span key={index} className="classic-skill">
-                            {item}
-                          </span>
-                        ))}
-                      </div>
-                    </section>
-                  ) : null}
-
-                  {resume.certifications.some((item: string) => item.trim()) ? (
-                    <section className="resume-section avoid-break">
-                      <h2 className="section-title">Certifications</h2>
-                      <ul className="classic-list">
-                        {resume.certifications
-                          .filter((item: string) => item.trim())
-                          .map((item: string, index: number) => (
-                            <li key={index}>{item}</li>
-                          ))}
-                      </ul>
-                    </section>
-                  ) : null}
-
-                  {resume.languages.some((item: string) => item.trim()) ? (
-                    <section className="resume-section avoid-break">
-                      <h2 className="section-title">Languages</h2>
-                      <div className="classic-contact">
-                        {resume.languages
-                          .filter((item: string) => item.trim())
-                          .map((item: string, index: number) => (
-                            <span key={index}>{item}</span>
-                          ))}
-                      </div>
-                    </section>
-                  ) : null}
-                </div>
-              )}
-            </div>
+          <div className="overflow-x-auto rounded-xl border border-gray-200">
+            <div ref={pdfRef} id="resume-sheet" style={{ width: 794 }}><ResumePreview resume={resume} /></div>
           </div>
         </div>
       </div>
 
-      <style jsx global>{`
-        .resume-sheet {
-          width: 210mm;
-          min-height: 297mm;
-          background: white;
-          color: #111827;
-          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
-          overflow: hidden;
-        }
 
-        .classic-template {
-          padding: 16mm 14mm;
-        }
-
-        .modern-template {
-          padding: 0;
-        }
-
-        .classic-layout {
-          display: block;
-        }
-
-        .classic-header {
-          border-bottom: 2px solid #111827;
-          padding-bottom: 12px;
-          margin-bottom: 20px;
-        }
-
-        .classic-name {
-          font-size: 26px;
-          font-weight: 800;
-          line-height: 1.1;
-        }
-
-        .classic-role {
-          font-size: 14px;
-          color: #111827;
-          margin-top: 4px;
-          font-weight: 600;
-        }
-
-        .classic-contact {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 10px 16px;
-          margin-top: 12px;
-          font-size: 12px;
-          color: #4b5563;
-        }
-
-        .classic-skills {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-        }
-
-        .classic-skill {
-          border: 1px solid #d1d5db;
-          padding: 4px 10px;
-          border-radius: 999px;
-          font-size: 12px;
-          font-weight: 500;
-        }
-
-        .classic-list {
-          padding-left: 18px;
-          font-size: 12px;
-          line-height: 1.7;
-        }
-
-        .modern-layout {
-          display: grid;
-          grid-template-columns: 68mm 1fr;
-          min-height: 297mm;
-        }
-
-        .modern-sidebar {
-          background: #0f172a;
-          color: white;
-          padding: 18mm 12mm;
-        }
-
-        .modern-main {
-          padding: 18mm 14mm;
-        }
-
-        .modern-pill {
-          display: inline-flex;
-          align-items: center;
-          padding: 4px 9px;
-          border-radius: 999px;
-          background: rgba(255, 255, 255, 0.14);
-          font-size: 11px;
-          line-height: 1.4;
-        }
-
-        .resume-section {
-          margin-bottom: 14px;
-          break-inside: avoid;
-          page-break-inside: avoid;
-        }
-
-        .section-title {
-          font-size: 12px;
-          font-weight: 800;
-          text-transform: uppercase;
-          letter-spacing: 0.08em;
-          margin-bottom: 8px;
-          border-bottom: 1px solid #d1d5db;
-          padding-bottom: 4px;
-        }
-
-        .sidebar-title {
-          border-bottom-color: rgba(255, 255, 255, 0.25);
-        }
-
-        .resume-item-title {
-          font-size: 13px;
-          font-weight: 700;
-          line-height: 1.35;
-        }
-
-        .resume-subtitle {
-          font-size: 11.5px;
-          color: #374151;
-          margin-top: 2px;
-        }
-
-        .modern-sidebar .resume-subtitle {
-          color: rgba(255, 255, 255, 0.75);
-        }
-
-        .resume-date {
-          font-size: 10.5px;
-          color: #4b5563;
-          white-space: nowrap;
-        }
-
-        .resume-link {
-          font-size: 12px;
-          color: #2563eb;
-          margin-top: 2px;
-          word-break: break-word;
-        }
-
-        .resume-paragraph {
-          font-size: 11.5px;
-          line-height: 1.65;
-          color: #111827;
-          white-space: pre-line;
-        }
-
-        .resume-bullets {
-          margin-top: 6px;
-          padding-left: 16px;
-          font-size: 11.5px;
-          line-height: 1.6;
-          color: #111827;
-        }
-
-        .resume-bullets li {
-          margin-bottom: 4px;
-          break-inside: avoid;
-          page-break-inside: avoid;
-        }
-
-        .avoid-break,
-        .exp-item,
-        .edu-item,
-        .project-item {
-          break-inside: avoid;
-          page-break-inside: avoid;
-        }
-
-        .force-page-break {
-          break-before: page;
-          page-break-before: always;
-        }
-
-        @media (max-width: 1280px) {
-          .resume-sheet {
-            width: 100%;
-            min-height: auto;
-          }
-
-          .modern-layout {
-            grid-template-columns: 1fr;
-          }
-
-          .modern-sidebar,
-          .modern-main,
-          .classic-template {
-            padding: 24px;
-          }
-        }
-      `}</style>
     </main>
   )
 }

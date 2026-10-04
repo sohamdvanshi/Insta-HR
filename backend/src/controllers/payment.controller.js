@@ -1,18 +1,12 @@
 const Razorpay = require('razorpay');
-const crypto = require('crypto');
+const { PLANS, canBuyPlan, validSignature, validateGatewayPayment } = require('../services/subscriptionPaymentPolicy');
 const PDFDocument = require('pdfkit');
-const { User, Payment } = require('../models/index');
+const { User, Payment, sequelize } = require('../models/index');
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
-
-const PLANS = {
-  standard: { name: 'Standard Plan', amount: 199900, currency: 'INR', duration: 30 },
-  premium: { name: 'Premium Plan', amount: 399900, currency: 'INR', duration: 30 },
-  enterprise: { name: 'Enterprise Plan', amount: 999900, currency: 'INR', duration: 30 },
-};
 
 const formatCurrency = amount => {
   return `₹${Number(amount || 0).toLocaleString('en-IN')}`;
@@ -31,7 +25,7 @@ exports.createOrder = async (req, res) => {
   try {
     const { plan } = req.body;
 
-    if (!PLANS[plan]) {
+    if (!canBuyPlan(req.user, plan)) {
       return res.status(400).json({
         success: false,
         message: 'Invalid plan',
@@ -68,74 +62,27 @@ exports.createOrder = async (req, res) => {
 
 exports.verifyPayment = async (req, res) => {
   try {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, plan } = req.body;
-
-    const body = razorpay_order_id + '|' + razorpay_payment_id;
-    const expectedSignature = crypto
-      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
-      .update(body)
-      .digest('hex');
-
-    if (expectedSignature !== razorpay_signature) {
-      return res.status(400).json({
-        success: false,
-        message: 'Payment verification failed',
-      });
+    const { razorpay_order_id: orderId, razorpay_payment_id: paymentId, razorpay_signature: signature, plan: requestedPlan } = req.body;
+    if (!validSignature({ orderId, paymentId, signature, secret: process.env.RAZORPAY_KEY_SECRET })) {
+      return res.status(400).json({ success: false, message: 'Payment verification failed' });
     }
-
-    const planDetails = PLANS[plan];
-    if (!planDetails) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid plan',
-      });
-    }
-
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + planDetails.duration);
-
-    await Payment.create({
-      userId: req.user.id,
-      orderId: razorpay_order_id,
-      paymentId: razorpay_payment_id,
-      amount: planDetails.amount / 100,
-      currency: 'INR',
-      plan,
-      planName: planDetails.name,
-      status: 'success',
-      expiresAt,
+    const [order, gatewayPayment] = await Promise.all([razorpay.orders.fetch(orderId), razorpay.payments.fetch(paymentId)]);
+    const verified = validateGatewayPayment({ user: req.user, order, payment: gatewayPayment, requestedPlan });
+    if (!verified) return res.status(400).json({ success: false, message: 'Payment is not captured or does not match your account, plan, or amount. Please contact support if charged.' });
+    const result = await sequelize.transaction(async transaction => {
+      const user = await User.findByPk(req.user.id, { transaction, lock: transaction.LOCK.UPDATE });
+      const existing = await Payment.findOne({ where: { orderId, userId: user.id, status: 'success' }, transaction });
+      if (existing) return { plan: existing.plan, expiresAt: existing.expiresAt, user };
+      const expiresAt = new Date(Math.max(Date.now(), new Date(user.subscriptionExpiry || 0).getTime() || 0));
+      expiresAt.setDate(expiresAt.getDate() + verified.details.duration);
+      await Payment.create({ userId: user.id, orderId, paymentId, amount: verified.details.amount / 100, currency: verified.details.currency, plan: verified.plan, planName: verified.details.name, status: 'success', expiresAt }, { transaction });
+      await user.update({ subscriptionPlan: verified.plan, subscriptionExpiry: expiresAt, subscriptionReminder7Sent: false, subscriptionReminder1Sent: false, subscriptionExpiredMailSent: false }, { transaction });
+      return { plan: verified.plan, expiresAt, user };
     });
-
-    await User.update(
-    {
-      subscriptionPlan: plan,
-      subscriptionExpiry: expiresAt,
-      subscriptionReminder7Sent: false,
-      subscriptionReminder1Sent: false,
-      subscriptionExpiredMailSent: false,
-    },
-    {
-      where: { id: req.user.id },
-    }
-  );
-
-    const updatedUser = await User.findByPk(req.user.id, {
-      attributes: { exclude: ['password'] },
-    });
-
-    return res.json({
-      success: true,
-      message: 'Payment verified! Subscription activated.',
-      plan,
-      expiresAt,
-      user: updatedUser,
-    });
-  } catch (err) {
-    console.error('Payment verify error:', err);
-    return res.status(500).json({
-      success: false,
-      message: err.message,
-    });
+    return res.json({ success: true, message: 'Subscription activated.', plan: result.plan, expiresAt: result.expiresAt, user: { id: result.user.id, email: result.user.email, role: result.user.role, referralCode: result.user.referralCode, subscriptionPlan: result.user.subscriptionPlan, subscriptionExpiry: result.user.subscriptionExpiry } });
+  } catch (error) {
+    console.error('Payment verification error:', error.message);
+    return res.status(500).json({ success: false, message: 'Unable to verify payment. Retry verification or contact support if charged.' });
   }
 };
 
@@ -203,7 +150,7 @@ exports.downloadInvoice = async (req, res) => {
     }
 
     const user = await User.findByPk(req.user.id, {
-      attributes: ['id', 'name', 'email'],
+      attributes: ['id', 'email'],
     });
 
     const invoiceNumber = `INV-${payment.id}-${new Date(payment.createdAt).getFullYear()}`;

@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { GoogleLogin } from '@react-oauth/google'
 
-const API_BASE = 'http://localhost:5000/api/v1'
+import { API_BASE } from '@/lib/resume'
 
 type User = {
   id: string
@@ -45,6 +45,11 @@ const saveAuth = (token: string, user: User) => {
 }
 
 const redirectByRole = (user?: User) => {
+  const next = new URLSearchParams(window.location.search).get('next')
+  if (user?.role === 'candidate' && next && /^\/resume(?:[/?]|$)/.test(next) && !next.includes('\\')) {
+    window.location.href = next
+    return
+  }
   if (!user?.role) {
     window.location.href = '/dashboard'
     return

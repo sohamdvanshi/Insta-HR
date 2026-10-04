@@ -7,6 +7,7 @@ import {
   useSearchParams
 } from 'next/navigation'
 import Link from 'next/link'
+import { API_BASE } from '@/lib/resume'
 import ShareJobButton from '@/components/jobs/ShareJobButton'
 
 interface Job {
@@ -33,7 +34,7 @@ interface MyApplication {
   }
 }
 
-const API_BASE = 'http://localhost:5000/api/v1'
+
 
 export default function JobDetailPage() {
   const params = useParams()

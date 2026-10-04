@@ -1,0 +1,1606 @@
+{
+  "sectors": [
+    {
+      "id": "general",
+      "label": "General",
+      "template": "sector_general",
+      "templateName": "General Focus",
+      "accent": "#334155",
+      "sections": [
+        "summary",
+        "experience",
+        "education",
+        "skills",
+        "projects",
+        "certifications",
+        "languages"
+      ],
+      "hints": [
+        "Use clear job titles and describe outcomes, not only duties.",
+        "Use only your own experience. Replace example wording and verify every claim."
+      ],
+      "examples": {
+        "summary": "Professional Associate with an interest in communication and problem solving.",
+        "skills": [
+          "Communication",
+          "Problem solving",
+          "Teamwork"
+        ],
+        "experience": [
+          {
+            "company": "Example Company (fictional)",
+            "jobTitle": "Professional Associate",
+            "location": "Pune",
+            "startDate": "2024-06",
+            "endDate": "2025-06",
+            "currentlyWorking": false,
+            "description": "Coordinated a team task and documented the process.",
+            "bullets": [
+              "Coordinated a team task and documented the process."
+            ]
+          }
+        ],
+        "education": [
+          {
+            "institution": "Example Institute (fictional)",
+            "degree": "Bachelor of Arts",
+            "fieldOfStudy": "General",
+            "startDate": "2021",
+            "endDate": "2024",
+            "description": "Relevant coursework and practical projects."
+          }
+        ],
+        "projects": [
+          {
+            "name": "General practice project",
+            "link": "",
+            "description": "Coordinated a team task and documented the process."
+          }
+        ]
+      }
+    },
+    {
+      "id": "information_technology",
+      "label": "Information Technology",
+      "template": "sector_information_technology",
+      "templateName": "Information Technology Focus",
+      "accent": "#1d4ed8",
+      "sections": [
+        "summary",
+        "skills",
+        "projects",
+        "experience",
+        "education",
+        "certifications",
+        "languages"
+      ],
+      "hints": [
+        "Name the technologies you used and link projects you can explain.",
+        "Use only your own experience. Replace example wording and verify every claim."
+      ],
+      "examples": {
+        "summary": "Software Developer with an interest in javascript and sql.",
+        "skills": [
+          "JavaScript",
+          "SQL",
+          "Git"
+        ],
+        "experience": [
+          {
+            "company": "Example Company (fictional)",
+            "jobTitle": "Software Developer",
+            "location": "Pune",
+            "startDate": "2024-06",
+            "endDate": "2025-06",
+            "currentlyWorking": false,
+            "description": "Built and tested an application feature using JavaScript and SQL.",
+            "bullets": [
+              "Built and tested an application feature using JavaScript and SQL."
+            ]
+          }
+        ],
+        "education": [
+          {
+            "institution": "Example Institute (fictional)",
+            "degree": "Bachelor of Technology",
+            "fieldOfStudy": "Information Technology",
+            "startDate": "2021",
+            "endDate": "2024",
+            "description": "Relevant coursework and practical projects."
+          }
+        ],
+        "projects": [
+          {
+            "name": "Information Technology practice project",
+            "link": "",
+            "description": "Built and tested an application feature using JavaScript and SQL."
+          }
+        ]
+      }
+    },
+    {
+      "id": "sales_marketing",
+      "label": "Sales & Marketing",
+      "template": "sector_sales_marketing",
+      "templateName": "Sales & Marketing Focus",
+      "accent": "#b45309",
+      "sections": [
+        "summary",
+        "experience",
+        "skills",
+        "projects",
+        "education",
+        "certifications",
+        "languages"
+      ],
+      "hints": [
+        "Include genuine targets, conversion rates, or campaign results when available.",
+        "Use only your own experience. Replace example wording and verify every claim."
+      ],
+      "examples": {
+        "summary": "Sales Executive with an interest in crm and lead qualification.",
+        "skills": [
+          "CRM",
+          "Lead qualification",
+          "Customer communication"
+        ],
+        "experience": [
+          {
+            "company": "Example Company (fictional)",
+            "jobTitle": "Sales Executive",
+            "location": "Pune",
+            "startDate": "2024-06",
+            "endDate": "2025-06",
+            "currentlyWorking": false,
+            "description": "Maintained CRM records and followed up with qualified leads.",
+            "bullets": [
+              "Maintained CRM records and followed up with qualified leads."
+            ]
+          }
+        ],
+        "education": [
+          {
+            "institution": "Example Institute (fictional)",
+            "degree": "Bachelor of Business Administration",
+            "fieldOfStudy": "Sales & Marketing",
+            "startDate": "2021",
+            "endDate": "2024",
+            "description": "Relevant coursework and practical projects."
+          }
+        ],
+        "projects": [
+          {
+            "name": "Sales & Marketing practice project",
+            "link": "",
+            "description": "Maintained CRM records and followed up with qualified leads."
+          }
+        ]
+      }
+    },
+    {
+      "id": "finance",
+      "label": "Finance",
+      "template": "sector_finance",
+      "templateName": "Finance Focus",
+      "accent": "#166534",
+      "sections": [
+        "summary",
+        "certifications",
+        "experience",
+        "skills",
+        "education",
+        "projects",
+        "languages"
+      ],
+      "hints": [
+        "Mention accounting tools, reporting responsibilities, and verified qualifications.",
+        "Use only your own experience. Replace example wording and verify every claim."
+      ],
+      "examples": {
+        "summary": "Accounts Associate with an interest in excel and reconciliation.",
+        "skills": [
+          "Excel",
+          "Reconciliation",
+          "Bookkeeping"
+        ],
+        "experience": [
+          {
+            "company": "Example Company (fictional)",
+            "jobTitle": "Accounts Associate",
+            "location": "Pune",
+            "startDate": "2024-06",
+            "endDate": "2025-06",
+            "currentlyWorking": false,
+            "description": "Reconciled invoice records and prepared a monthly expense report.",
+            "bullets": [
+              "Reconciled invoice records and prepared a monthly expense report."
+            ]
+          }
+        ],
+        "education": [
+          {
+            "institution": "Example Institute (fictional)",
+            "degree": "Bachelor of Commerce",
+            "fieldOfStudy": "Finance",
+            "startDate": "2021",
+            "endDate": "2024",
+            "description": "Relevant coursework and practical projects."
+          }
+        ],
+        "projects": [
+          {
+            "name": "Finance practice project",
+            "link": "",
+            "description": "Reconciled invoice records and prepared a monthly expense report."
+          }
+        ]
+      }
+    },
+    {
+      "id": "healthcare",
+      "label": "Healthcare",
+      "template": "sector_healthcare",
+      "templateName": "Healthcare Focus",
+      "accent": "#0e7490",
+      "sections": [
+        "summary",
+        "certifications",
+        "education",
+        "experience",
+        "skills",
+        "projects",
+        "languages"
+      ],
+      "hints": [
+        "List valid licences and training accurately; do not include patient information.",
+        "Use only your own experience. Replace example wording and verify every claim."
+      ],
+      "examples": {
+        "summary": "Healthcare Assistant with an interest in patient support and record keeping.",
+        "skills": [
+          "Patient support",
+          "Record keeping",
+          "Infection prevention"
+        ],
+        "experience": [
+          {
+            "company": "Example Company (fictional)",
+            "jobTitle": "Healthcare Assistant",
+            "location": "Pune",
+            "startDate": "2024-06",
+            "endDate": "2025-06",
+            "currentlyWorking": false,
+            "description": "Maintained accurate records and supported routine patient-care tasks.",
+            "bullets": [
+              "Maintained accurate records and supported routine patient-care tasks."
+            ]
+          }
+        ],
+        "education": [
+          {
+            "institution": "Example Institute (fictional)",
+            "degree": "Diploma in Healthcare Assistance",
+            "fieldOfStudy": "Healthcare",
+            "startDate": "2021",
+            "endDate": "2024",
+            "description": "Relevant coursework and practical projects."
+          }
+        ],
+        "projects": [
+          {
+            "name": "Healthcare practice project",
+            "link": "",
+            "description": "Maintained accurate records and supported routine patient-care tasks."
+          }
+        ]
+      }
+    },
+    {
+      "id": "manufacturing",
+      "label": "Manufacturing",
+      "template": "sector_manufacturing",
+      "templateName": "Manufacturing Focus",
+      "accent": "#9a3412",
+      "sections": [
+        "summary",
+        "skills",
+        "experience",
+        "certifications",
+        "education",
+        "projects",
+        "languages"
+      ],
+      "hints": [
+        "Highlight equipment, safety training, and quality procedures you actually know.",
+        "Use only your own experience. Replace example wording and verify every claim."
+      ],
+      "examples": {
+        "summary": "Production Associate with an interest in quality checks and safety procedures.",
+        "skills": [
+          "Quality checks",
+          "Safety procedures",
+          "Process documentation"
+        ],
+        "experience": [
+          {
+            "company": "Example Company (fictional)",
+            "jobTitle": "Production Associate",
+            "location": "Pune",
+            "startDate": "2024-06",
+            "endDate": "2025-06",
+            "currentlyWorking": false,
+            "description": "Recorded production checks and reported quality deviations to the supervisor.",
+            "bullets": [
+              "Recorded production checks and reported quality deviations to the supervisor."
+            ]
+          }
+        ],
+        "education": [
+          {
+            "institution": "Example Institute (fictional)",
+            "degree": "Diploma in Mechanical Engineering",
+            "fieldOfStudy": "Manufacturing",
+            "startDate": "2021",
+            "endDate": "2024",
+            "description": "Relevant coursework and practical projects."
+          }
+        ],
+        "projects": [
+          {
+            "name": "Manufacturing practice project",
+            "link": "",
+            "description": "Recorded production checks and reported quality deviations to the supervisor."
+          }
+        ]
+      }
+    },
+    {
+      "id": "retail",
+      "label": "Retail",
+      "template": "sector_retail",
+      "templateName": "Retail Focus",
+      "accent": "#be185d",
+      "sections": [
+        "summary",
+        "skills",
+        "experience",
+        "education",
+        "projects",
+        "certifications",
+        "languages"
+      ],
+      "hints": [
+        "Describe customer service, store operations, shift availability, and product knowledge.",
+        "Use only your own experience. Replace example wording and verify every claim."
+      ],
+      "examples": {
+        "summary": "Retail Associate with an interest in pos systems and stock control.",
+        "skills": [
+          "POS systems",
+          "Stock control",
+          "Customer service"
+        ],
+        "experience": [
+          {
+            "company": "Example Company (fictional)",
+            "jobTitle": "Retail Associate",
+            "location": "Pune",
+            "startDate": "2024-06",
+            "endDate": "2025-06",
+            "currentlyWorking": false,
+            "description": "Assisted customers and maintained accurate shelf-stock records.",
+            "bullets": [
+              "Assisted customers and maintained accurate shelf-stock records."
+            ]
+          }
+        ],
+        "education": [
+          {
+            "institution": "Example Institute (fictional)",
+            "degree": "Higher Secondary Certificate",
+            "fieldOfStudy": "Retail",
+            "startDate": "2021",
+            "endDate": "2024",
+            "description": "Relevant coursework and practical projects."
+          }
+        ],
+        "projects": [
+          {
+            "name": "Retail practice project",
+            "link": "",
+            "description": "Assisted customers and maintained accurate shelf-stock records."
+          }
+        ]
+      }
+    },
+    {
+      "id": "hospitality",
+      "label": "Hospitality",
+      "template": "sector_hospitality",
+      "templateName": "Hospitality Focus",
+      "accent": "#7e22ce",
+      "sections": [
+        "summary",
+        "languages",
+        "experience",
+        "skills",
+        "education",
+        "projects",
+        "certifications"
+      ],
+      "hints": [
+        "Highlight guest handling, reservation tools, languages, and relevant training.",
+        "Use only your own experience. Replace example wording and verify every claim."
+      ],
+      "examples": {
+        "summary": "Guest Services Associate with an interest in guest service and reservations.",
+        "skills": [
+          "Guest service",
+          "Reservations",
+          "Team coordination"
+        ],
+        "experience": [
+          {
+            "company": "Example Company (fictional)",
+            "jobTitle": "Guest Services Associate",
+            "location": "Pune",
+            "startDate": "2024-06",
+            "endDate": "2025-06",
+            "currentlyWorking": false,
+            "description": "Handled guest enquiries and coordinated requests with the service team.",
+            "bullets": [
+              "Handled guest enquiries and coordinated requests with the service team."
+            ]
+          }
+        ],
+        "education": [
+          {
+            "institution": "Example Institute (fictional)",
+            "degree": "Diploma in Hospitality Management",
+            "fieldOfStudy": "Hospitality",
+            "startDate": "2021",
+            "endDate": "2024",
+            "description": "Relevant coursework and practical projects."
+          }
+        ],
+        "projects": [
+          {
+            "name": "Hospitality practice project",
+            "link": "",
+            "description": "Handled guest enquiries and coordinated requests with the service team."
+          }
+        ]
+      }
+    },
+    {
+      "id": "logistics",
+      "label": "Logistics",
+      "template": "sector_logistics",
+      "templateName": "Logistics Focus",
+      "accent": "#0369a1",
+      "sections": [
+        "summary",
+        "skills",
+        "experience",
+        "projects",
+        "certifications",
+        "education",
+        "languages"
+      ],
+      "hints": [
+        "Describe inventory systems, dispatch tasks, and delivery outcomes you can support.",
+        "Use only your own experience. Replace example wording and verify every claim."
+      ],
+      "examples": {
+        "summary": "Logistics Coordinator with an interest in inventory control and dispatch planning.",
+        "skills": [
+          "Inventory control",
+          "Dispatch planning",
+          "Excel"
+        ],
+        "experience": [
+          {
+            "company": "Example Company (fictional)",
+            "jobTitle": "Logistics Coordinator",
+            "location": "Pune",
+            "startDate": "2024-06",
+            "endDate": "2025-06",
+            "currentlyWorking": false,
+            "description": "Updated dispatch records and reconciled inventory movements.",
+            "bullets": [
+              "Updated dispatch records and reconciled inventory movements."
+            ]
+          }
+        ],
+        "education": [
+          {
+            "institution": "Example Institute (fictional)",
+            "degree": "Diploma in Logistics",
+            "fieldOfStudy": "Logistics",
+            "startDate": "2021",
+            "endDate": "2024",
+            "description": "Relevant coursework and practical projects."
+          }
+        ],
+        "projects": [
+          {
+            "name": "Logistics practice project",
+            "link": "",
+            "description": "Updated dispatch records and reconciled inventory movements."
+          }
+        ]
+      }
+    },
+    {
+      "id": "human_resources",
+      "label": "Human Resources",
+      "template": "sector_human_resources",
+      "templateName": "Human Resources Focus",
+      "accent": "#4338ca",
+      "sections": [
+        "summary",
+        "experience",
+        "skills",
+        "education",
+        "certifications",
+        "projects",
+        "languages"
+      ],
+      "hints": [
+        "Highlight recruitment, onboarding, employee support, and confidentiality.",
+        "Use only your own experience. Replace example wording and verify every claim."
+      ],
+      "examples": {
+        "summary": "HR Associate with an interest in recruitment coordination and onboarding.",
+        "skills": [
+          "Recruitment coordination",
+          "Onboarding",
+          "HRIS"
+        ],
+        "experience": [
+          {
+            "company": "Example Company (fictional)",
+            "jobTitle": "HR Associate",
+            "location": "Pune",
+            "startDate": "2024-06",
+            "endDate": "2025-06",
+            "currentlyWorking": false,
+            "description": "Scheduled interviews and maintained an onboarding checklist.",
+            "bullets": [
+              "Scheduled interviews and maintained an onboarding checklist."
+            ]
+          }
+        ],
+        "education": [
+          {
+            "institution": "Example Institute (fictional)",
+            "degree": "Bachelor of Business Administration",
+            "fieldOfStudy": "Human Resources",
+            "startDate": "2021",
+            "endDate": "2024",
+            "description": "Relevant coursework and practical projects."
+          }
+        ],
+        "projects": [
+          {
+            "name": "Human Resources practice project",
+            "link": "",
+            "description": "Scheduled interviews and maintained an onboarding checklist."
+          }
+        ]
+      }
+    }
+  ],
+  "samples": [
+    {
+      "id": "general-fresher",
+      "title": "General \u2014 Fresher sample",
+      "sector": "general",
+      "template": "sector_general",
+      "level": "fresher",
+      "fictional": true,
+      "personalInfo": {
+        "fullName": "Aarav Example",
+        "email": "aarav@example.com",
+        "phone": "",
+        "location": "Pune",
+        "jobTitle": "Professional Associate",
+        "linkedin": "",
+        "github": "",
+        "website": ""
+      },
+      "summary": "Entry-level professional associate seeking opportunities to apply practical training.",
+      "skills": [
+        "Communication",
+        "Problem solving",
+        "Teamwork"
+      ],
+      "experience": [],
+      "education": [
+        {
+          "institution": "Example Institute (fictional)",
+          "degree": "Bachelor of Arts",
+          "fieldOfStudy": "General",
+          "startDate": "2021",
+          "endDate": "2024",
+          "description": "Relevant coursework and practical projects."
+        }
+      ],
+      "projects": [
+        {
+          "name": "General practice project",
+          "link": "",
+          "description": "Coordinated a team task and documented the process."
+        }
+      ],
+      "certifications": [],
+      "languages": [
+        "English",
+        "Hindi"
+      ]
+    },
+    {
+      "id": "general-experienced",
+      "title": "General \u2014 Experienced sample",
+      "sector": "general",
+      "template": "sector_general",
+      "level": "experienced",
+      "fictional": true,
+      "personalInfo": {
+        "fullName": "Aarav Example",
+        "email": "aarav@example.com",
+        "phone": "",
+        "location": "Pune",
+        "jobTitle": "Professional Associate",
+        "linkedin": "",
+        "github": "",
+        "website": ""
+      },
+      "summary": "Professional Associate with experience supporting daily operations and maintaining accurate records.",
+      "skills": [
+        "Communication",
+        "Problem solving",
+        "Teamwork"
+      ],
+      "experience": [
+        {
+          "company": "Example Company (fictional)",
+          "jobTitle": "Professional Associate",
+          "location": "Pune",
+          "startDate": "2024-06",
+          "endDate": "2025-06",
+          "currentlyWorking": false,
+          "description": "Coordinated a team task and documented the process.",
+          "bullets": [
+            "Coordinated a team task and documented the process."
+          ]
+        }
+      ],
+      "education": [
+        {
+          "institution": "Example Institute (fictional)",
+          "degree": "Bachelor of Arts",
+          "fieldOfStudy": "General",
+          "startDate": "2021",
+          "endDate": "2024",
+          "description": "Relevant coursework and practical projects."
+        }
+      ],
+      "projects": [],
+      "certifications": [],
+      "languages": [
+        "English",
+        "Hindi"
+      ]
+    },
+    {
+      "id": "information_technology-fresher",
+      "title": "Information Technology \u2014 Fresher sample",
+      "sector": "information_technology",
+      "template": "sector_information_technology",
+      "level": "fresher",
+      "fictional": true,
+      "personalInfo": {
+        "fullName": "Aarav Example",
+        "email": "aarav@example.com",
+        "phone": "",
+        "location": "Pune",
+        "jobTitle": "Software Developer",
+        "linkedin": "",
+        "github": "",
+        "website": ""
+      },
+      "summary": "Entry-level software developer seeking opportunities to apply practical training.",
+      "skills": [
+        "JavaScript",
+        "SQL",
+        "Git"
+      ],
+      "experience": [],
+      "education": [
+        {
+          "institution": "Example Institute (fictional)",
+          "degree": "Bachelor of Technology",
+          "fieldOfStudy": "Information Technology",
+          "startDate": "2021",
+          "endDate": "2024",
+          "description": "Relevant coursework and practical projects."
+        }
+      ],
+      "projects": [
+        {
+          "name": "Information Technology practice project",
+          "link": "",
+          "description": "Built and tested an application feature using JavaScript and SQL."
+        }
+      ],
+      "certifications": [],
+      "languages": [
+        "English",
+        "Hindi"
+      ]
+    },
+    {
+      "id": "information_technology-experienced",
+      "title": "Information Technology \u2014 Experienced sample",
+      "sector": "information_technology",
+      "template": "sector_information_technology",
+      "level": "experienced",
+      "fictional": true,
+      "personalInfo": {
+        "fullName": "Aarav Example",
+        "email": "aarav@example.com",
+        "phone": "",
+        "location": "Pune",
+        "jobTitle": "Software Developer",
+        "linkedin": "",
+        "github": "",
+        "website": ""
+      },
+      "summary": "Software Developer with experience supporting daily operations and maintaining accurate records.",
+      "skills": [
+        "JavaScript",
+        "SQL",
+        "Git"
+      ],
+      "experience": [
+        {
+          "company": "Example Company (fictional)",
+          "jobTitle": "Software Developer",
+          "location": "Pune",
+          "startDate": "2024-06",
+          "endDate": "2025-06",
+          "currentlyWorking": false,
+          "description": "Built and tested an application feature using JavaScript and SQL.",
+          "bullets": [
+            "Built and tested an application feature using JavaScript and SQL."
+          ]
+        }
+      ],
+      "education": [
+        {
+          "institution": "Example Institute (fictional)",
+          "degree": "Bachelor of Technology",
+          "fieldOfStudy": "Information Technology",
+          "startDate": "2021",
+          "endDate": "2024",
+          "description": "Relevant coursework and practical projects."
+        }
+      ],
+      "projects": [],
+      "certifications": [],
+      "languages": [
+        "English",
+        "Hindi"
+      ]
+    },
+    {
+      "id": "sales_marketing-fresher",
+      "title": "Sales & Marketing \u2014 Fresher sample",
+      "sector": "sales_marketing",
+      "template": "sector_sales_marketing",
+      "level": "fresher",
+      "fictional": true,
+      "personalInfo": {
+        "fullName": "Aarav Example",
+        "email": "aarav@example.com",
+        "phone": "",
+        "location": "Pune",
+        "jobTitle": "Sales Executive",
+        "linkedin": "",
+        "github": "",
+        "website": ""
+      },
+      "summary": "Entry-level sales executive seeking opportunities to apply practical training.",
+      "skills": [
+        "CRM",
+        "Lead qualification",
+        "Customer communication"
+      ],
+      "experience": [],
+      "education": [
+        {
+          "institution": "Example Institute (fictional)",
+          "degree": "Bachelor of Business Administration",
+          "fieldOfStudy": "Sales & Marketing",
+          "startDate": "2021",
+          "endDate": "2024",
+          "description": "Relevant coursework and practical projects."
+        }
+      ],
+      "projects": [
+        {
+          "name": "Sales & Marketing practice project",
+          "link": "",
+          "description": "Maintained CRM records and followed up with qualified leads."
+        }
+      ],
+      "certifications": [],
+      "languages": [
+        "English",
+        "Hindi"
+      ]
+    },
+    {
+      "id": "sales_marketing-experienced",
+      "title": "Sales & Marketing \u2014 Experienced sample",
+      "sector": "sales_marketing",
+      "template": "sector_sales_marketing",
+      "level": "experienced",
+      "fictional": true,
+      "personalInfo": {
+        "fullName": "Aarav Example",
+        "email": "aarav@example.com",
+        "phone": "",
+        "location": "Pune",
+        "jobTitle": "Sales Executive",
+        "linkedin": "",
+        "github": "",
+        "website": ""
+      },
+      "summary": "Sales Executive with experience supporting daily operations and maintaining accurate records.",
+      "skills": [
+        "CRM",
+        "Lead qualification",
+        "Customer communication"
+      ],
+      "experience": [
+        {
+          "company": "Example Company (fictional)",
+          "jobTitle": "Sales Executive",
+          "location": "Pune",
+          "startDate": "2024-06",
+          "endDate": "2025-06",
+          "currentlyWorking": false,
+          "description": "Maintained CRM records and followed up with qualified leads.",
+          "bullets": [
+            "Maintained CRM records and followed up with qualified leads."
+          ]
+        }
+      ],
+      "education": [
+        {
+          "institution": "Example Institute (fictional)",
+          "degree": "Bachelor of Business Administration",
+          "fieldOfStudy": "Sales & Marketing",
+          "startDate": "2021",
+          "endDate": "2024",
+          "description": "Relevant coursework and practical projects."
+        }
+      ],
+      "projects": [],
+      "certifications": [],
+      "languages": [
+        "English",
+        "Hindi"
+      ]
+    },
+    {
+      "id": "finance-fresher",
+      "title": "Finance \u2014 Fresher sample",
+      "sector": "finance",
+      "template": "sector_finance",
+      "level": "fresher",
+      "fictional": true,
+      "personalInfo": {
+        "fullName": "Aarav Example",
+        "email": "aarav@example.com",
+        "phone": "",
+        "location": "Pune",
+        "jobTitle": "Accounts Associate",
+        "linkedin": "",
+        "github": "",
+        "website": ""
+      },
+      "summary": "Entry-level accounts associate seeking opportunities to apply practical training.",
+      "skills": [
+        "Excel",
+        "Reconciliation",
+        "Bookkeeping"
+      ],
+      "experience": [],
+      "education": [
+        {
+          "institution": "Example Institute (fictional)",
+          "degree": "Bachelor of Commerce",
+          "fieldOfStudy": "Finance",
+          "startDate": "2021",
+          "endDate": "2024",
+          "description": "Relevant coursework and practical projects."
+        }
+      ],
+      "projects": [
+        {
+          "name": "Finance practice project",
+          "link": "",
+          "description": "Reconciled invoice records and prepared a monthly expense report."
+        }
+      ],
+      "certifications": [],
+      "languages": [
+        "English",
+        "Hindi"
+      ]
+    },
+    {
+      "id": "finance-experienced",
+      "title": "Finance \u2014 Experienced sample",
+      "sector": "finance",
+      "template": "sector_finance",
+      "level": "experienced",
+      "fictional": true,
+      "personalInfo": {
+        "fullName": "Aarav Example",
+        "email": "aarav@example.com",
+        "phone": "",
+        "location": "Pune",
+        "jobTitle": "Accounts Associate",
+        "linkedin": "",
+        "github": "",
+        "website": ""
+      },
+      "summary": "Accounts Associate with experience supporting daily operations and maintaining accurate records.",
+      "skills": [
+        "Excel",
+        "Reconciliation",
+        "Bookkeeping"
+      ],
+      "experience": [
+        {
+          "company": "Example Company (fictional)",
+          "jobTitle": "Accounts Associate",
+          "location": "Pune",
+          "startDate": "2024-06",
+          "endDate": "2025-06",
+          "currentlyWorking": false,
+          "description": "Reconciled invoice records and prepared a monthly expense report.",
+          "bullets": [
+            "Reconciled invoice records and prepared a monthly expense report."
+          ]
+        }
+      ],
+      "education": [
+        {
+          "institution": "Example Institute (fictional)",
+          "degree": "Bachelor of Commerce",
+          "fieldOfStudy": "Finance",
+          "startDate": "2021",
+          "endDate": "2024",
+          "description": "Relevant coursework and practical projects."
+        }
+      ],
+      "projects": [],
+      "certifications": [],
+      "languages": [
+        "English",
+        "Hindi"
+      ]
+    },
+    {
+      "id": "healthcare-fresher",
+      "title": "Healthcare \u2014 Fresher sample",
+      "sector": "healthcare",
+      "template": "sector_healthcare",
+      "level": "fresher",
+      "fictional": true,
+      "personalInfo": {
+        "fullName": "Aarav Example",
+        "email": "aarav@example.com",
+        "phone": "",
+        "location": "Pune",
+        "jobTitle": "Healthcare Assistant",
+        "linkedin": "",
+        "github": "",
+        "website": ""
+      },
+      "summary": "Entry-level healthcare assistant seeking opportunities to apply practical training.",
+      "skills": [
+        "Patient support",
+        "Record keeping",
+        "Infection prevention"
+      ],
+      "experience": [],
+      "education": [
+        {
+          "institution": "Example Institute (fictional)",
+          "degree": "Diploma in Healthcare Assistance",
+          "fieldOfStudy": "Healthcare",
+          "startDate": "2021",
+          "endDate": "2024",
+          "description": "Relevant coursework and practical projects."
+        }
+      ],
+      "projects": [
+        {
+          "name": "Healthcare practice project",
+          "link": "",
+          "description": "Maintained accurate records and supported routine patient-care tasks."
+        }
+      ],
+      "certifications": [],
+      "languages": [
+        "English",
+        "Hindi"
+      ]
+    },
+    {
+      "id": "healthcare-experienced",
+      "title": "Healthcare \u2014 Experienced sample",
+      "sector": "healthcare",
+      "template": "sector_healthcare",
+      "level": "experienced",
+      "fictional": true,
+      "personalInfo": {
+        "fullName": "Aarav Example",
+        "email": "aarav@example.com",
+        "phone": "",
+        "location": "Pune",
+        "jobTitle": "Healthcare Assistant",
+        "linkedin": "",
+        "github": "",
+        "website": ""
+      },
+      "summary": "Healthcare Assistant with experience supporting daily operations and maintaining accurate records.",
+      "skills": [
+        "Patient support",
+        "Record keeping",
+        "Infection prevention"
+      ],
+      "experience": [
+        {
+          "company": "Example Company (fictional)",
+          "jobTitle": "Healthcare Assistant",
+          "location": "Pune",
+          "startDate": "2024-06",
+          "endDate": "2025-06",
+          "currentlyWorking": false,
+          "description": "Maintained accurate records and supported routine patient-care tasks.",
+          "bullets": [
+            "Maintained accurate records and supported routine patient-care tasks."
+          ]
+        }
+      ],
+      "education": [
+        {
+          "institution": "Example Institute (fictional)",
+          "degree": "Diploma in Healthcare Assistance",
+          "fieldOfStudy": "Healthcare",
+          "startDate": "2021",
+          "endDate": "2024",
+          "description": "Relevant coursework and practical projects."
+        }
+      ],
+      "projects": [],
+      "certifications": [],
+      "languages": [
+        "English",
+        "Hindi"
+      ]
+    },
+    {
+      "id": "manufacturing-fresher",
+      "title": "Manufacturing \u2014 Fresher sample",
+      "sector": "manufacturing",
+      "template": "sector_manufacturing",
+      "level": "fresher",
+      "fictional": true,
+      "personalInfo": {
+        "fullName": "Aarav Example",
+        "email": "aarav@example.com",
+        "phone": "",
+        "location": "Pune",
+        "jobTitle": "Production Associate",
+        "linkedin": "",
+        "github": "",
+        "website": ""
+      },
+      "summary": "Entry-level production associate seeking opportunities to apply practical training.",
+      "skills": [
+        "Quality checks",
+        "Safety procedures",
+        "Process documentation"
+      ],
+      "experience": [],
+      "education": [
+        {
+          "institution": "Example Institute (fictional)",
+          "degree": "Diploma in Mechanical Engineering",
+          "fieldOfStudy": "Manufacturing",
+          "startDate": "2021",
+          "endDate": "2024",
+          "description": "Relevant coursework and practical projects."
+        }
+      ],
+      "projects": [
+        {
+          "name": "Manufacturing practice project",
+          "link": "",
+          "description": "Recorded production checks and reported quality deviations to the supervisor."
+        }
+      ],
+      "certifications": [],
+      "languages": [
+        "English",
+        "Hindi"
+      ]
+    },
+    {
+      "id": "manufacturing-experienced",
+      "title": "Manufacturing \u2014 Experienced sample",
+      "sector": "manufacturing",
+      "template": "sector_manufacturing",
+      "level": "experienced",
+      "fictional": true,
+      "personalInfo": {
+        "fullName": "Aarav Example",
+        "email": "aarav@example.com",
+        "phone": "",
+        "location": "Pune",
+        "jobTitle": "Production Associate",
+        "linkedin": "",
+        "github": "",
+        "website": ""
+      },
+      "summary": "Production Associate with experience supporting daily operations and maintaining accurate records.",
+      "skills": [
+        "Quality checks",
+        "Safety procedures",
+        "Process documentation"
+      ],
+      "experience": [
+        {
+          "company": "Example Company (fictional)",
+          "jobTitle": "Production Associate",
+          "location": "Pune",
+          "startDate": "2024-06",
+          "endDate": "2025-06",
+          "currentlyWorking": false,
+          "description": "Recorded production checks and reported quality deviations to the supervisor.",
+          "bullets": [
+            "Recorded production checks and reported quality deviations to the supervisor."
+          ]
+        }
+      ],
+      "education": [
+        {
+          "institution": "Example Institute (fictional)",
+          "degree": "Diploma in Mechanical Engineering",
+          "fieldOfStudy": "Manufacturing",
+          "startDate": "2021",
+          "endDate": "2024",
+          "description": "Relevant coursework and practical projects."
+        }
+      ],
+      "projects": [],
+      "certifications": [],
+      "languages": [
+        "English",
+        "Hindi"
+      ]
+    },
+    {
+      "id": "retail-fresher",
+      "title": "Retail \u2014 Fresher sample",
+      "sector": "retail",
+      "template": "sector_retail",
+      "level": "fresher",
+      "fictional": true,
+      "personalInfo": {
+        "fullName": "Aarav Example",
+        "email": "aarav@example.com",
+        "phone": "",
+        "location": "Pune",
+        "jobTitle": "Retail Associate",
+        "linkedin": "",
+        "github": "",
+        "website": ""
+      },
+      "summary": "Entry-level retail associate seeking opportunities to apply practical training.",
+      "skills": [
+        "POS systems",
+        "Stock control",
+        "Customer service"
+      ],
+      "experience": [],
+      "education": [
+        {
+          "institution": "Example Institute (fictional)",
+          "degree": "Higher Secondary Certificate",
+          "fieldOfStudy": "Retail",
+          "startDate": "2021",
+          "endDate": "2024",
+          "description": "Relevant coursework and practical projects."
+        }
+      ],
+      "projects": [
+        {
+          "name": "Retail practice project",
+          "link": "",
+          "description": "Assisted customers and maintained accurate shelf-stock records."
+        }
+      ],
+      "certifications": [],
+      "languages": [
+        "English",
+        "Hindi"
+      ]
+    },
+    {
+      "id": "retail-experienced",
+      "title": "Retail \u2014 Experienced sample",
+      "sector": "retail",
+      "template": "sector_retail",
+      "level": "experienced",
+      "fictional": true,
+      "personalInfo": {
+        "fullName": "Aarav Example",
+        "email": "aarav@example.com",
+        "phone": "",
+        "location": "Pune",
+        "jobTitle": "Retail Associate",
+        "linkedin": "",
+        "github": "",
+        "website": ""
+      },
+      "summary": "Retail Associate with experience supporting daily operations and maintaining accurate records.",
+      "skills": [
+        "POS systems",
+        "Stock control",
+        "Customer service"
+      ],
+      "experience": [
+        {
+          "company": "Example Company (fictional)",
+          "jobTitle": "Retail Associate",
+          "location": "Pune",
+          "startDate": "2024-06",
+          "endDate": "2025-06",
+          "currentlyWorking": false,
+          "description": "Assisted customers and maintained accurate shelf-stock records.",
+          "bullets": [
+            "Assisted customers and maintained accurate shelf-stock records."
+          ]
+        }
+      ],
+      "education": [
+        {
+          "institution": "Example Institute (fictional)",
+          "degree": "Higher Secondary Certificate",
+          "fieldOfStudy": "Retail",
+          "startDate": "2021",
+          "endDate": "2024",
+          "description": "Relevant coursework and practical projects."
+        }
+      ],
+      "projects": [],
+      "certifications": [],
+      "languages": [
+        "English",
+        "Hindi"
+      ]
+    },
+    {
+      "id": "hospitality-fresher",
+      "title": "Hospitality \u2014 Fresher sample",
+      "sector": "hospitality",
+      "template": "sector_hospitality",
+      "level": "fresher",
+      "fictional": true,
+      "personalInfo": {
+        "fullName": "Aarav Example",
+        "email": "aarav@example.com",
+        "phone": "",
+        "location": "Pune",
+        "jobTitle": "Guest Services Associate",
+        "linkedin": "",
+        "github": "",
+        "website": ""
+      },
+      "summary": "Entry-level guest services associate seeking opportunities to apply practical training.",
+      "skills": [
+        "Guest service",
+        "Reservations",
+        "Team coordination"
+      ],
+      "experience": [],
+      "education": [
+        {
+          "institution": "Example Institute (fictional)",
+          "degree": "Diploma in Hospitality Management",
+          "fieldOfStudy": "Hospitality",
+          "startDate": "2021",
+          "endDate": "2024",
+          "description": "Relevant coursework and practical projects."
+        }
+      ],
+      "projects": [
+        {
+          "name": "Hospitality practice project",
+          "link": "",
+          "description": "Handled guest enquiries and coordinated requests with the service team."
+        }
+      ],
+      "certifications": [],
+      "languages": [
+        "English",
+        "Hindi"
+      ]
+    },
+    {
+      "id": "hospitality-experienced",
+      "title": "Hospitality \u2014 Experienced sample",
+      "sector": "hospitality",
+      "template": "sector_hospitality",
+      "level": "experienced",
+      "fictional": true,
+      "personalInfo": {
+        "fullName": "Aarav Example",
+        "email": "aarav@example.com",
+        "phone": "",
+        "location": "Pune",
+        "jobTitle": "Guest Services Associate",
+        "linkedin": "",
+        "github": "",
+        "website": ""
+      },
+      "summary": "Guest Services Associate with experience supporting daily operations and maintaining accurate records.",
+      "skills": [
+        "Guest service",
+        "Reservations",
+        "Team coordination"
+      ],
+      "experience": [
+        {
+          "company": "Example Company (fictional)",
+          "jobTitle": "Guest Services Associate",
+          "location": "Pune",
+          "startDate": "2024-06",
+          "endDate": "2025-06",
+          "currentlyWorking": false,
+          "description": "Handled guest enquiries and coordinated requests with the service team.",
+          "bullets": [
+            "Handled guest enquiries and coordinated requests with the service team."
+          ]
+        }
+      ],
+      "education": [
+        {
+          "institution": "Example Institute (fictional)",
+          "degree": "Diploma in Hospitality Management",
+          "fieldOfStudy": "Hospitality",
+          "startDate": "2021",
+          "endDate": "2024",
+          "description": "Relevant coursework and practical projects."
+        }
+      ],
+      "projects": [],
+      "certifications": [],
+      "languages": [
+        "English",
+        "Hindi"
+      ]
+    },
+    {
+      "id": "logistics-fresher",
+      "title": "Logistics \u2014 Fresher sample",
+      "sector": "logistics",
+      "template": "sector_logistics",
+      "level": "fresher",
+      "fictional": true,
+      "personalInfo": {
+        "fullName": "Aarav Example",
+        "email": "aarav@example.com",
+        "phone": "",
+        "location": "Pune",
+        "jobTitle": "Logistics Coordinator",
+        "linkedin": "",
+        "github": "",
+        "website": ""
+      },
+      "summary": "Entry-level logistics coordinator seeking opportunities to apply practical training.",
+      "skills": [
+        "Inventory control",
+        "Dispatch planning",
+        "Excel"
+      ],
+      "experience": [],
+      "education": [
+        {
+          "institution": "Example Institute (fictional)",
+          "degree": "Diploma in Logistics",
+          "fieldOfStudy": "Logistics",
+          "startDate": "2021",
+          "endDate": "2024",
+          "description": "Relevant coursework and practical projects."
+        }
+      ],
+      "projects": [
+        {
+          "name": "Logistics practice project",
+          "link": "",
+          "description": "Updated dispatch records and reconciled inventory movements."
+        }
+      ],
+      "certifications": [],
+      "languages": [
+        "English",
+        "Hindi"
+      ]
+    },
+    {
+      "id": "logistics-experienced",
+      "title": "Logistics \u2014 Experienced sample",
+      "sector": "logistics",
+      "template": "sector_logistics",
+      "level": "experienced",
+      "fictional": true,
+      "personalInfo": {
+        "fullName": "Aarav Example",
+        "email": "aarav@example.com",
+        "phone": "",
+        "location": "Pune",
+        "jobTitle": "Logistics Coordinator",
+        "linkedin": "",
+        "github": "",
+        "website": ""
+      },
+      "summary": "Logistics Coordinator with experience supporting daily operations and maintaining accurate records.",
+      "skills": [
+        "Inventory control",
+        "Dispatch planning",
+        "Excel"
+      ],
+      "experience": [
+        {
+          "company": "Example Company (fictional)",
+          "jobTitle": "Logistics Coordinator",
+          "location": "Pune",
+          "startDate": "2024-06",
+          "endDate": "2025-06",
+          "currentlyWorking": false,
+          "description": "Updated dispatch records and reconciled inventory movements.",
+          "bullets": [
+            "Updated dispatch records and reconciled inventory movements."
+          ]
+        }
+      ],
+      "education": [
+        {
+          "institution": "Example Institute (fictional)",
+          "degree": "Diploma in Logistics",
+          "fieldOfStudy": "Logistics",
+          "startDate": "2021",
+          "endDate": "2024",
+          "description": "Relevant coursework and practical projects."
+        }
+      ],
+      "projects": [],
+      "certifications": [],
+      "languages": [
+        "English",
+        "Hindi"
+      ]
+    },
+    {
+      "id": "human_resources-fresher",
+      "title": "Human Resources \u2014 Fresher sample",
+      "sector": "human_resources",
+      "template": "sector_human_resources",
+      "level": "fresher",
+      "fictional": true,
+      "personalInfo": {
+        "fullName": "Aarav Example",
+        "email": "aarav@example.com",
+        "phone": "",
+        "location": "Pune",
+        "jobTitle": "HR Associate",
+        "linkedin": "",
+        "github": "",
+        "website": ""
+      },
+      "summary": "Entry-level hr associate seeking opportunities to apply practical training.",
+      "skills": [
+        "Recruitment coordination",
+        "Onboarding",
+        "HRIS"
+      ],
+      "experience": [],
+      "education": [
+        {
+          "institution": "Example Institute (fictional)",
+          "degree": "Bachelor of Business Administration",
+          "fieldOfStudy": "Human Resources",
+          "startDate": "2021",
+          "endDate": "2024",
+          "description": "Relevant coursework and practical projects."
+        }
+      ],
+      "projects": [
+        {
+          "name": "Human Resources practice project",
+          "link": "",
+          "description": "Scheduled interviews and maintained an onboarding checklist."
+        }
+      ],
+      "certifications": [],
+      "languages": [
+        "English",
+        "Hindi"
+      ]
+    },
+    {
+      "id": "human_resources-experienced",
+      "title": "Human Resources \u2014 Experienced sample",
+      "sector": "human_resources",
+      "template": "sector_human_resources",
+      "level": "experienced",
+      "fictional": true,
+      "personalInfo": {
+        "fullName": "Aarav Example",
+        "email": "aarav@example.com",
+        "phone": "",
+        "location": "Pune",
+        "jobTitle": "HR Associate",
+        "linkedin": "",
+        "github": "",
+        "website": ""
+      },
+      "summary": "HR Associate with experience supporting daily operations and maintaining accurate records.",
+      "skills": [
+        "Recruitment coordination",
+        "Onboarding",
+        "HRIS"
+      ],
+      "experience": [
+        {
+          "company": "Example Company (fictional)",
+          "jobTitle": "HR Associate",
+          "location": "Pune",
+          "startDate": "2024-06",
+          "endDate": "2025-06",
+          "currentlyWorking": false,
+          "description": "Scheduled interviews and maintained an onboarding checklist.",
+          "bullets": [
+            "Scheduled interviews and maintained an onboarding checklist."
+          ]
+        }
+      ],
+      "education": [
+        {
+          "institution": "Example Institute (fictional)",
+          "degree": "Bachelor of Business Administration",
+          "fieldOfStudy": "Human Resources",
+          "startDate": "2021",
+          "endDate": "2024",
+          "description": "Relevant coursework and practical projects."
+        }
+      ],
+      "projects": [],
+      "certifications": [],
+      "languages": [
+        "English",
+        "Hindi"
+      ]
+    }
+  ]
+}

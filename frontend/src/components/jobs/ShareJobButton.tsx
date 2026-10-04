@@ -24,6 +24,7 @@ export default function ShareJobButton({ job }: ShareJobButtonProps) {
   const shareText = `Check out this job: ${job.title}${job.location ? ` in ${job.location}` : ''}`
 
   const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`${shareText} ${jobUrl}`)}`
+  const emailUrl = `mailto:?subject=${encodeURIComponent(job.title)}&body=${encodeURIComponent(`${shareText}\n\n${jobUrl}`)}`
   const linkedinUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(jobUrl)}`
   const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(jobUrl)}`
 
@@ -114,6 +115,7 @@ export default function ShareJobButton({ job }: ShareJobButtonProps) {
             </div>
 
             <div className="py-2">
+              <ShareLink href={emailUrl} label="Email" icon={<span aria-hidden="true">✉</span>} hoverClass="hover:bg-gray-50" />
               <ShareLink
                 href={whatsappUrl}
                 label="WhatsApp"
