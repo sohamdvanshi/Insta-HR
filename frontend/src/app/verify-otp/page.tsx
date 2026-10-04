@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { Suspense, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 
@@ -44,7 +44,7 @@ const redirectByRole = (user?: VerifyResponse['user']) => {
   window.location.href = '/dashboard'
 }
 
-export default function VerifyOtpPage() {
+function VerifyOtpContent() {
   const searchParams = useSearchParams()
 
   const userId = useMemo(() => searchParams.get('userId') || '', [searchParams])
@@ -221,5 +221,13 @@ export default function VerifyOtpPage() {
         </div>
       </div>
     </main>
+  )
+}
+
+export default function VerifyOtpPage() {
+  return (
+    <Suspense fallback={<main className='min-h-screen grid place-items-center'>Loading...</main>}>
+      <VerifyOtpContent />
+    </Suspense>
   )
 }

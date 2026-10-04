@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import {
   useParams,
   useRouter,
@@ -36,7 +36,7 @@ interface MyApplication {
 
 
 
-export default function JobDetailPage() {
+function JobDetailContent() {
   const params = useParams()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -527,5 +527,13 @@ export default function JobDetailPage() {
         </div>
       </div>
     </main>
+  )
+}
+
+export default function JobDetailPage() {
+  return (
+    <Suspense fallback={<main className="min-h-screen pt-24 text-center text-gray-500">Loading job...</main>}>
+      <JobDetailContent />
+    </Suspense>
   )
 }

@@ -1,9 +1,9 @@
 'use client'
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
-export default function VerifyOTPPage() {
+function VerifyOTPContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const userId = searchParams.get('userId')
@@ -139,5 +139,13 @@ export default function VerifyOTPPage() {
 
       </div>
     </div>
+  )
+}
+
+export default function VerifyOTPPage() {
+  return (
+    <Suspense fallback={<main className='min-h-screen grid place-items-center'>Loading...</main>}>
+      <VerifyOTPContent />
+    </Suspense>
   )
 }

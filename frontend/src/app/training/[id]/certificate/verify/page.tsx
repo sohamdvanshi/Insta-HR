@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 
-export default function VerifyCertificatePage() {
+function VerifyCertificateContent() {
   const searchParams = useSearchParams()
   const [certificateId, setCertificateId] = useState('')
   const [loading, setLoading] = useState(false)
@@ -161,5 +161,13 @@ export default function VerifyCertificatePage() {
         )}
       </div>
     </main>
+  )
+}
+
+export default function VerifyCertificatePage() {
+  return (
+    <Suspense fallback={<main className='min-h-screen grid place-items-center'>Loading...</main>}>
+      <VerifyCertificateContent />
+    </Suspense>
   )
 }

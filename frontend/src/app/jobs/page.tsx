@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 
@@ -42,7 +42,7 @@ const SORT_OPTIONS = [
   { label: 'Salary: Low to High', value: 'salaryLow' }
 ]
 
-export default function JobsPage() {
+function JobsContent() {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -458,5 +458,19 @@ export default function JobsPage() {
         )}
       </div>
     </main>
+  )
+}
+
+export default function JobsPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-gray-50 pt-24 text-center text-gray-500">
+          Loading jobs...
+        </main>
+      }
+    >
+      <JobsContent />
+    </Suspense>
   )
 }
