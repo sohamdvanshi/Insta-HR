@@ -3,12 +3,14 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { TRAINING_API } from '@/lib/trainingApi'
 
 const CATEGORIES = ['IT', 'Finance', 'Banking', 'Healthcare', 'HR', 'Marketing', 'Civil', 'Soft Skills', 'Others']
 const EMOJIS = ['💻', '📊', '💰', '🏦', '🏥', '👥', '📱', '🏗️', '🗣️', '📈', '🔴', '📚', '🎯', '⚙️', '🔧']
 
 export default function AdminCoursesPage() {
   const router = useRouter()
+  const [isTrainer, setIsTrainer] = useState(false)
   const [courses, setCourses] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -28,13 +30,12 @@ export default function AdminCoursesPage() {
     description: '',
     category: 'IT',
     type: 'video',
+    status: 'active',
     price: '',
     isFree: false,
     duration: '',
     emoji: '📚',
     skills: '',
-    liveLink: '',
-    liveSchedule: '',
   })
 
   useEffect(() => {
@@ -45,11 +46,12 @@ export default function AdminCoursesPage() {
     }
 
     const parsed = JSON.parse(user)
-    if (parsed.role !== 'admin') {
+    if (!['admin', 'super_admin', 'trainer'].includes(parsed.role)) {
       router.replace('/dashboard')
       return
     }
 
+    setIsTrainer(parsed.role === 'trainer')
     fetchCourses()
   }, [router])
 
@@ -57,14 +59,14 @@ export default function AdminCoursesPage() {
     const token = localStorage.getItem('token')
 
     try {
-      const res = await fetch('http://localhost:5000/api/v1/training', {
+      const res = await fetch(TRAINING_API + '/manage/courses', {
         headers: { Authorization: 'Bearer ' + token }
       })
 
       const data = await res.json()
       if (data.success) {
         setCourses(data.data || [])
-      }
+      } else { setError(data.message || 'Failed to load courses') }
     } catch (err) {
       console.error(err)
       setError('Failed to load courses')
@@ -79,13 +81,12 @@ export default function AdminCoursesPage() {
       description: '',
       category: 'IT',
       type: 'video',
+      status: 'active',
       price: '',
       isFree: false,
       duration: '',
       emoji: '📚',
       skills: '',
-      liveLink: '',
-      liveSchedule: '',
     })
 
     setEditCourse(null)
@@ -107,14 +108,13 @@ export default function AdminCoursesPage() {
       title: course.title || '',
       description: course.description || '',
       category: course.category || 'IT',
-      type: course.type || 'video',
+      type: 'video',
+      status: course.status || 'active',
       price: course.price ? String(course.price) : '',
       isFree: !!course.isFree,
       duration: course.duration || '',
       emoji: course.emoji || '📚',
       skills: course.skills?.join(', ') || '',
-      liveLink: course.liveLink || '',
-      liveSchedule: course.liveSchedule ? course.liveSchedule.slice(0, 16) : '',
     })
 
     setSelectedVideoName('')
@@ -130,19 +130,6 @@ export default function AdminCoursesPage() {
 
     if (!form.isFree && (!form.price || Number(form.price) < 0)) {
       return 'Please enter a valid price or mark the course as free'
-    }
-
-    if (form.type === 'live') {
-      if (!form.liveLink.trim()) {
-        return 'Live class link is required for live courses'
-      }
-      if (!form.liveSchedule.trim()) {
-        return 'Schedule date and time are required for live courses'
-      }
-    }
-
-    if (form.type === 'video' && !editCourse && !videoRef.current?.files?.[0]) {
-      return 'Please upload a video file for a new video course'
     }
 
     const videoFile = videoRef.current?.files?.[0]
@@ -198,10 +185,8 @@ export default function AdminCoursesPage() {
     formData.append('duration', form.duration.trim())
     formData.append('emoji', form.emoji)
     formData.append('skills', form.skills)
-    formData.append('status', 'active')
+    formData.append('status', form.status)
 
-    if (form.liveLink) formData.append('liveLink', form.liveLink.trim())
-    if (form.liveSchedule) formData.append('liveSchedule', form.liveSchedule)
 
     if (videoRef.current?.files?.[0]) {
       setUploadProgress('Uploading video to Cloudinary... this may take a minute')
@@ -214,8 +199,8 @@ export default function AdminCoursesPage() {
 
     try {
       const url = editCourse
-        ? 'http://localhost:5000/api/v1/training/' + editCourse.id
-        : 'http://localhost:5000/api/v1/training'
+        ? TRAINING_API + '/' + editCourse.id
+        : TRAINING_API
 
       const method = editCourse ? 'PUT' : 'POST'
 
@@ -252,7 +237,7 @@ export default function AdminCoursesPage() {
     const token = localStorage.getItem('token')
 
     try {
-      const res = await fetch('http://localhost:5000/api/v1/training/' + courseId, {
+      const res = await fetch(TRAINING_API + '/' + courseId, {
         method: 'DELETE',
         headers: { Authorization: 'Bearer ' + token }
       })
@@ -289,6 +274,7 @@ export default function AdminCoursesPage() {
                 ← Admin Panel
               </Link>
             </div>
+            <Link href={isTrainer ? '/trainer' : '/admin/training'} className="mr-5 text-blue-700 underline">Batches, classes & attendance</Link>
             <h1 className="text-3xl font-bold text-gray-900">Course Management</h1>
             <p className="text-gray-500">Create and manage training courses</p>
           </div>
@@ -357,24 +343,7 @@ export default function AdminCoursesPage() {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Course Type</label>
-                <select
-                  value={form.type}
-                  onChange={e =>
-                    setForm({
-                      ...form,
-                      type: e.target.value,
-                      liveLink: e.target.value === 'live' ? form.liveLink : '',
-                      liveSchedule: e.target.value === 'live' ? form.liveSchedule : '',
-                    })
-                  }
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500"
-                >
-                  <option value="video">Video Course</option>
-                  <option value="live">Live Class</option>
-                </select>
-              </div>
+              <div><label className="block text-sm font-medium text-gray-700 mb-2">Course status</label><select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })} className="w-full rounded-xl border p-3"><option value="active">Active</option><option value="inactive">Inactive</option></select><p className="mt-2 text-sm text-gray-500">Schedule physical and online classes in the Training workspace.</p></div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Duration *</label>
@@ -448,7 +417,7 @@ export default function AdminCoursesPage() {
               {form.type === 'video' && (
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Upload Video {editCourse ? '(optional on edit)' : '*'} (MP4, MOV, AVI — max 500MB)
+                    Upload Video (optional for classroom courses) (MP4, MOV, AVI — max 500MB)
                   </label>
 
                   <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-blue-400 transition-colors">
@@ -477,37 +446,6 @@ export default function AdminCoursesPage() {
                     )}
                   </div>
                 </div>
-              )}
-
-              {form.type === 'live' && (
-                <>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Live Class Link (Google Meet / Zoom) *
-                    </label>
-                    <input
-                      value={form.liveLink}
-                      onChange={e => setForm({ ...form, liveLink: e.target.value })}
-                      placeholder="https://meet.google.com/xxx-xxxx-xxx"
-                      className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500"
-                    />
-                    <p className="text-gray-400 text-xs mt-1">
-                      Students will see this link after enrolling
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Schedule Date & Time *
-                    </label>
-                    <input
-                      type="datetime-local"
-                      value={form.liveSchedule}
-                      onChange={e => setForm({ ...form, liveSchedule: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500"
-                    />
-                  </div>
-                </>
               )}
 
               <div className="md:col-span-2">
@@ -562,14 +500,14 @@ export default function AdminCoursesPage() {
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-            <h2 className="font-bold text-gray-900">All Courses ({courses.length})</h2>
+            <h2 className="font-bold text-gray-900">Managed Courses ({courses.length})</h2>
 
             <div className="flex gap-2 text-xs">
               <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
                 {courses.filter(c => c.type === 'video').length} video
               </span>
               <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full">
-                {courses.filter(c => c.type === 'live').length} live
+                Classes scheduled separately
               </span>
             </div>
           </div>
@@ -637,11 +575,7 @@ export default function AdminCoursesPage() {
                           </span>
                         )}
 
-                        {course.liveLink && (
-                          <span className="text-xs px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full">
-                            ✓ Live Link
-                          </span>
-                        )}
+
                       </div>
                     </div>
                   </div>
@@ -656,8 +590,9 @@ export default function AdminCoursesPage() {
                       Preview
                     </a>
 
+                    {course.canEdit && <>
                     <Link
-                      href={'/admin/courses/' + course.id + '/quiz'}
+                      href={(isTrainer ? '/trainer/courses/' : '/admin/courses/') + course.id + '/quiz'}
                       className="px-3 py-1.5 bg-purple-50 text-purple-700 text-xs rounded-lg hover:bg-purple-100"
                     >
                       Manage Quiz
@@ -676,6 +611,7 @@ export default function AdminCoursesPage() {
                     >
                       Delete
                     </button>
+                    </>}
                   </div>
                 </div>
               ))}

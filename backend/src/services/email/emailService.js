@@ -399,4 +399,16 @@ InstaHire
 };
 
 exports.sendMail = sendMail;
+exports.sendTrainingSessionEmail = async (email, session) => {
+  const portal = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/training/classes`;
+  const formatDate = value => new Date(value).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'full', timeStyle: 'short' });
+  const text = [
+    `Course: ${session.courseTitle}`, `Class: ${session.title}`, `Status: ${session.status}`,
+    `Starts: ${formatDate(session.startsAt)} IST`, `Ends: ${formatDate(session.endsAt)} IST`,
+    session.mode === 'physical' ? `Location: ${session.location}` : 'Online: Log in to your candidate portal and join when the trainer starts the class.',
+    session.notes || '', `Your classes: ${portal}`
+  ].filter(Boolean).join('\n');
+  const escaped = text.replace(/[&<>"']/g, value => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[value]));
+  return sendMail({ to: email, subject: `Training class ${session.status}: ${session.title}`.replace(/[\r\n]/g, ' '), text, html: wrapTemplate({ title: 'Training class update', content: `<p style="white-space:pre-wrap">${escaped}</p>` }) });
+};
 exports.verifySMTP = verifySMTP;

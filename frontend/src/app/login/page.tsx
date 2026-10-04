@@ -1,15 +1,16 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { loginDestination, trainingReturnPath } from '@/lib/trainingApi'
 import { GoogleLogin } from '@react-oauth/google'
 
-const API_BASE = 'http://localhost:5000/api/v1'
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1').replace(/\/$/, '')
 
 type User = {
   id: string
   email: string
-  role: 'admin' | 'employer' | 'candidate'
+  role: 'admin' | 'employer' | 'candidate' | 'trainer' | 'super_admin'
 }
 
 type LoginResponse = {
@@ -45,22 +46,7 @@ const saveAuth = (token: string, user: User) => {
 }
 
 const redirectByRole = (user?: User) => {
-  if (!user?.role) {
-    window.location.href = '/dashboard'
-    return
-  }
-
-  if (user.role === 'admin') {
-    window.location.href = '/admin'
-    return
-  }
-
-  if (user.role === 'employer') {
-    window.location.href = '/employer'
-    return
-  }
-
-  window.location.href = '/dashboard'
+  window.location.href = loginDestination(user?.role || 'candidate')
 }
 
 const readResponse = async (response: Response): Promise<LoginResponse> => {
@@ -78,6 +64,10 @@ const readResponse = async (response: Response): Promise<LoginResponse> => {
 }
 
 export default function LoginPage() {
+  useEffect(() => {
+    const next = trainingReturnPath(new URLSearchParams(window.location.search).get('next'))
+    if (next) sessionStorage.setItem('trainingReturnTo', next)
+  }, [])
   const [formData, setFormData] = useState({
     email: '',
     password: ''

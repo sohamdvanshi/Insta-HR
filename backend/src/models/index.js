@@ -5,6 +5,9 @@ const CandidateProfile = require('./CandidateProfile')
 const Job = require('./Job')
 const Application = require('./Application')
 const Training = require('./Training')
+const TrainingBatch = require('./TrainingBatch')
+const TrainingSession = require('./TrainingSession')
+const TrainingAttendance = require('./TrainingAttendance')
 const EmployerProfile = require('./EmployerProfile')
 const Payment = require('./Payment')
 const SavedJob = require('./SavedJob')
@@ -136,6 +139,16 @@ if (optionalModel(Training)) {
     constraints: false
   })
 }
+
+
+/* Training batches, sessions, and trainee attendance */
+TrainingBatch.belongsTo(Training, { foreignKey: 'trainingId', as: 'training' })
+TrainingBatch.belongsTo(User, { foreignKey: 'trainerId', as: 'trainer' })
+TrainingSession.belongsTo(Training, { foreignKey: 'trainingId', as: 'training' })
+TrainingSession.belongsTo(TrainingBatch, { foreignKey: 'batchId', as: 'batch' })
+TrainingAttendance.belongsTo(User, { foreignKey: 'userId', as: 'student' })
+TrainingAttendance.belongsTo(TrainingSession, { foreignKey: 'sessionId', as: 'session' })
+CourseEnrollment.belongsTo(TrainingBatch, { foreignKey: 'batchId', as: 'batch' })
 
 /* Employer profile */
 if (optionalModel(EmployerProfile)) {
@@ -723,8 +736,7 @@ const syncDatabase = async () => {
   }
 }
 
-syncDatabase()
-
+// Schema changes are applied explicitly with migration scripts.
 
 module.exports = {
   sequelize,
@@ -733,6 +745,9 @@ module.exports = {
   Job,
   Application,
   Training,
+  TrainingBatch,
+  TrainingSession,
+  TrainingAttendance,
   EmployerProfile,
   Payment,
   SavedJob,

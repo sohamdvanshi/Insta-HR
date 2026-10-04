@@ -21,14 +21,14 @@ export default function MyCertificatesPage() {
 
 
     if (!token) {
-      router.push('/login')
+      router.push('/login?next=' + encodeURIComponent(window.location.pathname))
       return
     }
 
 
     const fetchCertificates = async () => {
       try {
-        const enrolledRes = await fetch('http://localhost:5000/api/v1/training/my/enrolled', {
+        const enrolledRes = await fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1').replace(/\/$/, '') + '/training/my/enrolled', {
           headers: {
             Authorization: 'Bearer ' + token
           }
@@ -57,7 +57,7 @@ export default function MyCertificatesPage() {
           enrolledCourses.map(async (course: any) => {
             try {
               const progressRes = await fetch(
-                'http://localhost:5000/api/v1/training/' + course.id + '/progress',
+                (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1').replace(/\/$/, '') + '/training/' + course.id + '/progress',
                 {
                   headers: {
                     Authorization: 'Bearer ' + token
@@ -75,7 +75,7 @@ export default function MyCertificatesPage() {
 
                 if (progressData.data?.completed) {
                   const certRes = await fetch(
-                    'http://localhost:5000/api/v1/training/' + course.id + '/certificate',
+                    (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1').replace(/\/$/, '') + '/training/' + course.id + '/certificate',
                     {
                       headers: {
                         Authorization: 'Bearer ' + token

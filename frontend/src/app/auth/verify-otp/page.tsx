@@ -1,9 +1,10 @@
 'use client'
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { loginDestination } from '@/lib/trainingApi'
 
-export default function VerifyOTPPage() {
+function VerifyOTPPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const userId = searchParams.get('userId')
@@ -24,7 +25,7 @@ export default function VerifyOTPPage() {
     setError('')
 
     try {
-      const res = await fetch('http://localhost:5000/api/v1/auth/verify-otp', {
+      const res = await fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1').replace(/\/$/, '') + '/auth/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, otp })
@@ -32,10 +33,11 @@ export default function VerifyOTPPage() {
 
       const data = await res.json()
 
-      if (data.success) {
+      if (res.ok && data.success && data.token && data.user) {
         setSuccess('Email verified successfully! Redirecting...')
         localStorage.setItem('token', data.token)
-        setTimeout(() => router.push('/dashboard'), 2000)
+        localStorage.setItem('user', JSON.stringify(data.user))
+        setTimeout(() => window.location.assign(loginDestination(data.user.role)), 800)
       } else {
         setError(data.message || 'Invalid OTP')
       }
@@ -50,13 +52,13 @@ export default function VerifyOTPPage() {
     setError('')
     setSuccess('')
     try {
-      const res = await fetch('http://localhost:5000/api/v1/auth/resend-otp', {
+      const res = await fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1').replace(/\/$/, '') + '/auth/resend-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId })
       })
       const data = await res.json()
-      if (data.success) {
+      if (res.ok && data.success) {
         setSuccess('New OTP sent to your email!')
         setTimeout(() => setSuccess(''), 3000)
       }
@@ -140,4 +142,8 @@ export default function VerifyOTPPage() {
       </div>
     </div>
   )
+}
+
+export default function VerifyOTPPage() {
+  return <Suspense fallback={<main className="pt-24 text-center">Loading...</main>}><VerifyOTPPageContent /></Suspense>
 }

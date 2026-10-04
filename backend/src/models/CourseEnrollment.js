@@ -17,6 +17,7 @@ const CourseEnrollment = sequelize.define(
       type: DataTypes.UUID,
       allowNull: false
     },
+    batchId: { type: DataTypes.UUID, allowNull: true },
     enrolledAt: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW

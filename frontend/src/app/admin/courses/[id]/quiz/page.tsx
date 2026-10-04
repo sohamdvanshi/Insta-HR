@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 
-const API_BASE = 'http://localhost:5000/api/v1'
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1').replace(/\/$/, '')
 
 type Question = {
   question: string
@@ -22,6 +22,7 @@ export default function AdminCourseQuizPage() {
   const router = useRouter()
   const courseId = params?.id as string
 
+  const [isTrainer, setIsTrainer] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [course, setCourse] = useState<any>(null)
@@ -52,11 +53,12 @@ export default function AdminCourseQuizPage() {
     }
 
     const parsed = JSON.parse(user)
-    if (parsed.role !== 'admin') {
+    if (!['admin', 'super_admin', 'trainer'].includes(parsed.role)) {
       router.replace('/dashboard')
       return
     }
 
+    setIsTrainer(parsed.role === 'trainer')
     if (!courseId) return
     fetchCourseAndQuiz()
   }, [courseId, router])
@@ -91,6 +93,7 @@ export default function AdminCourseQuizPage() {
       })
 
       const quizData = await quizRes.json()
+      if (quizRes.status === 401 || quizRes.status === 403) { setCourse(null); setError(quizData.message || 'Access denied'); return }
 
       if (quizRes.ok && quizData.success && quizData.data) {
         setTitle(quizData.data.title || 'Final Course Quiz')
@@ -298,7 +301,7 @@ export default function AdminCourseQuizPage() {
       <div className="max-w-5xl mx-auto px-6 py-10 space-y-6">
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
           <Link
-            href="/admin/courses"
+            href={isTrainer ? '/trainer/courses' : '/admin/courses'}
             className="text-sm text-blue-600 hover:underline"
           >
             ← Back to Courses

@@ -10,6 +10,7 @@ const ALLOWED_ROLES = [
   'candidate',
   'employer',
   'admin',
+  'trainer',
   'super_admin'
 ]
 

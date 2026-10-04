@@ -78,6 +78,10 @@ exports.protect = async (req, res, next) => {
       role: user.role
     })
 
+    if (user.role === 'trainer' && !/^\/api\/v1\/training(?:\/|$)/.test(req.originalUrl.split('?')[0])) {
+      return res.status(403).json({ success: false, message: 'Trainer accounts only have access to training modules' })
+    }
+
     req.user = user
     return next()
   } catch (error) {

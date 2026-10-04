@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import {
   useParams,
   useRouter,
@@ -35,7 +35,7 @@ interface MyApplication {
 
 const API_BASE = 'http://localhost:5000/api/v1'
 
-export default function JobDetailPage() {
+function JobDetailPageContent() {
   const params = useParams()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -527,4 +527,8 @@ export default function JobDetailPage() {
       </div>
     </main>
   )
+}
+
+export default function JobDetailPage() {
+  return <Suspense fallback={<main className="pt-24 text-center">Loading...</main>}><JobDetailPageContent /></Suspense>
 }

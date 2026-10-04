@@ -1,6 +1,7 @@
 'use client'
 
 import { GoogleOAuthProvider } from '@react-oauth/google'
+import TrainerAccessGuard from '@/components/training/TrainerAccessGuard'
 
 export default function Providers({
   children,
@@ -9,7 +10,7 @@ export default function Providers({
 }) {
   return (
     <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!}>
-      {children}
+      <TrainerAccessGuard>{children}</TrainerAccessGuard>
     </GoogleOAuthProvider>
   )
 }

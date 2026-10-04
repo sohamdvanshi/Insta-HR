@@ -3,8 +3,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
+import CandidateClasses from '@/components/training/CandidateClasses'
+import { trainingRequest } from '@/lib/trainingApi'
 
-const API_BASE = 'http://localhost:5000/api/v1'
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1').replace(/\/$/, '')
 
 export default function CourseDetailPage() {
   const router = useRouter()
@@ -14,6 +16,7 @@ export default function CourseDetailPage() {
   const [course, setCourse] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [enrolling, setEnrolling] = useState(false)
+  const [canPreview, setCanPreview] = useState(false)
   const [enrolled, setEnrolled] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
@@ -43,7 +46,12 @@ export default function CourseDetailPage() {
 
   useEffect(() => {
     const token = localStorage.getItem('token')
-    if (!token || !params.id) return
+    if (!token || !params.id || !course?.id) return
+    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    if (['trainer', 'admin', 'super_admin', 'employer'].includes(user.role)) {
+      trainingRequest(`/${params.id}/content`).then(data => { setCanPreview(true); setCourse((current: any) => current ? { ...current, ...data.data } : current) }).catch(err => setError(err.message))
+      return
+    }
 
     const fetchEnrollmentStatus = async () => {
       try {
@@ -64,7 +72,7 @@ export default function CourseDetailPage() {
     }
 
     fetchEnrollmentStatus()
-  }, [params.id])
+  }, [params.id, course?.id])
 
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -128,6 +136,13 @@ export default function CourseDetailPage() {
     fetchQuizResult()
   }, [params.id, enrolled, completed])
 
+  useEffect(() => {
+    if (!enrolled || !params.id || !course?.id) return
+    let cancelled = false
+    trainingRequest(`/${params.id}/content`).then(data => { if (!cancelled) setCourse((current: any) => ({ ...current, ...data.data })) }).catch(err => { if (!cancelled) setError(err.message) })
+    return () => { cancelled = true }
+  }, [enrolled, params.id, course?.id])
+
   const saveProgress = async (percent: number, watchedSeconds: number) => {
     const token = localStorage.getItem('token')
     if (!token || !course?.videoUrl || !enrolled) return
@@ -160,10 +175,11 @@ export default function CourseDetailPage() {
   const handleEnroll = async () => {
     const token = localStorage.getItem('token')
     if (!token) {
-      router.push('/login')
+      router.push('/login?next=' + encodeURIComponent('/training/' + params.id))
       return
     }
 
+    setError('')
     setEnrolling(true)
     try {
       const res = await fetch(API_BASE + '/training/' + params.id + '/enroll', {
@@ -171,6 +187,7 @@ export default function CourseDetailPage() {
         headers: { Authorization: 'Bearer ' + token }
       })
       const data = await res.json()
+      if (res.status === 401) { localStorage.removeItem('token'); localStorage.removeItem('user'); router.push('/login?next=' + encodeURIComponent('/training/' + params.id)); return }
       if (data.success) {
         setEnrolled(true)
         setMessage(data.message || 'Successfully enrolled!')
@@ -232,7 +249,7 @@ export default function CourseDetailPage() {
     )
   }
 
-  if (error || !course) {
+  if (!course) {
     return (
       <main className="min-h-screen bg-gray-50 pt-24 flex items-center justify-center">
         <div className="text-center">
@@ -247,12 +264,11 @@ export default function CourseDetailPage() {
 
   return (
     <main className="min-h-screen bg-gray-50 pt-16">
+      {error && <p role="alert" className="mx-auto mt-5 max-w-6xl rounded-lg bg-red-50 p-4 text-red-700">{error}</p>}
       <div
         className={
           'py-12 px-6 ' +
-          (course.type === 'live'
-            ? 'bg-gradient-to-r from-red-600 to-orange-500'
-            : 'bg-gradient-to-r from-blue-600 to-purple-600')
+          'bg-gradient-to-r from-blue-600 to-purple-600'
         }
       >
         <div className="max-w-6xl mx-auto">
@@ -266,12 +282,7 @@ export default function CourseDetailPage() {
                 <span className="px-3 py-1 bg-white/20 text-white text-xs font-medium rounded-full">
                   {course.category}
                 </span>
-                {course.type === 'live' && (
-                  <span className="px-3 py-1 bg-red-500 text-white text-xs font-bold rounded-full flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
-                    LIVE
-                  </span>
-                )}
+
               </div>
 
               <h1 className="text-3xl font-bold text-white mb-4">{course.title}</h1>
@@ -291,7 +302,7 @@ export default function CourseDetailPage() {
                 ))}
               </div>
 
-              {course.videoUrl && enrolled ? (
+              {course.hasVideo && enrolled ? (
                 <div className="bg-white/10 rounded-2xl p-4">
                   <div className="flex items-center justify-between text-white mb-2">
                     <span className="text-sm font-medium">Your Progress</span>
@@ -315,7 +326,7 @@ export default function CourseDetailPage() {
                     {loadingProgress && <span>Loading progress...</span>}
                   </div>
                 </div>
-              ) : course.videoUrl ? (
+              ) : course.hasVideo ? (
                 <div className="bg-white/10 rounded-2xl p-4 text-white/90">
                   <p className="font-medium mb-1">Enroll to start tracking progress.</p>
                   <p className="text-sm text-white/70">Progress is available only for enrolled users.</p>
@@ -335,7 +346,7 @@ export default function CourseDetailPage() {
                   {course.isFree ? 'FREE' : '₹' + Number(course.price).toLocaleString()}
                 </div>
 
-                {!course.isFree && <p className="text-white/60 text-sm mb-4">One-time payment</p>}
+                {!course.isFree && <p className="text-white/60 text-sm mb-4">Contact the training team for paid enrollment</p>}
 
                 {message ? (
                   <div className="bg-green-500 text-white px-4 py-3 rounded-xl font-medium">
@@ -344,10 +355,10 @@ export default function CourseDetailPage() {
                 ) : (
                   <button
                     onClick={handleEnroll}
-                    disabled={enrolling || enrolled}
+                    disabled={enrolling || enrolled || canPreview}
                     className="w-full py-3 bg-white text-blue-600 font-bold rounded-xl hover:bg-blue-50 transition-colors disabled:opacity-50"
                   >
-                    {enrolling
+                    {canPreview ? 'Staff preview' : enrolling
                       ? 'Enrolling...'
                       : enrolled
                       ? '✓ Enrolled'
@@ -365,7 +376,8 @@ export default function CourseDetailPage() {
       <div className="max-w-6xl mx-auto px-6 py-10">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="md:col-span-2 space-y-8">
-            {course.videoUrl && (
+            {enrolled && <CandidateClasses courseId={String(params.id)} />}
+            {course.hasVideo && (
               <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
                 <div className="p-4 border-b border-gray-100 flex items-center justify-between">
                   <h2 className="font-bold text-gray-900">Course Player</h2>
@@ -375,7 +387,7 @@ export default function CourseDetailPage() {
                 </div>
 
                 <div className="relative bg-black" style={{ paddingTop: '56.25%' }}>
-                  {enrolled ? (
+                  {enrolled || canPreview ? (
                     <video
                       ref={videoRef}
                       src={course.videoUrl}
@@ -416,46 +428,20 @@ export default function CourseDetailPage() {
               </div>
             )}
 
-            {!course.videoUrl && (
+            {!course.hasVideo && (
               <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
                 <div className="p-4 border-b border-gray-100">
                   <h2 className="font-bold text-gray-900">Course Video</h2>
                 </div>
                 <div className="bg-gradient-to-br from-gray-100 to-gray-200 flex flex-col items-center justify-center py-16">
                   <div className="text-6xl mb-4">{course.emoji || '📚'}</div>
-                  <p className="text-gray-500 font-medium mb-2">Video content coming soon</p>
-                  <p className="text-gray-400 text-sm">Enroll now to get notified when video is uploaded</p>
+                  <p className="text-gray-500 font-medium mb-2">Classroom-based course or video content not uploaded yet</p>
+                  <p className="text-gray-400 text-sm">Check My classes after enrolling for scheduled sessions.</p>
                 </div>
               </div>
             )}
 
-            {course.type === 'live' && (
-              <div className="bg-red-50 border border-red-200 rounded-2xl p-6">
-                <h2 className="font-bold text-red-800 mb-3 flex items-center gap-2">
-                  <span className="w-2 h-2 bg-red-500 rounded-full"></span>
-                  Live Class Details
-                </h2>
 
-                {course.liveSchedule && (
-                  <p className="text-red-700 mb-2">
-                    📅 Scheduled: {new Date(course.liveSchedule).toLocaleString()}
-                  </p>
-                )}
-
-                {course.liveLink && enrolled ? (
-                  <a
-                    href={course.liveLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-block px-6 py-3 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-colors"
-                  >
-                    Join Live Class
-                  </a>
-                ) : (
-                  <p className="text-red-600 text-sm">Enroll to get the live class link</p>
-                )}
-              </div>
-            )}
 
             {course.curriculum && course.curriculum.length > 0 && (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">

@@ -15,13 +15,13 @@ export default function MyLearningPage() {
     const token = localStorage.getItem('token')
 
     if (!token) {
-      router.push('/login')
+      router.push('/login?next=' + encodeURIComponent(window.location.pathname))
       return
     }
 
     const fetchMyCourses = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/v1/training/my/enrolled', {
+        const res = await fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1').replace(/\/$/, '') + '/training/my/enrolled', {
           headers: {
             Authorization: 'Bearer ' + token
           }
@@ -46,7 +46,7 @@ export default function MyLearningPage() {
 
             try {
               const progressRes = await fetch(
-                'http://localhost:5000/api/v1/training/' + course.id + '/progress',
+                (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1').replace(/\/$/, '') + '/training/' + course.id + '/progress',
                 {
                   headers: {
                     Authorization: 'Bearer ' + token

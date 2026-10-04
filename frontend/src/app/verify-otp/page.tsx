@@ -1,10 +1,11 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { Suspense, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { loginDestination } from '@/lib/trainingApi'
 import { useSearchParams } from 'next/navigation'
 
-const API_BASE = 'http://localhost:5000/api/v1'
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1').replace(/\/$/, '')
 
 type VerifyResponse = {
   success: boolean
@@ -13,7 +14,7 @@ type VerifyResponse = {
   user?: {
     id: string
     email: string
-    role: 'admin' | 'employer' | 'candidate'
+    role: 'admin' | 'employer' | 'candidate' | 'trainer' | 'super_admin'
   }
 }
 
@@ -26,25 +27,10 @@ const saveAuth = (token: string, user?: VerifyResponse['user']) => {
 }
 
 const redirectByRole = (user?: VerifyResponse['user']) => {
-  if (!user?.role) {
-    window.location.href = '/dashboard'
-    return
-  }
-
-  if (user.role === 'admin') {
-    window.location.href = '/admin'
-    return
-  }
-
-  if (user.role === 'employer') {
-    window.location.href = '/employer'
-    return
-  }
-
-  window.location.href = '/dashboard'
+  window.location.href = loginDestination(user?.role || 'candidate')
 }
 
-export default function VerifyOtpPage() {
+function VerifyOtpPageContent() {
   const searchParams = useSearchParams()
 
   const userId = useMemo(() => searchParams.get('userId') || '', [searchParams])
@@ -222,4 +208,8 @@ export default function VerifyOtpPage() {
       </div>
     </main>
   )
+}
+
+export default function VerifyOtpPage() {
+  return <Suspense fallback={<main className="pt-24 text-center">Loading...</main>}><VerifyOtpPageContent /></Suspense>
 }

@@ -78,6 +78,7 @@ export default function Navbar() {
     if (!user) return '/dashboard'
     if (user.role === 'super_admin') return '/super-admin'
     if (user.role === 'admin') return '/admin'
+    if (user.role === 'trainer') return '/trainer'
     if (user.role === 'employer') return '/employer'
     return '/dashboard'
   }
@@ -126,6 +127,7 @@ export default function Navbar() {
   const candidateLinks: NavItem[] = [
     { label: t('resumeBuilder'), href: '/resume' },
     { label: t('myLearning'), href: '/training/my-learning' },
+    { label: 'My classes', href: '/training/classes' },
     { label: t('myCertificates'), href: '/training/my-certificates' },
     { label: t('myApplications'), href: '/applications' },
     { label: t('savedJobs'), href: '/saved-jobs' }
@@ -166,6 +168,8 @@ export default function Navbar() {
       label: t('admin'),
       items: [
         { label: t('dashboard'), href: '/admin' },
+        { label: 'Courses', href: '/admin/courses' },
+        { label: 'Training & Classes', href: '/admin/training' },
         { label: t('analytics'), href: '/admin/analytics' },
         { label: t('auditFraud'), href: '/admin/audit' },
         { label: 'Internal Communication', href: '/admin/communication' }
@@ -178,6 +182,8 @@ export default function Navbar() {
       label: 'System Control',
       items: [
         { label: 'Dashboard', href: '/super-admin' },
+        { label: 'Courses', href: '/admin/courses' },
+        { label: 'Training & Classes', href: '/admin/training' },
         { label: 'Staff & Roles', href: '/super-admin/staff' },
         { label: 'Users', href: '/super-admin/users' },
         { label: 'Plans & Perks', href: '/super-admin/plans' },
@@ -194,8 +200,11 @@ export default function Navbar() {
     if (user.role === 'employer') return 'employer'
     if (user.role === 'super_admin') return 'super_admin'
     if (user.role === 'admin') return 'admin'
+    if (user.role === 'trainer') return 'trainer'
     return 'guest'
   }, [user])
+
+  const trainerGroups: NavGroup[] = [{ label: 'Training', items: [{ label: 'Courses', href: '/trainer/courses' }, { label: 'Batches, classes & attendance', href: '/trainer' }] }]
 
   const toggleDropdown = (label: string) => {
     setOpenDropdown((previous) => (
@@ -313,7 +322,7 @@ export default function Navbar() {
       className="fixed inset-x-0 top-0 z-50 border-b border-gray-100 bg-white shadow-sm"
     >
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-        <Link href="/" className="flex items-center gap-2" onClick={closeMenus}>
+        <Link href={userMode === 'trainer' ? '/trainer' : '/'} className="flex items-center gap-2" onClick={closeMenus}>
           <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-600 to-purple-600" />
           <span className="text-xl font-bold text-gray-900">
             {t('appName')}
@@ -321,7 +330,7 @@ export default function Navbar() {
         </Link>
 
         <div className="hidden items-center gap-4 text-sm font-medium md:flex">
-          {publicLinks.map((link) => (
+          {publicLinks.filter(link => userMode !== 'trainer' || link.href.startsWith('/training')).map((link) => (
             <Link
               key={link.href}
               href={link.href}
@@ -353,6 +362,7 @@ export default function Navbar() {
 
           {userMode === 'employer' && employerGroups.map(renderDesktopDropdown)}
           {userMode === 'admin' && adminGroups.map(renderDesktopDropdown)}
+          {userMode === 'trainer' && trainerGroups.map(renderDesktopDropdown)}
           {userMode === 'super_admin' && superAdminGroups.map(renderDesktopDropdown)}
         </div>
 
@@ -430,7 +440,7 @@ export default function Navbar() {
             </div>
 
             <div className="flex flex-col gap-3">
-              {publicLinks.map((link) => (
+              {publicLinks.filter(link => userMode !== 'trainer' || link.href.startsWith('/training')).map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
@@ -474,6 +484,7 @@ export default function Navbar() {
 
             {userMode === 'employer' && employerGroups.map(renderMobileGroup)}
             {userMode === 'admin' && adminGroups.map(renderMobileGroup)}
+            {userMode === 'trainer' && trainerGroups.map(renderMobileGroup)}
             {userMode === 'super_admin' && superAdminGroups.map(renderMobileGroup)}
 
             {user ? (

@@ -7,6 +7,9 @@ const {
   CourseQuizAttempt,
   User
 } = require('../models/index');
+const { STAFF_ROLES, ownsCourse, publicCourse, parseCourse } = require('../services/trainingPolicy');
+const { Op } = require('sequelize');
+const { TrainingBatch, TrainingSession, sequelize } = require('../models');
 const { cloudinary } = require('../config/cloudinary');
 const PDFDocument = require('pdfkit');
 const QRCode = require('qrcode');
@@ -29,7 +32,7 @@ exports.getAllCourses = async (req, res) => {
       order: [['enrollmentCount', 'DESC']]
     });
 
-    res.json({ success: true, data: courses });
+    res.json({ success: true, data: courses.map(publicCourse) });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -39,22 +42,53 @@ exports.getCourse = async (req, res) => {
   try {
     const course = await Training.findByPk(req.params.id);
 
-    if (!course) {
+    if (!course || course.status !== 'active') {
       return res.status(404).json({ success: false, message: 'Course not found' });
     }
 
-    res.json({ success: true, data: course });
+    res.json({ success: true, data: publicCourse(course) });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
+
+exports.requireCourseOwner = async (req, res, next) => {
+  try {
+    const course = await Training.findByPk(req.params.id);
+    if (!course) return res.status(404).json({ success: false, message: 'Course not found' });
+    if (!ownsCourse(req.user, course)) return res.status(403).json({ success: false, message: 'You may only manage courses you own' });
+    req.course = course;
+    return next();
+  } catch (error) { return res.status(400).json({ success: false, message: 'Invalid course ID' }); }
+};
+exports.getManagedCourses = async (req, res) => {
+  try {
+    let where = {};
+    if (!['admin', 'super_admin'].includes(req.user.role)) {
+      const assigned = req.user.role === 'trainer' ? await TrainingBatch.findAll({ where: { trainerId: req.user.id }, attributes: ['trainingId'] }) : [];
+      where = { [Op.or]: [{ providerId: req.user.id }, { id: { [Op.in]: assigned.map(item => item.trainingId) } }] };
+    }
+    const courses = await Training.findAll({ where, order: [['createdAt', 'DESC']] });
+    return res.json({ success: true, data: courses.map(course => ({ ...course.toJSON(), canEdit: ownsCourse(req.user, course) })) });
+  } catch (error) { return res.status(500).json({ success: false, message: 'Unable to load managed courses' }); }
+};
+exports.getCourseContent = async (req, res) => {
+  try {
+    const course = await Training.findByPk(req.params.id);
+    if (!course) return res.status(404).json({ success: false, message: 'Course not found' });
+    const enrollment = req.user.role === 'candidate' && course.status === 'active' && await CourseEnrollment.findOne({ where: { userId: req.user.id, trainingId: course.id, status: ['active', 'completed'] } });
+    const assignment = req.user.role === 'trainer' && await TrainingBatch.findOne({ where: { trainingId: course.id, trainerId: req.user.id, status: 'active' } });
+    if (!ownsCourse(req.user, course) && !enrollment && !assignment) return res.status(403).json({ success: false, message: 'Enroll and log in to access course content' });
+    return res.json({ success: true, data: { videoUrl: course.videoUrl, hasVideo: !!course.videoUrl } });
+  } catch (error) { return res.status(400).json({ success: false, message: 'Unable to load course content' }); }
+};
+
 exports.createCourse = async (req, res) => {
   try {
-    const courseData = {
-      ...req.body,
-      providerId: req.user.id
-    };
+    let courseData;
+    try { courseData = { ...parseCourse(req.body, true), providerId: req.user.id }; }
+    catch (error) { return res.status(400).json({ success: false, message: error.message }); }
 
     if (req.files) {
       if (req.files.thumbnail && req.files.thumbnail[0]) {
@@ -95,7 +129,11 @@ exports.updateCourse = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Course not found' });
     }
 
-    const updateData = { ...req.body };
+    let updateData;
+    try { updateData = parseCourse(req.body); }
+    catch (error) { return res.status(400).json({ success: false, message: error.message }); }
+
+    if (updateData.status === 'inactive' && await TrainingSession.count({ where: { trainingId: course.id, status: ['scheduled', 'live'] } })) return res.status(400).json({ success: false, message: 'Cancel or complete pending classes before deactivating this course' });
 
     if (req.files) {
       if (req.files.thumbnail && req.files.thumbnail[0]) {
@@ -135,6 +173,8 @@ exports.deleteCourse = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Course not found' });
     }
 
+    if (await CourseEnrollment.count({ where: { trainingId: course.id } }) || await TrainingBatch.count({ where: { trainingId: course.id } }) || await TrainingSession.count({ where: { trainingId: course.id } })) return res.status(400).json({ success: false, message: 'This course has training records. Set its status to inactive to preserve history.' });
+
     if (course.thumbnailPublicId) {
       await cloudinary.uploader.destroy(course.thumbnailPublicId);
     }
@@ -151,47 +191,23 @@ exports.deleteCourse = async (req, res) => {
   }
 };
 
-// FIX #8: enrollCourse relies on route-level auth middleware (protect + authorizeRole('candidate'))
-// Ensure the router applies protect middleware before this handler to prevent unauthenticated enrollment
 exports.enrollCourse = async (req, res) => {
   try {
-    const course = await Training.findByPk(req.params.id);
-
-    if (!course) {
-      return res.status(404).json({ success: false, message: 'Course not found' });
-    }
-
-    const existingEnrollment = await CourseEnrollment.findOne({
-      where: {
-        userId: req.user.id,
-        trainingId: req.params.id
-      }
+    const result = await sequelize.transaction(async transaction => {
+      const course = await Training.findByPk(req.params.id, { transaction, lock: transaction.LOCK.UPDATE });
+      if (!course || course.status !== 'active') return { error: 'Course not available', status: 404 };
+      const existing = await CourseEnrollment.findOne({ where: { userId: req.user.id, trainingId: course.id }, transaction });
+      if (existing && ['active', 'completed'].includes(existing.status)) return { data: existing };
+      if (!course.isFree && Number(course.price) > 0) return { error: 'Contact the training team to arrange paid enrollment. No payment has been taken.', status: 402 };
+      const enrollment = existing ? await existing.update({ status: 'active' }, { transaction }) : await CourseEnrollment.create({ userId: req.user.id, trainingId: course.id, status: 'active' }, { transaction });
+      const count = await CourseEnrollment.count({ where: { trainingId: course.id, status: ['active', 'completed'] }, transaction });
+      await course.update({ enrollmentCount: count }, { transaction });
+      return { data: enrollment, notify: true };
     });
-
-    if (existingEnrollment) {
-      return res.json({
-        success: true,
-        message: 'Already enrolled',
-        data: existingEnrollment
-      });
-    }
-
-    const enrollment = await CourseEnrollment.create({
-      userId: req.user.id,
-      trainingId: req.params.id,
-      status: 'active'
-    });
-
-    await course.increment('enrollmentCount');
-
-    res.json({
-      success: true,
-      message: 'Enrolled successfully!',
-      data: enrollment
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
+    if (result.error) return res.status(result.status).json({ success: false, message: result.error });
+    const notifications = result.notify ? await require('./trainingOps.controller').notifyEnrollment(req.params.id) : [];
+    return res.json({ success: true, message: 'Enrolled successfully', data: result.data, notifications });
+  } catch (error) { return res.status(400).json({ success: false, message: 'Unable to enroll in this course' }); }
 };
 
 exports.getMyEnrollmentStatus = async (req, res) => {

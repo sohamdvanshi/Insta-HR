@@ -11,7 +11,7 @@ const REFERRAL_CODE_MAX_LENGTH = (
 )
 const REFERRAL_CHARACTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 
-const SYSTEM_ROLES = ['candidate', 'employer', 'admin', 'super_admin']
+const SYSTEM_ROLES = ['candidate', 'employer', 'admin', 'super_admin', 'trainer']
 
 const normalizeEmail = (value) => {
   if (value === null || value === undefined) return null
