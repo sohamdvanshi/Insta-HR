@@ -2,6 +2,7 @@ const express = require('express')
 const router = express.Router()
 
 const adminController = require('../controllers/admin.controller')
+const workspace = require('../controllers/adminWorkspace.controller')
 const {
   protect,
   authorize
@@ -15,15 +16,15 @@ router.use(
 
 router.get('/stats', adminController.getStats)
 router.get('/jobs', adminController.getAllJobs)
-router.put('/jobs/:id/status', adminController.updateJobStatus)
+router.put('/jobs/:id/status', workspace.jobStatus)
 router.get('/users', adminController.getAllUsers)
-router.put('/users/:id/toggle', adminController.toggleUserActive)
+router.put('/users/:id/toggle', workspace.changeAccess)
 
 // Only super_admin may change roles, including assigning super_admin.
 router.put(
   '/users/:id/role',
   authorize('super_admin'),
-  adminController.updateUserRole
+  workspace.changeRole
 )
 
 module.exports = router

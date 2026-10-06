@@ -8,8 +8,9 @@ const fail = (message, status = 400) => { throw Object.assign(new Error(message)
 const handle = fn => async (req, res) => {
   try { await fn(req, res); } catch (error) {
     if (!error.status) console.error('Training operation:', error.message);
-    const invalidId = error.original?.code === '22P02';
-    res.status(error.status || (invalidId ? 400 : 500)).json({ success: false, message: error.status ? error.message : invalidId ? 'Invalid ID' : 'Unable to complete training operation' });
+    const invalidValue = error.original?.code === '22P02';
+    const missingTrainerRole = invalidValue && /enum/i.test(error.message) && /trainer/i.test(error.message);
+    res.status(error.status || (invalidValue ? 400 : 500)).json({ success: false, message: error.status ? error.message : missingTrainerRole ? 'Trainer role is missing in the database. Run migrate:phase5 and restart the backend.' : invalidValue ? 'Invalid record value' : 'Unable to complete training operation' });
   }
 };
 const courseFor = async (user, id, allowAssignment = true) => {

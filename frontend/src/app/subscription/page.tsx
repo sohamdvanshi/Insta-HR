@@ -8,102 +8,14 @@ declare global {
   }
 }
 
-const PLANS = [
-  {
-    id: 'free',
-    name: 'Free',
-    price: 0,
-    priceLabel: '₹0',
-    period: 'forever',
-    color: 'gray',
-    badge: '',
-    features: [
-      '3 job postings/month',
-      'Basic candidate search',
-      'Standard support',
-      '5 resume views/month',
-    ],
-    missing: [
-      'AI resume screening',
-      'Featured listings',
-      'Bulk email',
-      'Priority support',
-    ],
-    cta: 'Current Plan',
-    disabled: true,
-  },
-  {
-    id: 'standard',
-    name: 'Standard',
-    price: 1999,
-    priceLabel: '₹1,999',
-    period: '/month',
-    color: 'blue',
-    badge: 'Popular',
-    features: [
-      'Unlimited job postings',
-      'Resume database access',
-      'Basic AI screening',
-      '100 resume views/month',
-      'Email support',
-      'Application analytics',
-    ],
-    missing: [
-      'Featured listings',
-      'Priority candidate reach',
-      'Social promotion',
-    ],
-    cta: 'Get Standard',
-    disabled: false,
-  },
-  {
-    id: 'premium',
-    name: 'Premium',
-    price: 3999,
-    priceLabel: '₹3,999',
-    period: '/month',
-    color: 'purple',
-    badge: 'Best Value',
-    features: [
-      'Everything in Standard',
-      'Featured job listings',
-      'AI resume ranking',
-      'Unlimited resume views',
-      'Priority candidate reach',
-      'Social promotion',
-      'Dedicated support',
-      'Custom branding',
-    ],
-    missing: [],
-    cta: 'Get Premium',
-    disabled: false,
-  },
-  {
-    id: 'enterprise',
-    name: 'Enterprise',
-    price: 9999,
-    priceLabel: '₹9,999',
-    period: '/month',
-    color: 'gold',
-    badge: 'Enterprise',
-    features: [
-      'Everything in Premium',
-      'Job branding campaigns',
-      'Social media promotion',
-      'Recruitment support team',
-      'Custom AI matching',
-      'Bulk hiring tools',
-      'Account manager',
-      'API access',
-    ],
-    missing: [],
-    cta: 'Get Enterprise',
-    disabled: false,
-  },
-]
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1').replace(/\/$/, '')
+type Plan = { id: string; name: string; price: number; priceLabel: string; period: string; color: string; badge: string; features: string[]; missing: string[]; cta: string; disabled: boolean }
 
 export default function SubscriptionPage() {
   const router = useRouter()
+  const [plans, setPlans] = useState<Plan[]>([])
+  const [planError, setPlanError] = useState('')
+  const [plansLoading, setPlansLoading] = useState(true)
   const [currentPlan, setCurrentPlan] = useState('free')
   const [expiresAt, setExpiresAt] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -116,6 +28,12 @@ export default function SubscriptionPage() {
     const userData = localStorage.getItem('user')
     if (userData) setUser(JSON.parse(userData))
     loadRazorpay()
+    fetch(`${API_BASE}/payments/plans`).then(async response => {
+      const result = await response.json()
+      if (!response.ok || !result.success) throw new Error(result.message || 'Unable to load plans')
+      const colors: Record<string, string> = { free: 'gray', standard: 'blue', premium: 'purple', enterprise: 'gold' }
+      setPlans(result.data.map((plan: any) => ({ id: plan.id, name: plan.name, price: plan.amountPaise / 100, priceLabel: `₹${(plan.amountPaise / 100).toLocaleString('en-IN')}`, period: plan.id === 'free' ? 'forever' : `/${plan.durationDays} days`, color: colors[plan.id] || 'blue', badge: '', features: plan.features, missing: [], cta: `Get ${plan.name}`, disabled: plan.id === 'free' })))
+    }).catch(error => setPlanError(error.message)).finally(() => setPlansLoading(false))
     fetchSubscription()
   }, [])
 
@@ -141,7 +59,7 @@ export default function SubscriptionPage() {
     }
 
     try {
-      const res = await fetch('http://localhost:5000/api/v1/payments/subscription', {
+      const res = await fetch(`${API_BASE}/payments/subscription`, {
         headers: { Authorization: 'Bearer ' + token }
       })
       const data = await res.json()
@@ -165,7 +83,7 @@ export default function SubscriptionPage() {
     }
 
     try {
-      const res = await fetch('http://localhost:5000/api/v1/payments/history', {
+      const res = await fetch(`${API_BASE}/payments/history`, {
         headers: { Authorization: 'Bearer ' + token }
       })
       const data = await res.json()
@@ -185,7 +103,7 @@ export default function SubscriptionPage() {
     }
 
     try {
-      const res = await fetch(`http://localhost:5000/api/v1/payments/${paymentId}/invoice`, {
+      const res = await fetch(`${API_BASE}/payments/${paymentId}/invoice`, {
         headers: {
           Authorization: 'Bearer ' + token
         }
@@ -227,7 +145,7 @@ export default function SubscriptionPage() {
     setProcessingPlan(planId)
 
     try {
-      const orderRes = await fetch('http://localhost:5000/api/v1/payments/create-order', {
+      const orderRes = await fetch(`${API_BASE}/payments/create-order`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -255,7 +173,7 @@ export default function SubscriptionPage() {
         image: '/logo.png',
         order_id: orderData.order.id,
         handler: async (response: any) => {
-          const verifyRes = await fetch('http://localhost:5000/api/v1/payments/verify', {
+          const verifyRes = await fetch(`${API_BASE}/payments/verify`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -360,8 +278,11 @@ export default function SubscriptionPage() {
       </div>
 
       <div className="max-w-6xl mx-auto px-6 py-12">
+        {plansLoading && <p role="status" className="mb-4">Loading current plans…</p>}
+        {planError && <p role="alert" className="mb-4 rounded-lg bg-red-50 p-4 text-red-800">{planError}</p>}
+        {!plansLoading && !planError && !plans.length && <p>No plans are available right now.</p>}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {PLANS.map(plan => {
+          {plans.map(plan => {
             const colors = colorMap[plan.color]
             const isCurrent = currentPlan === plan.id
             const isProcessing = processingPlan === plan.id

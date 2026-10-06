@@ -31,6 +31,8 @@ const LoyaltyPointTransaction = require('./LoyaltyPointTransaction')
 const InternalThread = require('./InternalThread')
 const InternalMessage = require('./InternalMessage')
 const InternalNote = require('./InternalNote')
+const SubscriptionPlan = require('./SubscriptionPlan')
+const FeatureFlag = require('./FeatureFlag')
 
 const optionalModel = (model) => model && typeof model.hasMany === 'function'
 
@@ -771,5 +773,7 @@ module.exports = {
   InternalThread,
   InternalMessage,
   InternalNote,
+  SubscriptionPlan,
+  FeatureFlag,
   syncDatabase
 }

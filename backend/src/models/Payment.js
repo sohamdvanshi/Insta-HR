@@ -37,6 +37,10 @@ const Payment = sequelize.define(
       type: DataTypes.STRING,
       allowNull: true
     },
+    planDurationDays: {
+      type: DataTypes.INTEGER,
+      allowNull: true
+    },
     status: {
       type: DataTypes.ENUM('created', 'success', 'failed'),
       defaultValue: 'created'

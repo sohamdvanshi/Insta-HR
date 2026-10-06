@@ -20,6 +20,7 @@ const InternalThread = sequelize.define(
       validate: {
         isIn: [[
           'general',
+          'support',
           'candidate',
           'employer',
           'job',

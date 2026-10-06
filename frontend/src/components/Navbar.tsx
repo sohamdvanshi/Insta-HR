@@ -168,6 +168,10 @@ export default function Navbar() {
       label: t('admin'),
       items: [
         { label: t('dashboard'), href: '/admin' },
+        { label: 'Candidates', href: '/admin/candidates' },
+        { label: 'Employers', href: '/admin/employers' },
+        { label: 'Applications', href: '/admin/applications' },
+        { label: 'Payments', href: '/admin/payments' },
         { label: 'Courses', href: '/admin/courses' },
         { label: 'Training & Classes', href: '/admin/training' },
         { label: t('analytics'), href: '/admin/analytics' },
@@ -188,6 +192,7 @@ export default function Navbar() {
         { label: 'Users', href: '/super-admin/users' },
         { label: 'Plans & Perks', href: '/super-admin/plans' },
         { label: 'Feature Flags', href: '/super-admin/feature-flags' },
+        { label: 'Infrastructure', href: '/super-admin/infrastructure' },
         { label: 'Audit Logs', href: '/super-admin/audit-logs' },
         { label: 'Internal Communication', href: '/super-admin/communication' }
       ]

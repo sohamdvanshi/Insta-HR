@@ -8,7 +8,9 @@
     "start": "node src/server.js",
     "reindex:jobs": "node src/scripts/reindexJobs.js",
     "migrate:phase5": "node scripts/db/migrate-phase5.js",
-    "test:phase5": "node --test test/phase5*.test.js"
+    "test:phase5": "node --test test/phase5*.test.js",
+    "migrate:phase6": "node scripts/db/migrate-phase6.js",
+    "test:phase6": "node --test test/phase6*.test.js"
   },
   "keywords": [],
   "author": "",
