@@ -32,7 +32,7 @@ export function AdminFrame({ title, description, children }: { title: string; de
 
   const staff = useStaff(), root = staff.role === 'super_admin' ? '/super-admin' : '/admin'
   const links = [['Overview', root], ['Candidates', '/admin/candidates'], ['Employers', '/admin/employers'], ['Jobs', '/admin/jobs'], ['Applications', '/admin/applications'], ['Payments', '/admin/payments'], ['Invoices', '/admin/invoices'], ['Support & notes', `${root}/communication`], ['Audit logs', `${root}/audit-logs`], ['Training', '/admin/training']]
-  if (staff.role === 'super_admin') links.push(['Staff & roles', '/super-admin/staff'], ['Plans', '/super-admin/plans'], ['Feature flags', '/super-admin/feature-flags'], ['Infrastructure', '/super-admin/infrastructure'])
+  if (staff.role === 'super_admin') links.push(['Wage registers', '/super-admin/wage-register'], ['Staff & roles', '/super-admin/staff'], ['Plans', '/super-admin/plans'], ['Feature flags', '/super-admin/feature-flags'], ['Infrastructure', '/super-admin/infrastructure'])
   return <main className="min-h-screen bg-slate-50 px-4 pb-16 pt-24 text-slate-900 sm:px-6"><div className="mx-auto max-w-7xl"><p className="text-sm text-blue-700">{tr(staff.role === 'super_admin' ? 'System control' : 'Insta-HR team')}</p><h1 className="mt-1 text-3xl font-bold">{tr(title)}</h1>{description && <p className="mt-2 text-slate-600">{tr(description)}</p>}<nav aria-label={tr("Admin tools")} className="my-6 flex flex-wrap gap-2">{links.map(([label, href]) => <Link key={label} href={href} className="rounded-lg border bg-white px-3 py-2 text-sm text-blue-800 hover:bg-blue-50">{tr(label)}</Link>)}</nav>{children}</div></main>
 }
 export function Notice({ error, success }: { error?: string; success?: string }) {

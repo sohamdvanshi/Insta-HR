@@ -66,7 +66,7 @@ app.use(cors({ origin: FRONTEND_URL, credentials: true }))
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 500,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -77,7 +77,7 @@ const apiLimiter = rateLimit({
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 50,
+  max: 200,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -156,6 +156,7 @@ app.use('/api/v1/employer/manpower-requests', manpowerRequestRoutes)
 app.use('/api/v1/employer/contracts', contractRoutes)
 app.use('/api/v1/employer/attendance', attendanceRoutes)
 app.use('/api/v1/employer/payrolls', payrollRoutes)
+app.use('/api/v1/wage-registers', require('./routes/wageRegister.routes'))
 app.use('/api/v1/employer/invoices', invoiceRoutes)
 app.use('/api/v1/admin/analytics', analyticsRoutes)
 app.use('/api/v1/employer/analytics', employerAnalyticsRoutes)

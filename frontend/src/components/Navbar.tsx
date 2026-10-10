@@ -161,6 +161,7 @@ export default function Navbar() {
       label: t('finance'),
       items: [
         { label: t('payroll'), href: '/employer/payrolls' },
+        { label: 'Wage registers', href: '/employer/wage-register' },
         { label: t('invoices'), href: '/employer/invoices' },
         { label: t('upgradePlan'), href: '/subscription' }
       ]

@@ -3,6 +3,7 @@ import { tr, trError, useLocale, locale } from '@/lib/localization'
 
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
 
@@ -270,6 +271,7 @@ export default function EmployerAttendancePage() {
     <div className="min-h-screen bg-gray-50 px-4 py-8 md:px-8">
       <div className="mx-auto max-w-7xl">
         <div className="mb-8">
+          <Link href="/employer/wage-register" className="mb-4 inline-block text-blue-700 underline">{tr("Upload attendance and calculate wage registers")}</Link>
           <h1 className="text-3xl font-bold text-gray-900">{tr("Attendance Tracking")}</h1>
           <p className="mt-2 text-sm text-gray-600">{tr("Mark daily attendance for deployed candidates and maintain payroll-ready records.")}</p>
         </div>

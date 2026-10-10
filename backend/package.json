@@ -10,7 +10,9 @@
     "migrate:phase5": "node scripts/db/migrate-phase5.js",
     "test:phase5": "node --test test/phase5*.test.js",
     "migrate:phase6": "node scripts/db/migrate-phase6.js",
-    "test:phase6": "node --test test/phase6*.test.js"
+    "test:phase6": "node --test test/phase6*.test.js",
+    "migrate:wages": "node scripts/db/migrate-wages.js",
+    "test:wages": "node --test test/wages*.test.js"
   },
   "keywords": [],
   "author": "",
@@ -22,6 +24,7 @@
     "cloudinary": "^1.41.3",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
+    "exceljs": "^4.4.0",
     "express": "^5.2.1",
     "express-rate-limit": "^8.2.1",
     "express-validator": "^7.3.1",
