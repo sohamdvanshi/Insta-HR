@@ -1,4 +1,6 @@
 'use client'
+import { tr, useLocale } from '@/lib/localization'
+
 
 import { useEffect, useRef, useState } from 'react'
 
@@ -11,6 +13,8 @@ interface ShareJobButtonProps {
 }
 
 export default function ShareJobButton({ job }: ShareJobButtonProps) {
+  useLocale()
+
   const [showMenu, setShowMenu] = useState(false)
   const [copied, setCopied] = useState(false)
   const [toast, setToast] = useState('')
@@ -21,7 +25,7 @@ export default function ShareJobButton({ job }: ShareJobButtonProps) {
       ? `${window.location.origin}/jobs/${job.id}`
       : ''
 
-  const shareText = `Check out this job: ${job.title}${job.location ? ` in ${job.location}` : ''}`
+  const shareText = job.location ? tr('Job share with location', { job: job.title, location: job.location }) : tr('Job share', { job: job.title })
 
   const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`${shareText} ${jobUrl}`)}`
   const linkedinUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(jobUrl)}`
@@ -91,7 +95,7 @@ export default function ShareJobButton({ job }: ShareJobButtonProps) {
         onClick={handleShare}
         aria-haspopup="menu"
         aria-expanded={showMenu}
-        aria-label="Share this job"
+        aria-label={tr("Share this job")}
         className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold shadow-sm transition-all duration-200 ${
           copied
             ? 'border-green-200 bg-green-50 text-green-700'
@@ -99,7 +103,7 @@ export default function ShareJobButton({ job }: ShareJobButtonProps) {
         }`}
       >
         {copied ? <CheckIcon /> : <ShareIcon />}
-        <span>{copied ? 'Copied' : 'Share'}</span>
+        <span>{tr(copied ? 'Copied' : 'Share')}</span>
         <ChevronDownIcon open={showMenu} />
       </button>
 
@@ -109,7 +113,7 @@ export default function ShareJobButton({ job }: ShareJobButtonProps) {
 
           <div className="relative rounded-xl bg-white">
             <div className="border-b border-gray-100 px-3 py-3">
-              <p className="text-sm font-semibold text-gray-900">Share this job</p>
+              <p className="text-sm font-semibold text-gray-900">{tr("Share this job")}</p>
               <p className="mt-1 line-clamp-1 text-xs text-gray-500">{job.title}</p>
             </div>
 
@@ -141,7 +145,7 @@ export default function ShareJobButton({ job }: ShareJobButtonProps) {
                 className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
               >
                 <LinkIcon />
-                <span>Copy link</span>
+                <span>{tr("Copy link")}</span>
               </button>
             </div>
           </div>
@@ -150,7 +154,7 @@ export default function ShareJobButton({ job }: ShareJobButtonProps) {
 
       {toast && (
         <div className="absolute left-0 top-full z-50 mt-3 whitespace-nowrap rounded-xl bg-gray-900 px-4 py-2 text-sm font-medium text-white shadow-lg">
-          {toast}
+          {tr(toast)}
         </div>
       )}
 
@@ -185,6 +189,8 @@ function ShareLink({
   icon: React.ReactNode
   hoverClass: string
 }) {
+  useLocale()
+
   return (
     <a
       href={href}
@@ -193,12 +199,14 @@ function ShareLink({
       className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-gray-700 transition-colors ${hoverClass}`}
     >
       {icon}
-      <span>{label}</span>
+      <span>{tr(label)}</span>
     </a>
   )
 }
 
 function ShareIcon() {
+  useLocale()
+
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -218,6 +226,8 @@ function ShareIcon() {
 }
 
 function CheckIcon() {
+  useLocale()
+
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -233,6 +243,8 @@ function CheckIcon() {
 }
 
 function ChevronDownIcon({ open }: { open: boolean }) {
+  useLocale()
+
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -249,6 +261,8 @@ function ChevronDownIcon({ open }: { open: boolean }) {
 }
 
 function LinkIcon() {
+  useLocale()
+
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -265,6 +279,8 @@ function LinkIcon() {
 }
 
 function WhatsAppIcon() {
+  useLocale()
+
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -281,6 +297,8 @@ function WhatsAppIcon() {
 }
 
 function LinkedInIcon() {
+  useLocale()
+
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -297,6 +315,8 @@ function LinkedInIcon() {
 }
 
 function FacebookIcon() {
+  useLocale()
+
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"

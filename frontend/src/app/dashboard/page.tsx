@@ -1,4 +1,6 @@
 'use client'
+import { tr, useLocale } from '@/lib/localization'
+
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
@@ -28,6 +30,8 @@ interface EmployerStats {
 const API_BASE = 'http://localhost:5000/api/v1'
 
 export default function DashboardPage() {
+  useLocale()
+
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
@@ -164,9 +168,7 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <main className="min-h-screen bg-gray-50 pt-24 flex items-center justify-center">
-        <p className="text-gray-400">
-          Loading dashboard...
-        </p>
+        <p className="text-gray-400">{tr("Loading dashboard...")}</p>
       </main>
     )
   }
@@ -179,14 +181,12 @@ export default function DashboardPage() {
     <main className="min-h-screen bg-gray-50 pt-16">
       <div className="max-w-7xl mx-auto px-6 py-10">
         <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white mb-8">
-          <h1 className="text-3xl font-bold mb-2">
-            Welcome back! 👋
-          </h1>
+          <h1 className="text-3xl font-bold mb-2">{tr("Welcome back! 👋")}</h1>
           <p className="text-blue-100">
-            {user.email} —{' '}
-            {user.role === 'candidate'
+            {user.email} —{tr(' ')}
+            {tr(user.role === 'candidate'
               ? 'Job Seeker'
-              : 'Employer'}
+              : 'Employer')}
           </p>
         </div>
 
@@ -252,20 +252,14 @@ export default function DashboardPage() {
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-violet-100 mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-wide text-violet-600">
-                  Invite and earn
-                </p>
-                <h2 className="mt-2 text-xl font-bold text-gray-900">
-                  Your Referral Code
-                </h2>
-                <p className="mt-2 text-sm text-gray-500">
-                  Share this unique code with another candidate.
-                </p>
+                <p className="text-sm font-semibold uppercase tracking-wide text-violet-600">{tr("Invite and earn")}</p>
+                <h2 className="mt-2 text-xl font-bold text-gray-900">{tr("Your Referral Code")}</h2>
+                <p className="mt-2 text-sm text-gray-500">{tr("Share this unique code with another candidate.")}</p>
               </div>
 
               <div className="flex items-center gap-3">
                 <code className="px-4 py-3 bg-gray-100 rounded-xl font-bold tracking-wider text-gray-900">
-                  {user.referralCode || 'Not available'}
+                  {tr(user.referralCode || 'Not available')}
                 </code>
 
                 <button
@@ -274,23 +268,19 @@ export default function DashboardPage() {
                   disabled={!user.referralCode}
                   className="px-4 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  {copied ? 'Copied!' : 'Copy'}
+                  {tr(copied ? 'Copied!' : 'Copy')}
                 </button>
               </div>
             </div>
 
             {!user.referralCode && (
-              <p className="mt-4 text-sm text-amber-600">
-                Your referral code is not available yet. Please log out and log in again after the backend update.
-              </p>
+              <p className="mt-4 text-sm text-amber-600">{tr("Your referral code is not available yet. Please log out and log in again after the backend update.")}</p>
             )}
           </div>
         )}
 
         <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">
-            Quick Actions
-          </h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-6">{tr("Quick Actions")}</h2>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {user.role === 'candidate' ? (
@@ -362,15 +352,9 @@ export default function DashboardPage() {
           >
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-wide text-violet-600">
-                  Earn rewards
-                </p>
-                <h2 className="mt-2 text-xl font-bold text-gray-900">
-                  Referrals & Loyalty
-                </h2>
-                <p className="mt-2 text-sm leading-6 text-gray-600">
-                  Refer candidates, track referral progress, and view your loyalty points.
-                </p>
+                <p className="text-sm font-semibold uppercase tracking-wide text-violet-600">{tr("Earn rewards")}</p>
+                <h2 className="mt-2 text-xl font-bold text-gray-900">{tr("Referrals & Loyalty")}</h2>
+                <p className="mt-2 text-sm leading-6 text-gray-600">{tr("Refer candidates, track referral progress, and view your loyalty points.")}</p>
               </div>
 
               <div className="rounded-xl bg-violet-600 px-3 py-2 text-2xl">
@@ -378,9 +362,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="mt-5 text-sm font-semibold text-violet-700">
-              Open referrals →
-            </div>
+            <div className="mt-5 text-sm font-semibold text-violet-700">{tr("Open referrals →")}</div>
           </Link>
         )}
 
@@ -391,15 +373,9 @@ export default function DashboardPage() {
           >
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-wide text-blue-600">
-                  Hiring insights
-                </p>
-                <h2 className="mt-2 text-xl font-bold text-gray-900">
-                  Referral Tracking
-                </h2>
-                <p className="mt-2 text-sm leading-6 text-gray-600">
-                  Review referred candidates and monitor referral statuses for your jobs.
-                </p>
+                <p className="text-sm font-semibold uppercase tracking-wide text-blue-600">{tr("Hiring insights")}</p>
+                <h2 className="mt-2 text-xl font-bold text-gray-900">{tr("Referral Tracking")}</h2>
+                <p className="mt-2 text-sm leading-6 text-gray-600">{tr("Review referred candidates and monitor referral statuses for your jobs.")}</p>
               </div>
 
               <div className="rounded-xl bg-blue-600 px-3 py-2 text-2xl">
@@ -407,17 +383,15 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="mt-5 text-sm font-semibold text-blue-700">
-              View referrals →
-            </div>
+            <div className="mt-5 text-sm font-semibold text-blue-700">{tr("View referrals →")}</div>
           </Link>
         )}
 
         <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 mb-8">
           <h2 className="text-xl font-bold text-gray-900 mb-4">
-            {user.role === 'candidate'
+            {tr(user.role === 'candidate'
               ? 'Your Application Status'
-              : 'Hiring Overview'}
+              : 'Hiring Overview')}
           </h2>
 
           {user.role === 'candidate' &&
@@ -452,7 +426,7 @@ export default function DashboardPage() {
                   <div key={label}>
                     <div className="flex justify-between text-sm mb-1">
                       <span className="text-gray-600">
-                        {label}
+                        {tr(label)}
                       </span>
                       <span className="font-medium text-gray-900">
                         {value}
@@ -475,15 +449,11 @@ export default function DashboardPage() {
 
                 {candidateStats.totalApplied === 0 && (
                   <div className="text-center py-6">
-                    <p className="text-gray-400 mb-3">
-                      You have not applied to any jobs yet
-                    </p>
+                    <p className="text-gray-400 mb-3">{tr("You have not applied to any jobs yet")}</p>
                     <Link
                       href="/jobs"
                       className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700"
-                    >
-                      Browse Jobs
-                    </Link>
+                    >{tr("Browse Jobs")}</Link>
                   </div>
                 )}
               </div>
@@ -493,18 +463,14 @@ export default function DashboardPage() {
             employerStats && (
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-blue-50 rounded-xl p-4">
-                  <p className="text-blue-800 font-medium mb-1">
-                    Active Jobs
-                  </p>
+                  <p className="text-blue-800 font-medium mb-1">{tr("Active Jobs")}</p>
                   <p className="text-2xl font-bold text-blue-600">
                     {employerStats.totalJobs}
                   </p>
                 </div>
 
                 <div className="bg-purple-50 rounded-xl p-4">
-                  <p className="text-purple-800 font-medium mb-1">
-                    Total Applications
-                  </p>
+                  <p className="text-purple-800 font-medium mb-1">{tr("Total Applications")}</p>
                   <p className="text-2xl font-bold text-purple-600">
                     {employerStats.totalApplications}
                   </p>
@@ -512,15 +478,11 @@ export default function DashboardPage() {
 
                 {employerStats.totalJobs === 0 && (
                   <div className="col-span-2 text-center py-4">
-                    <p className="text-gray-400 mb-3">
-                      You have not posted any jobs yet
-                    </p>
+                    <p className="text-gray-400 mb-3">{tr("You have not posted any jobs yet")}</p>
                     <Link
                       href="/post-job"
                       className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700"
-                    >
-                      Post Your First Job
-                    </Link>
+                    >{tr("Post Your First Job")}</Link>
                   </div>
                 )}
               </div>
@@ -531,9 +493,7 @@ export default function DashboardPage() {
           type="button"
           onClick={handleLogout}
           className="px-6 py-3 bg-red-50 text-red-600 font-medium rounded-xl hover:bg-red-100 transition-colors"
-        >
-          Logout
-        </button>
+        >{tr("Logout")}</button>
       </div>
     </main>
   )
@@ -546,13 +506,15 @@ function StatCard({
   value: string
   label: string
 }) {
+  useLocale()
+
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
       <div className="text-3xl font-bold text-blue-600 mb-1">
-        {value}
+        {tr(value)}
       </div>
       <div className="text-gray-500 text-sm">
-        {label}
+        {tr(label)}
       </div>
     </div>
   )
@@ -569,6 +531,8 @@ function ActionLink({
   label: string
   highlight?: boolean
 }) {
+  useLocale()
+
   return (
     <Link
       href={href}
@@ -578,7 +542,7 @@ function ActionLink({
           : 'flex flex-col items-center p-4 bg-blue-50 rounded-xl hover:bg-blue-100 transition-colors'
       }
     >
-      <span className="text-3xl mb-2">{emoji}</span>
+      <span className="text-3xl mb-2">{tr(emoji)}</span>
       <span
         className={
           highlight
@@ -586,7 +550,7 @@ function ActionLink({
             : 'text-sm font-medium text-gray-700 text-center'
         }
       >
-        {label}
+        {tr(label)}
       </span>
     </Link>
   )

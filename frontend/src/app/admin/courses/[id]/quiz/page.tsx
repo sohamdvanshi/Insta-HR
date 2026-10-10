@@ -1,4 +1,6 @@
 'use client'
+import { tr, trError, useLocale } from '@/lib/localization'
+
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
@@ -18,6 +20,8 @@ type Question = {
 }
 
 export default function AdminCourseQuizPage() {
+  useLocale()
+
   const params = useParams()
   const router = useRouter()
   const courseId = params?.id as string
@@ -290,7 +294,7 @@ export default function AdminCourseQuizPage() {
     return (
       <main className="min-h-screen bg-gray-50 pt-24 px-6">
         <div className="max-w-5xl mx-auto bg-white rounded-2xl p-6 shadow-sm">
-          <p className="text-gray-500">Loading quiz editor...</p>
+          <p className="text-gray-500">{tr("Loading quiz editor...")}</p>
         </div>
       </main>
     )
@@ -303,60 +307,51 @@ export default function AdminCourseQuizPage() {
           <Link
             href={isTrainer ? '/trainer/courses' : '/admin/courses'}
             className="text-sm text-blue-600 hover:underline"
-          >
-            ← Back to Courses
-          </Link>
+          >{tr("← Back to Courses")}</Link>
 
           <div className="mt-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Manage Course Quiz</h1>
+              <h1 className="text-2xl font-bold text-gray-900">{tr("Manage Course Quiz")}</h1>
               <p className="text-sm text-gray-500 mt-1">
-                {course?.title || 'Course'} — create or update the final quiz
-              </p>
+                {course?.title || 'Course'}{tr(" — create or update the final quiz")}</p>
             </div>
 
             <button
               onClick={() => router.push('/training/' + courseId)}
               className="px-4 py-2 rounded-xl border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              Preview Course
-            </button>
+            >{tr("Preview Course")}</button>
           </div>
         </div>
 
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-5">
-          <h2 className="text-lg font-bold text-gray-900">Quiz Settings</h2>
+          <h2 className="text-lg font-bold text-gray-900">{tr("Quiz Settings")}</h2>
 
           {message && (
             <div className="rounded-xl bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700">
-              {message}
+              {tr(message)}
             </div>
           )}
 
           {error && (
             <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-              {error}
+              {trError(error)}
             </div>
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Quiz Title
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{tr("Quiz Title")}</label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-blue-500"
-                placeholder="Final Course Quiz"
+                placeholder={tr("Final Course Quiz")}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Pass Percentage
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{tr("Pass Percentage")}</label>
               <input
                 type="number"
                 min="1"
@@ -369,15 +364,13 @@ export default function AdminCourseQuizPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Description
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{tr("Description")}</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
               className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-blue-500"
-              placeholder="Answer all questions carefully"
+              placeholder={tr("Answer all questions carefully")}
             />
           </div>
         </div>
@@ -389,25 +382,20 @@ export default function AdminCourseQuizPage() {
               className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100"
             >
               <div className="flex items-center justify-between mb-5">
-                <h3 className="text-lg font-bold text-gray-900">
-                  Question {index + 1}
+                <h3 className="text-lg font-bold text-gray-900">{tr("Question ")}{index + 1}
                 </h3>
 
                 {questions.length > 1 && (
                   <button
                     onClick={() => removeQuestion(index)}
                     className="px-3 py-2 rounded-xl bg-red-50 text-red-600 text-sm font-medium hover:bg-red-100"
-                  >
-                    Remove
-                  </button>
+                  >{tr("Remove")}</button>
                 )}
               </div>
 
               <div className="space-y-5">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Question Text
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{tr("Question Text")}</label>
                   <textarea
                     value={question.question}
                     onChange={(e) =>
@@ -415,15 +403,13 @@ export default function AdminCourseQuizPage() {
                     }
                     rows={3}
                     className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-blue-500"
-                    placeholder="Enter the question"
+                    placeholder={tr("Enter the question")}
                   />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Option A
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{tr("Option A")}</label>
                     <input
                       type="text"
                       value={question.optionA}
@@ -435,9 +421,7 @@ export default function AdminCourseQuizPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Option B
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{tr("Option B")}</label>
                     <input
                       type="text"
                       value={question.optionB}
@@ -449,9 +433,7 @@ export default function AdminCourseQuizPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Option C
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{tr("Option C")}</label>
                     <input
                       type="text"
                       value={question.optionC}
@@ -463,9 +445,7 @@ export default function AdminCourseQuizPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Option D
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{tr("Option D")}</label>
                     <input
                       type="text"
                       value={question.optionD}
@@ -479,9 +459,7 @@ export default function AdminCourseQuizPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Correct Option
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{tr("Correct Option")}</label>
                     <select
                       value={question.correctOption}
                       onChange={(e) =>
@@ -493,17 +471,15 @@ export default function AdminCourseQuizPage() {
                       }
                       className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-blue-500"
                     >
-                      <option value="A">Option A</option>
-                      <option value="B">Option B</option>
-                      <option value="C">Option C</option>
-                      <option value="D">Option D</option>
+                      <option value="A">{tr("Option A")}</option>
+                      <option value="B">{tr("Option B")}</option>
+                      <option value="C">{tr("Option C")}</option>
+                      <option value="D">{tr("Option D")}</option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Marks
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{tr("Marks")}</label>
                     <input
                       type="number"
                       min="1"
@@ -522,9 +498,7 @@ export default function AdminCourseQuizPage() {
           <button
             onClick={addQuestion}
             className="w-full rounded-2xl border-2 border-dashed border-blue-300 py-4 text-blue-600 font-semibold hover:bg-blue-50"
-          >
-            + Add Another Question
-          </button>
+          >{tr("+ Add Another Question")}</button>
         </div>
 
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
@@ -534,22 +508,18 @@ export default function AdminCourseQuizPage() {
               disabled={saving}
               className="px-6 py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-50"
             >
-              {saving ? 'Saving...' : 'Save Quiz'}
+              {tr(saving ? 'Saving...' : 'Save Quiz')}
             </button>
 
             <button
               onClick={handleDeleteQuiz}
               className="px-6 py-3 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700"
-            >
-              Delete Quiz
-            </button>
+            >{tr("Delete Quiz")}</button>
 
             <button
               onClick={() => router.push('/admin/courses')}
               className="px-6 py-3 rounded-xl border border-gray-300 text-gray-700 font-semibold hover:bg-gray-50"
-            >
-              Back to Courses
-            </button>
+            >{tr("Back to Courses")}</button>
           </div>
         </div>
       </div>

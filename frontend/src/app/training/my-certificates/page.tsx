@@ -1,5 +1,7 @@
 
 'use client'
+import { tr, trError, useLocale, locale } from '@/lib/localization'
+
 
 
 import { useEffect, useState } from 'react'
@@ -8,6 +10,8 @@ import Link from 'next/link'
 
 
 export default function MyCertificatesPage() {
+  useLocale()
+
   const router = useRouter()
   const [courses, setCourses] = useState<any[]>([])
   const [progressMap, setProgressMap] = useState<Record<string, any>>({})
@@ -120,7 +124,7 @@ export default function MyCertificatesPage() {
   if (loading) {
     return (
       <main className="min-h-screen bg-gray-50 pt-24 flex items-center justify-center">
-        <p className="text-gray-400">Loading your certificates...</p>
+        <p className="text-gray-400">{tr("Loading your certificates...")}</p>
       </main>
     )
   }
@@ -130,31 +134,27 @@ export default function MyCertificatesPage() {
     <main className="min-h-screen bg-gray-50 pt-16">
       <div className="bg-gradient-to-r from-green-600 to-emerald-600 py-14 px-6">
         <div className="max-w-6xl mx-auto">
-          <Link href="/training/my-learning" className="text-white/70 hover:text-white text-sm mb-4 inline-block">
-            ← Back to My Learning
-          </Link>
+          <Link href="/training/my-learning" className="text-white/70 hover:text-white text-sm mb-4 inline-block">{tr("            ← Back to My Learning          ")}</Link>
 
 
-          <h1 className="text-4xl font-bold text-white mb-3">My Certificates</h1>
-          <p className="text-green-100 text-lg mb-8">
-            View and verify your earned course completion certificates
-          </p>
+          <h1 className="text-4xl font-bold text-white mb-3">{tr("My Certificates")}</h1>
+          <p className="text-green-100 text-lg mb-8">{tr("            View and verify your earned course completion certificates          ")}</p>
 
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-white/10 rounded-2xl p-5">
               <div className="text-2xl font-bold text-white">{completedCourses.length}</div>
-              <div className="text-green-100 text-sm">Certificates Earned</div>
+              <div className="text-green-100 text-sm">{tr("Certificates Earned")}</div>
             </div>
             <div className="bg-white/10 rounded-2xl p-5">
               <div className="text-2xl font-bold text-white">{courses.length}</div>
-              <div className="text-green-100 text-sm">Enrolled Courses</div>
+              <div className="text-green-100 text-sm">{tr("Enrolled Courses")}</div>
             </div>
             <div className="bg-white/10 rounded-2xl p-5">
               <div className="text-2xl font-bold text-white">
                 {courses.length - completedCourses.length}
               </div>
-              <div className="text-green-100 text-sm">Still In Progress</div>
+              <div className="text-green-100 text-sm">{tr("Still In Progress")}</div>
             </div>
           </div>
         </div>
@@ -164,7 +164,7 @@ export default function MyCertificatesPage() {
       <div className="max-w-6xl mx-auto px-6 py-10">
         {error && (
           <div className="bg-red-50 text-red-700 px-4 py-3 rounded-xl mb-6 border border-red-200">
-            {error}
+            {trError(error)}
           </div>
         )}
 
@@ -172,16 +172,12 @@ export default function MyCertificatesPage() {
         {completedCourses.length === 0 ? (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center">
             <div className="text-6xl mb-4">🏆</div>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">No certificates earned yet</h2>
-            <p className="text-gray-500 mb-6">
-              Complete at least one course to generate your first certificate.
-            </p>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">{tr("No certificates earned yet")}</h2>
+            <p className="text-gray-500 mb-6">{tr("              Complete at least one course to generate your first certificate.            ")}</p>
             <Link
               href="/training/my-learning"
               className="inline-block px-6 py-3 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition-colors"
-            >
-              Continue Learning
-            </Link>
+            >{tr("              Continue Learning            ")}</Link>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -198,9 +194,7 @@ export default function MyCertificatesPage() {
                   <div className="bg-gradient-to-br from-green-500 to-emerald-600 p-6 text-white">
                     <div className="flex items-center justify-between mb-4">
                       <div className="text-5xl">🏆</div>
-                      <span className="px-3 py-1 bg-white/20 rounded-full text-xs font-semibold">
-                        Completed
-                      </span>
+                      <span className="px-3 py-1 bg-white/20 rounded-full text-xs font-semibold">{tr("                        Completed                      ")}</span>
                     </div>
 
 
@@ -212,17 +206,17 @@ export default function MyCertificatesPage() {
                   <div className="p-6">
                     <div className="space-y-3 mb-5 text-sm">
                       <div className="flex justify-between gap-4">
-                        <span className="text-gray-500">Completion Date</span>
+                        <span className="text-gray-500">{tr("Completion Date")}</span>
                         <span className="font-medium text-gray-900 text-right">
-                          {cert?.completionDate
-                            ? new Date(cert.completionDate).toLocaleDateString()
-                            : '-'}
+                          {tr(cert?.completionDate
+                            ? new Date(cert.completionDate).toLocaleDateString(locale())
+                            : '-')}
                         </span>
                       </div>
 
 
                       <div className="flex justify-between gap-4">
-                        <span className="text-gray-500">Progress</span>
+                        <span className="text-gray-500">{tr("Progress")}</span>
                         <span className="font-medium text-gray-900">
                           {Math.round(Number(progress?.progressPercent || 0))}%
                         </span>
@@ -230,7 +224,7 @@ export default function MyCertificatesPage() {
 
 
                       <div className="flex justify-between gap-4">
-                        <span className="text-gray-500">Certificate ID</span>
+                        <span className="text-gray-500">{tr("Certificate ID")}</span>
                         <span className="font-medium text-gray-900 text-right break-all">
                           {cert?.certificateId}
                         </span>
@@ -256,9 +250,7 @@ export default function MyCertificatesPage() {
                       <Link
                         href={'/training/' + course.id + '/certificate'}
                         className="block w-full py-3 bg-green-600 text-white font-semibold rounded-xl text-center hover:bg-green-700 transition-colors"
-                      >
-                        View Certificate
-                      </Link>
+                      >{tr("                        View Certificate                      ")}</Link>
 
 
                       <Link
@@ -267,9 +259,7 @@ export default function MyCertificatesPage() {
                           encodeURIComponent(cert.certificateId)
                         }
                         className="block w-full py-3 bg-white text-green-700 font-semibold rounded-xl text-center border border-green-200 hover:bg-green-50 transition-colors"
-                      >
-                        Verify Certificate
-                      </Link>
+                      >{tr("                        Verify Certificate                      ")}</Link>
                     </div>
                   </div>
                 </div>

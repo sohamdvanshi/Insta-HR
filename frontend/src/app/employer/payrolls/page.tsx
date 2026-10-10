@@ -1,4 +1,6 @@
 'use client';
+import { tr, trError, useLocale } from '@/lib/localization'
+
 
 import { useEffect, useState } from 'react';
 
@@ -42,6 +44,8 @@ type DeploymentOption = {
 };
 
 export default function EmployerPayrollsPage() {
+  useLocale()
+
   const [token, setToken] = useState('');
   const [payrolls, setPayrolls] = useState<PayrollRecord[]>([]);
   const [deployments, setDeployments] = useState<DeploymentOption[]>([]);
@@ -213,46 +217,38 @@ export default function EmployerPayrollsPage() {
     <div className="min-h-screen bg-gray-50 px-4 py-8 md:px-8">
       <div className="mx-auto max-w-7xl">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Payroll Management</h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Generate monthly payroll records from deployment and attendance data.
-          </p>
+          <h1 className="text-3xl font-bold text-gray-900">{tr("Payroll Management")}</h1>
+          <p className="mt-2 text-sm text-gray-600">{tr("Generate monthly payroll records from deployment and attendance data.")}</p>
         </div>
 
         {!token && (
-          <div className="mb-6 rounded-xl border border-yellow-300 bg-yellow-50 p-4 text-sm text-yellow-800">
-            JWT token not found in localStorage. Please login again as employer.
-          </div>
+          <div className="mb-6 rounded-xl border border-yellow-300 bg-yellow-50 p-4 text-sm text-yellow-800">{tr("JWT token not found in localStorage. Please login again as employer.")}</div>
         )}
 
         {error && (
           <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            {error}
+            {trError(error)}
           </div>
         )}
 
         {success && (
           <div className="mb-6 rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-700">
-            {success}
+            {tr(success)}
           </div>
         )}
 
         <div className="grid gap-8 lg:grid-cols-5">
           <div className="lg:col-span-2">
             <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">Create Payroll</h2>
-              <p className="mt-1 text-sm text-gray-500">
-                Create a monthly payroll record for a deployment.
-              </p>
+              <h2 className="text-xl font-semibold text-gray-900">{tr("Create Payroll")}</h2>
+              <p className="mt-1 text-sm text-gray-500">{tr("Create a monthly payroll record for a deployment.")}</p>
 
               <form onSubmit={handleSubmit} className="mt-6 space-y-4">
                 <div>
                   <label
                     htmlFor="deploymentId"
                     className="mb-2 block text-sm font-medium text-gray-700"
-                  >
-                    Deployment
-                  </label>
+                  >{tr("Deployment")}</label>
                   <select
                     id="deploymentId"
                     name="deploymentId"
@@ -260,10 +256,10 @@ export default function EmployerPayrollsPage() {
                     onChange={handleChange}
                     className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
                   >
-                    <option value="">Select Deployment</option>
+                    <option value="">{tr("Select Deployment")}</option>
                     {deployments.map(deployment => (
                       <option key={deployment.id} value={deployment.id}>
-                        {getDeploymentLabel(deployment)}
+                        {tr(getDeploymentLabel(deployment))}
                       </option>
                     ))}
                   </select>
@@ -273,9 +269,7 @@ export default function EmployerPayrollsPage() {
                   <label
                     htmlFor="payPeriodMonth"
                     className="mb-2 block text-sm font-medium text-gray-700"
-                  >
-                    Payroll Month
-                  </label>
+                  >{tr("Payroll Month")}</label>
                   <input
                     id="payPeriodMonth"
                     name="payPeriodMonth"
@@ -290,9 +284,7 @@ export default function EmployerPayrollsPage() {
                   <label
                     htmlFor="grossSalary"
                     className="mb-2 block text-sm font-medium text-gray-700"
-                  >
-                    Gross Salary
-                  </label>
+                  >{tr("Gross Salary")}</label>
                   <input
                     id="grossSalary"
                     name="grossSalary"
@@ -300,7 +292,7 @@ export default function EmployerPayrollsPage() {
                     step="0.01"
                     value={form.grossSalary}
                     onChange={handleChange}
-                    placeholder="Enter gross salary"
+                    placeholder={tr("Enter gross salary")}
                     className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
                   />
                 </div>
@@ -309,9 +301,7 @@ export default function EmployerPayrollsPage() {
                   <label
                     htmlFor="deductions"
                     className="mb-2 block text-sm font-medium text-gray-700"
-                  >
-                    Deductions
-                  </label>
+                  >{tr("Deductions")}</label>
                   <input
                     id="deductions"
                     name="deductions"
@@ -319,7 +309,7 @@ export default function EmployerPayrollsPage() {
                     step="0.01"
                     value={form.deductions}
                     onChange={handleChange}
-                    placeholder="Enter deductions"
+                    placeholder={tr("Enter deductions")}
                     className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
                   />
                 </div>
@@ -328,9 +318,7 @@ export default function EmployerPayrollsPage() {
                   <label
                     htmlFor="bonus"
                     className="mb-2 block text-sm font-medium text-gray-700"
-                  >
-                    Bonus
-                  </label>
+                  >{tr("Bonus")}</label>
                   <input
                     id="bonus"
                     name="bonus"
@@ -338,7 +326,7 @@ export default function EmployerPayrollsPage() {
                     step="0.01"
                     value={form.bonus}
                     onChange={handleChange}
-                    placeholder="Enter bonus"
+                    placeholder={tr("Enter bonus")}
                     className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
                   />
                 </div>
@@ -347,16 +335,14 @@ export default function EmployerPayrollsPage() {
                   <label
                     htmlFor="remarks"
                     className="mb-2 block text-sm font-medium text-gray-700"
-                  >
-                    Remarks
-                  </label>
+                  >{tr("Remarks")}</label>
                   <textarea
                     id="remarks"
                     name="remarks"
                     value={form.remarks}
                     onChange={handleChange}
                     rows={4}
-                    placeholder="Optional payroll notes"
+                    placeholder={tr("Optional payroll notes")}
                     className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
                   />
                 </div>
@@ -366,7 +352,7 @@ export default function EmployerPayrollsPage() {
                   disabled={submitting || !token}
                   className="w-full rounded-xl bg-black px-4 py-3 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-400"
                 >
-                  {submitting ? 'Submitting...' : 'Create Payroll'}
+                  {tr(submitting ? 'Submitting...' : 'Create Payroll')}
                 </button>
               </form>
             </div>
@@ -376,73 +362,64 @@ export default function EmployerPayrollsPage() {
             <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-900">Payroll History</h2>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Review attendance summary, payroll values, and payout status.
-                  </p>
+                  <h2 className="text-xl font-semibold text-gray-900">{tr("Payroll History")}</h2>
+                  <p className="mt-1 text-sm text-gray-500">{tr("Review attendance summary, payroll values, and payout status.")}</p>
                 </div>
 
                 <button
                   onClick={fetchPayrolls}
                   className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  Refresh
-                </button>
+                >{tr("Refresh")}</button>
               </div>
 
               <div className="mt-6 overflow-x-auto">
                 <table className="min-w-full border-separate border-spacing-y-3">
                   <thead>
                     <tr className="text-left text-xs uppercase tracking-wide text-gray-500">
-                      <th className="px-3 py-2">Candidate</th>
-                      <th className="px-3 py-2">Deployment</th>
-                      <th className="px-3 py-2">Month</th>
-                      <th className="px-3 py-2">Attendance</th>
-                      <th className="px-3 py-2">Gross</th>
-                      <th className="px-3 py-2">Deductions</th>
-                      <th className="px-3 py-2">Bonus</th>
-                      <th className="px-3 py-2">Net</th>
-                      <th className="px-3 py-2">Status</th>
+                      <th className="px-3 py-2">{tr("Candidate")}</th>
+                      <th className="px-3 py-2">{tr("Deployment")}</th>
+                      <th className="px-3 py-2">{tr("Month")}</th>
+                      <th className="px-3 py-2">{tr("Attendance")}</th>
+                      <th className="px-3 py-2">{tr("Gross")}</th>
+                      <th className="px-3 py-2">{tr("Deductions")}</th>
+                      <th className="px-3 py-2">{tr("Bonus")}</th>
+                      <th className="px-3 py-2">{tr("Net")}</th>
+                      <th className="px-3 py-2">{tr("Status")}</th>
                     </tr>
                   </thead>
 
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan={9} className="px-3 py-8 text-center text-sm text-gray-500">
-                          Loading payrolls...
-                        </td>
+                        <td colSpan={9} className="px-3 py-8 text-center text-sm text-gray-500">{tr("Loading payrolls...")}</td>
                       </tr>
                     ) : payrolls.length === 0 ? (
                       <tr>
-                        <td colSpan={9} className="px-3 py-8 text-center text-sm text-gray-500">
-                          No payroll records found.
-                        </td>
+                        <td colSpan={9} className="px-3 py-8 text-center text-sm text-gray-500">{tr("No payroll records found.")}</td>
                       </tr>
                     ) : (
                       payrolls.map(item => (
                         <tr key={item.id} className="rounded-2xl bg-gray-50 text-sm text-gray-800">
                           <td className="rounded-l-2xl px-3 py-4 font-medium">
-                            {item.candidate?.email || item.deployment?.candidate?.email || '—'}
+                            {tr(item.candidate?.email || item.deployment?.candidate?.email || '—')}
                           </td>
-                          <td className="px-3 py-4">{item.deployment?.siteName || '—'}</td>
-                          <td className="px-3 py-4">{item.payPeriodMonth}</td>
-                          <td className="px-3 py-4">
-                            P: {item.totalPresentDays}, A: {item.totalAbsentDays}, H: {item.totalHalfDays}
+                          <td className="px-3 py-4">{tr(item.deployment?.siteName || '—')}</td>
+                          <td className="px-3 py-4">{tr(item.payPeriodMonth)}</td>
+                          <td className="px-3 py-4">{tr("P: ")}{item.totalPresentDays}{tr(", A: ")}{item.totalAbsentDays}{tr(", H: ")}{item.totalHalfDays}
                           </td>
-                          <td className="px-3 py-4">{formatCurrency(item.grossSalary)}</td>
-                          <td className="px-3 py-4">{formatCurrency(item.deductions)}</td>
-                          <td className="px-3 py-4">{formatCurrency(item.bonus)}</td>
-                          <td className="px-3 py-4 font-semibold">{formatCurrency(item.netSalary)}</td>
+                          <td className="px-3 py-4">{tr(formatCurrency(item.grossSalary))}</td>
+                          <td className="px-3 py-4">{tr(formatCurrency(item.deductions))}</td>
+                          <td className="px-3 py-4">{tr(formatCurrency(item.bonus))}</td>
+                          <td className="px-3 py-4 font-semibold">{tr(formatCurrency(item.netSalary))}</td>
                           <td className="rounded-r-2xl px-3 py-4">
                             <select
                               value={item.status}
                               onChange={e => handleStatusChange(item.id, e.target.value)}
                               className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-medium outline-none focus:border-black"
                             >
-                              <option value="draft">Draft</option>
-                              <option value="processed">Processed</option>
-                              <option value="paid">Paid</option>
+                              <option value="draft">{tr("Draft")}</option>
+                              <option value="processed">{tr("Processed")}</option>
+                              <option value="paid">{tr("Paid")}</option>
                             </select>
                           </td>
                         </tr>

@@ -1,4 +1,6 @@
 'use client'
+import { tr, trError, useLocale } from '@/lib/localization'
+
 
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
@@ -61,6 +63,8 @@ const emptyResume = {
 }
 
 export default function PublicResumePage() {
+  useLocale()
+
   const params = useParams()
   const resumeId = params?.id as string
 
@@ -137,7 +141,7 @@ export default function PublicResumePage() {
   if (loading) {
     return (
       <main className="min-h-screen bg-gray-100 pt-24 flex items-center justify-center">
-        <p className="text-gray-400">Loading shared resume...</p>
+        <p className="text-gray-400">{tr("Loading shared resume...")}</p>
       </main>
     )
   }
@@ -147,14 +151,12 @@ export default function PublicResumePage() {
       <main className="min-h-screen bg-gray-100 pt-24">
         <div className="max-w-3xl mx-auto px-6">
           <div className="bg-white rounded-2xl border border-red-100 shadow-sm p-8 text-center">
-            <h1 className="text-2xl font-bold text-gray-900 mb-3">Resume unavailable</h1>
-            <p className="text-gray-600 mb-6">{error}</p>
+            <h1 className="text-2xl font-bold text-gray-900 mb-3">{tr("Resume unavailable")}</h1>
+            <p className="text-gray-600 mb-6">{trError(error)}</p>
             <Link
               href="/"
               className="inline-block px-5 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700"
-            >
-              Go Home
-            </Link>
+            >{tr("Go Home")}</Link>
           </div>
         </div>
       </main>
@@ -166,7 +168,7 @@ export default function PublicResumePage() {
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <div>
-            <p className="text-sm text-gray-500">Shared Resume</p>
+            <p className="text-sm text-gray-500">{tr("Shared Resume")}</p>
             <h1 className="text-2xl font-bold text-gray-900">
               {resume.title || 'Shared Resume'}
             </h1>
@@ -174,12 +176,9 @@ export default function PublicResumePage() {
 
           <div className="flex flex-wrap gap-2">
             <span className="px-3 py-1.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-sm font-medium capitalize">
-              {resume.template || 'classic'} template
-            </span>
+              {resume.template || 'classic'}{tr(" template")}</span>
 
-            <span className="px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-sm font-medium">
-              Link Shared
-            </span>
+            <span className="px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-sm font-medium">{tr("Link Shared")}</span>
           </div>
         </div>
 
@@ -201,7 +200,7 @@ export default function PublicResumePage() {
                   </div>
 
                   <div className="resume-section avoid-break">
-                    <h2 className="section-title sidebar-title">Contact</h2>
+                    <h2 className="section-title sidebar-title">{tr("Contact")}</h2>
                     <div className="space-y-2 text-sm">
                       {resume.personalInfo.email ? <p>{resume.personalInfo.email}</p> : null}
                       {resume.personalInfo.phone ? <p>{resume.personalInfo.phone}</p> : null}
@@ -214,11 +213,11 @@ export default function PublicResumePage() {
 
                   {cleanSkills.length > 0 ? (
                     <div className="resume-section avoid-break">
-                      <h2 className="section-title sidebar-title">Skills</h2>
+                      <h2 className="section-title sidebar-title">{tr("Skills")}</h2>
                       <div className="flex flex-wrap gap-2">
                         {cleanSkills.map((item: string, index: number) => (
                           <span key={index} className="modern-pill">
-                            {item}
+                            {tr(item)}
                           </span>
                         ))}
                       </div>
@@ -227,12 +226,12 @@ export default function PublicResumePage() {
 
                   {resume.languages.some((item: string) => item.trim()) ? (
                     <div className="resume-section avoid-break">
-                      <h2 className="section-title sidebar-title">Languages</h2>
+                      <h2 className="section-title sidebar-title">{tr("Languages")}</h2>
                       <div className="space-y-1 text-sm">
                         {resume.languages
                           .filter((item: string) => item.trim())
                           .map((item: string, index: number) => (
-                            <p key={index}>{item}</p>
+                            <p key={index}>{tr(item)}</p>
                           ))}
                       </div>
                     </div>
@@ -240,12 +239,12 @@ export default function PublicResumePage() {
 
                   {resume.certifications.some((item: string) => item.trim()) ? (
                     <div className="resume-section avoid-break">
-                      <h2 className="section-title sidebar-title">Certifications</h2>
+                      <h2 className="section-title sidebar-title">{tr("Certifications")}</h2>
                       <div className="space-y-1 text-sm">
                         {resume.certifications
                           .filter((item: string) => item.trim())
                           .map((item: string, index: number) => (
-                            <p key={index}>{item}</p>
+                            <p key={index}>{tr(item)}</p>
                           ))}
                       </div>
                     </div>
@@ -255,14 +254,14 @@ export default function PublicResumePage() {
                 <section className="modern-main">
                   {resume.summary ? (
                     <div className="resume-section avoid-break">
-                      <h2 className="section-title">Professional Summary</h2>
+                      <h2 className="section-title">{tr("Professional Summary")}</h2>
                       <p className="resume-paragraph">{resume.summary}</p>
                     </div>
                   ) : null}
 
                   {resume.experience.some((item: any) => item.jobTitle || item.company) ? (
                     <div className="resume-section">
-                      <h2 className="section-title">Experience</h2>
+                      <h2 className="section-title">{tr("Experience")}</h2>
                       <div className="space-y-5">
                         {resume.experience.map((item: any, index: number) => {
                           if (!item.jobTitle && !item.company) return null
@@ -280,13 +279,13 @@ export default function PublicResumePage() {
                                   </h3>
                                   <p className="resume-subtitle">
                                     {item.company}
-                                    {item.location ? ` • ${item.location}` : ''}
+                                    {tr(item.location ? ` • ${item.location}` : '')}
                                   </p>
                                 </div>
 
                                 <p className="resume-date">
                                   {item.startDate}
-                                  {item.startDate || item.endDate ? ' - ' : ''}
+                                  {tr(item.startDate || item.endDate ? ' - ' : '')}
                                   {item.endDate || 'Present'}
                                 </p>
                               </div>
@@ -309,7 +308,7 @@ export default function PublicResumePage() {
 
                   {resume.projects.some((item: any) => item.name) ? (
                     <div className="resume-section">
-                      <h2 className="section-title">Projects</h2>
+                      <h2 className="section-title">{tr("Projects")}</h2>
                       <div className="space-y-4">
                         {resume.projects.map((item: any, index: number) => {
                           if (!item.name) return null
@@ -330,7 +329,7 @@ export default function PublicResumePage() {
 
                   {resume.education.some((item: any) => item.institution || item.degree) ? (
                     <div className="resume-section">
-                      <h2 className="section-title">Education</h2>
+                      <h2 className="section-title">{tr("Education")}</h2>
                       <div className="space-y-4">
                         {resume.education.map((item: any, index: number) => {
                           if (!item.institution && !item.degree) return null
@@ -341,14 +340,14 @@ export default function PublicResumePage() {
                                 <div>
                                   <h3 className="resume-item-title">
                                     {item.degree || 'Degree'}
-                                    {item.fieldOfStudy ? ` - ${item.fieldOfStudy}` : ''}
+                                    {tr(item.fieldOfStudy ? ` - ${item.fieldOfStudy}` : '')}
                                   </h3>
                                   <p className="resume-subtitle">{item.institution}</p>
                                 </div>
 
                                 <p className="resume-date">
                                   {item.startDate}
-                                  {item.startDate || item.endDate ? ' - ' : ''}
+                                  {tr(item.startDate || item.endDate ? ' - ' : '')}
                                   {item.endDate}
                                 </p>
                               </div>
@@ -392,14 +391,14 @@ export default function PublicResumePage() {
 
                 {resume.summary ? (
                   <section className="resume-section avoid-break">
-                    <h2 className="section-title">Professional Summary</h2>
+                    <h2 className="section-title">{tr("Professional Summary")}</h2>
                     <p className="resume-paragraph">{resume.summary}</p>
                   </section>
                 ) : null}
 
                 {resume.experience.some((item: any) => item.jobTitle || item.company) ? (
                   <section className="resume-section">
-                    <h2 className="section-title">Experience</h2>
+                    <h2 className="section-title">{tr("Experience")}</h2>
                     <div className="space-y-5">
                       {resume.experience.map((item: any, index: number) => {
                         if (!item.jobTitle && !item.company) return null
@@ -417,13 +416,13 @@ export default function PublicResumePage() {
                                 </h3>
                                 <p className="resume-subtitle">
                                   {item.company}
-                                  {item.location ? ` • ${item.location}` : ''}
+                                  {tr(item.location ? ` • ${item.location}` : '')}
                                 </p>
                               </div>
 
                               <p className="resume-date">
                                 {item.startDate}
-                                {item.startDate || item.endDate ? ' - ' : ''}
+                                {tr(item.startDate || item.endDate ? ' - ' : '')}
                                 {item.endDate || 'Present'}
                               </p>
                             </div>
@@ -446,7 +445,7 @@ export default function PublicResumePage() {
 
                 {resume.projects.some((item: any) => item.name) ? (
                   <section className="resume-section">
-                    <h2 className="section-title">Projects</h2>
+                    <h2 className="section-title">{tr("Projects")}</h2>
                     <div className="space-y-4">
                       {resume.projects.map((item: any, index: number) => {
                         if (!item.name) return null
@@ -467,7 +466,7 @@ export default function PublicResumePage() {
 
                 {resume.education.some((item: any) => item.institution || item.degree) ? (
                   <section className="resume-section">
-                    <h2 className="section-title">Education</h2>
+                    <h2 className="section-title">{tr("Education")}</h2>
                     <div className="space-y-4">
                       {resume.education.map((item: any, index: number) => {
                         if (!item.institution && !item.degree) return null
@@ -478,14 +477,14 @@ export default function PublicResumePage() {
                               <div>
                                 <h3 className="resume-item-title">
                                   {item.degree || 'Degree'}
-                                  {item.fieldOfStudy ? ` - ${item.fieldOfStudy}` : ''}
+                                  {tr(item.fieldOfStudy ? ` - ${item.fieldOfStudy}` : '')}
                                 </h3>
                                 <p className="resume-subtitle">{item.institution}</p>
                               </div>
 
                               <p className="resume-date">
                                 {item.startDate}
-                                {item.startDate || item.endDate ? ' - ' : ''}
+                                {tr(item.startDate || item.endDate ? ' - ' : '')}
                                 {item.endDate}
                               </p>
                             </div>
@@ -502,11 +501,11 @@ export default function PublicResumePage() {
 
                 {cleanSkills.length > 0 ? (
                   <section className="resume-section avoid-break">
-                    <h2 className="section-title">Skills</h2>
+                    <h2 className="section-title">{tr("Skills")}</h2>
                     <div className="classic-skills">
                       {cleanSkills.map((item: string, index: number) => (
                         <span key={index} className="classic-skill">
-                          {item}
+                          {tr(item)}
                         </span>
                       ))}
                     </div>
@@ -515,12 +514,12 @@ export default function PublicResumePage() {
 
                 {resume.certifications.some((item: string) => item.trim()) ? (
                   <section className="resume-section avoid-break">
-                    <h2 className="section-title">Certifications</h2>
+                    <h2 className="section-title">{tr("Certifications")}</h2>
                     <ul className="classic-list">
                       {resume.certifications
                         .filter((item: string) => item.trim())
                         .map((item: string, index: number) => (
-                          <li key={index}>{item}</li>
+                          <li key={index}>{tr(item)}</li>
                         ))}
                     </ul>
                   </section>
@@ -528,12 +527,12 @@ export default function PublicResumePage() {
 
                 {resume.languages.some((item: string) => item.trim()) ? (
                   <section className="resume-section avoid-break">
-                    <h2 className="section-title">Languages</h2>
+                    <h2 className="section-title">{tr("Languages")}</h2>
                     <div className="classic-contact">
                       {resume.languages
                         .filter((item: string) => item.trim())
                         .map((item: string, index: number) => (
-                          <span key={index}>{item}</span>
+                          <span key={index}>{tr(item)}</span>
                         ))}
                     </div>
                   </section>

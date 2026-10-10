@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "i18n:index": "node scripts/build-i18n-index.cjs",
+    "test:i18n": "node --test test/i18n.test.cjs"
   },
   "dependencies": {
     "@react-oauth/google": "^0.13.5",

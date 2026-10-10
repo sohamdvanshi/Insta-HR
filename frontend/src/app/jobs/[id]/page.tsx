@@ -1,4 +1,6 @@
 'use client'
+import { tr, useLocale, locale } from '@/lib/localization'
+
 
 import { Suspense, useEffect, useState } from 'react'
 import {
@@ -36,6 +38,8 @@ interface MyApplication {
 const API_BASE = 'http://localhost:5000/api/v1'
 
 function JobDetailPageContent() {
+  useLocale()
+
   const params = useParams()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -259,9 +263,7 @@ function JobDetailPageContent() {
   if (loading) {
     return (
       <main className="min-h-screen bg-gray-50 pt-24 flex items-center justify-center">
-        <p className="text-gray-400 text-lg">
-          Loading job details...
-        </p>
+        <p className="text-gray-400 text-lg">{tr("Loading job details...")}</p>
       </main>
     )
   }
@@ -270,16 +272,12 @@ function JobDetailPageContent() {
     return (
       <main className="min-h-screen bg-gray-50 pt-24 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-400 text-lg mb-4">
-            Job not found
-          </p>
+          <p className="text-gray-400 text-lg mb-4">{tr("Job not found")}</p>
 
           <Link
             href="/jobs"
             className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
-          >
-            Back to Jobs
-          </Link>
+          >{tr("Back to Jobs")}</Link>
         </div>
       </main>
     )
@@ -291,9 +289,7 @@ function JobDetailPageContent() {
         <Link
           href="/jobs"
           className="text-blue-600 hover:underline text-sm mb-6 inline-block"
-        >
-          ← Back to Jobs
-        </Link>
+        >{tr("← Back to Jobs")}</Link>
 
         {message && (
           <div
@@ -303,14 +299,12 @@ function JobDetailPageContent() {
                 : 'bg-red-50 text-red-700 border border-red-200'
             }`}
           >
-            {message}
+            {tr(message)}
           </div>
         )}
 
         {referralCode && !message && (
-          <div className="px-4 py-3 rounded-xl mb-6 bg-violet-50 text-violet-700 border border-violet-200">
-            🤝 Referral code detected. It will be linked automatically when you apply.
-          </div>
+          <div className="px-4 py-3 rounded-xl mb-6 bg-violet-50 text-violet-700 border border-violet-200">{tr("🤝 Referral code detected. It will be linked automatically when you apply.")}</div>
         )}
 
         <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 mb-6">
@@ -322,41 +316,38 @@ function JobDetailPageContent() {
 
               <p className="text-gray-500">
                 {job.location}
-                {job.isRemote && ' • Remote'}
+                {tr(job.isRemote && ' • Remote')}
               </p>
             </div>
 
             <div className="text-left sm:text-right">
               <p className="text-green-600 font-bold text-lg">
-                ₹{Number(job.salaryMin).toLocaleString()} – ₹
-                {Number(job.salaryMax).toLocaleString()}
+                ₹{tr(Number(job.salaryMin).toLocaleString(locale()))} – ₹
+                {tr(Number(job.salaryMax).toLocaleString(locale()))}
               </p>
 
-              <p className="text-gray-400 text-sm">
-                per month
-              </p>
+              <p className="text-gray-400 text-sm">{tr("per month")}</p>
             </div>
           </div>
 
           <div className="flex flex-wrap gap-2 mb-6">
             <span className="px-3 py-1 bg-blue-50 text-blue-700 text-sm font-medium rounded-full">
-              {job.industry}
+              {tr(job.industry)}
             </span>
 
             <span className="px-3 py-1 bg-purple-50 text-purple-700 text-sm font-medium rounded-full">
-              {job.jobType}
+              {tr(job.jobType)}
             </span>
 
             <span className="px-3 py-1 bg-orange-50 text-orange-700 text-sm font-medium rounded-full">
-              {job.experienceLevel}
+              {tr(job.experienceLevel)}
             </span>
 
             {job.applicationDeadline && (
-              <span className="px-3 py-1 bg-red-50 text-red-700 text-sm font-medium rounded-full">
-                Deadline:{' '}
-                {new Date(
+              <span className="px-3 py-1 bg-red-50 text-red-700 text-sm font-medium rounded-full">{tr("Deadline:")}{tr(' ')}
+                {tr(new Date(
                   job.applicationDeadline
-                ).toLocaleDateString()}
+                ).toLocaleDateString(locale()))}
               </span>
             )}
           </div>
@@ -368,24 +359,18 @@ function JobDetailPageContent() {
           {userRole === 'candidate' && !message && (
             <div>
               {alreadyApplied ? (
-                <div className="inline-flex items-center px-6 py-3 bg-green-50 text-green-700 font-semibold rounded-xl border border-green-200">
-                  Already Applied
-                </div>
+                <div className="inline-flex items-center px-6 py-3 bg-green-50 text-green-700 font-semibold rounded-xl border border-green-200">{tr("Already Applied")}</div>
               ) : !showApplyBox ? (
                 <button
                   type="button"
                   onClick={() => setShowApplyBox(true)}
                   className="px-8 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors"
-                >
-                  Apply Now
-                </button>
+                >{tr("Apply Now")}</button>
               ) : (
                 <div className="mt-4 space-y-4">
                   {referralCode && (
-                    <div className="rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-violet-700">
-                      Referral code detected:
-                      <span className="ml-1 font-bold">
-                        {referralCode}
+                    <div className="rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-violet-700">{tr("Referral code detected:")}<span className="ml-1 font-bold">
+                        {tr(referralCode)}
                       </span>
                     </div>
                   )}
@@ -395,17 +380,14 @@ function JobDetailPageContent() {
                     onChange={(event) =>
                       setCoverLetter(event.target.value)
                     }
-                    placeholder="Write a short cover letter (optional)..."
+                    placeholder={tr("Write a short cover letter (optional)...")}
                     rows={4}
                     className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500 resize-none"
                   />
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Referral Code{' '}
-                      <span className="text-gray-400 font-normal">
-                        (optional)
-                      </span>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{tr("Referral Code")}{tr(' ')}
+                      <span className="text-gray-400 font-normal">{tr("(optional)")}</span>
                     </label>
 
                     <input
@@ -418,19 +400,16 @@ function JobDetailPageContent() {
                             .replace(/\s/g, '')
                         )
                       }}
-                      placeholder="e.g. INSTA7K4P9X2"
+                      placeholder={tr("e.g. INSTA7K4P9X2")}
                       maxLength={12}
                       className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500 uppercase"
                     />
 
-                    <p className="text-xs text-gray-400 mt-2">
-                      Enter the unique referral code shared by your referrer.
-                    </p>
+                    <p className="text-xs text-gray-400 mt-2">{tr("Enter the unique referral code shared by your referrer.")}</p>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Upload Resume{' '}
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{tr("Upload Resume")}{tr(' ')}
                       <span className="text-red-500">*</span>
                     </label>
 
@@ -447,8 +426,7 @@ function JobDetailPageContent() {
                     />
 
                     {resumeFile && (
-                      <p className="text-sm text-green-600 mt-2">
-                        Selected: {resumeFile.name}
+                      <p className="text-sm text-green-600 mt-2">{tr("Selected: ")}{resumeFile.name}
                       </p>
                     )}
                   </div>
@@ -460,9 +438,9 @@ function JobDetailPageContent() {
                       disabled={applying}
                       className="px-6 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50"
                     >
-                      {applying
+                      {tr(applying
                         ? 'Submitting...'
-                        : 'Submit Application'}
+                        : 'Submit Application')}
                     </button>
 
                     <button
@@ -477,9 +455,7 @@ function JobDetailPageContent() {
                         )
                       }}
                       className="px-6 py-3 bg-gray-100 text-gray-600 font-medium rounded-xl hover:bg-gray-200 transition-colors"
-                    >
-                      Cancel
-                    </button>
+                    >{tr("Cancel")}</button>
                   </div>
                 </div>
               )}
@@ -490,17 +466,13 @@ function JobDetailPageContent() {
             <Link
               href="/login"
               className="px-8 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors inline-block"
-            >
-              Login to Apply
-            </Link>
+            >{tr("Login to Apply")}</Link>
           )}
         </div>
 
         {job.requiredSkills?.length > 0 && (
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">
-              Required Skills
-            </h2>
+            <h2 className="text-lg font-bold text-gray-900 mb-4">{tr("Required Skills")}</h2>
 
             <div className="flex flex-wrap gap-2">
               {job.requiredSkills.map((skill, index) => (
@@ -516,9 +488,7 @@ function JobDetailPageContent() {
         )}
 
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-          <h2 className="text-lg font-bold text-gray-900 mb-4">
-            Job Description
-          </h2>
+          <h2 className="text-lg font-bold text-gray-900 mb-4">{tr("Job Description")}</h2>
 
           <p className="text-gray-600 leading-relaxed whitespace-pre-wrap">
             {job.description}
@@ -530,5 +500,7 @@ function JobDetailPageContent() {
 }
 
 export default function JobDetailPage() {
-  return <Suspense fallback={<main className="pt-24 text-center">Loading...</main>}><JobDetailPageContent /></Suspense>
+  useLocale()
+
+  return <Suspense fallback={<main className="pt-24 text-center">{tr("Loading...")}</main>}><JobDetailPageContent /></Suspense>
 }

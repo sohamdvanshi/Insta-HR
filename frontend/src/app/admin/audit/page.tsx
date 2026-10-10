@@ -1,4 +1,6 @@
 'use client';
+import { tr, trError, useLocale } from '@/lib/localization'
+
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -112,11 +114,13 @@ function StatCard({
   value: string | number;
   subtitle?: string;
 }) {
+  useLocale()
+
   return (
     <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
-      <p className="text-sm font-medium text-gray-500">{title}</p>
-      <p className="mt-3 text-2xl font-bold text-gray-900">{value}</p>
-      {subtitle ? <p className="mt-2 text-xs text-gray-400">{subtitle}</p> : null}
+      <p className="text-sm font-medium text-gray-500">{tr(title)}</p>
+      <p className="mt-3 text-2xl font-bold text-gray-900">{tr(value)}</p>
+      {subtitle ? <p className="mt-2 text-xs text-gray-400">{tr(subtitle)}</p> : null}
     </div>
   );
 }
@@ -128,6 +132,8 @@ function Badge({
   children: React.ReactNode;
   tone?: 'gray' | 'green' | 'red' | 'yellow' | 'blue' | 'violet';
 }) {
+  useLocale()
+
   const toneClasses: Record<string, string> = {
     gray: 'bg-gray-100 text-gray-700',
     green: 'bg-emerald-100 text-emerald-700',
@@ -155,11 +161,13 @@ function Section({
   description?: string;
   children: React.ReactNode;
 }) {
+  useLocale()
+
   return (
     <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
       <div className="mb-5">
-        <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
-        {description ? <p className="mt-1 text-sm text-gray-500">{description}</p> : null}
+        <h2 className="text-lg font-semibold text-gray-900">{tr(title)}</h2>
+        {description ? <p className="mt-1 text-sm text-gray-500">{tr(description)}</p> : null}
       </div>
       {children}
     </div>
@@ -167,14 +175,18 @@ function Section({
 }
 
 function EmptyState({ message }: { message: string }) {
+  useLocale()
+
   return (
     <div className="flex h-40 items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50 text-sm text-gray-500">
-      {message}
+      {tr(message)}
     </div>
   );
 }
 
 export default function AdminAuditPage() {
+  useLocale()
+
   const [token, setToken] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -338,10 +350,8 @@ export default function AdminAuditPage() {
       <div className="mx-auto max-w-7xl">
         <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Audit Logs & Fraud Detection</h1>
-            <p className="mt-2 text-sm text-gray-600">
-              Monitor critical admin activity, suspicious application patterns, and fraud alert review status.
-            </p>
+            <h1 className="text-3xl font-bold text-gray-900">{tr("Audit Logs & Fraud Detection")}</h1>
+            <p className="mt-2 text-sm text-gray-600">{tr("Monitor critical admin activity, suspicious application patterns, and fraud alert review status.")}</p>
           </div>
 
           <button
@@ -349,19 +359,17 @@ export default function AdminAuditPage() {
             disabled={!token || refreshing}
             className="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {refreshing ? 'Refreshing...' : 'Refresh'}
+            {tr(refreshing ? 'Refreshing...' : 'Refresh')}
           </button>
         </div>
 
         {!token && (
-          <div className="mb-6 rounded-xl border border-yellow-300 bg-yellow-50 p-4 text-sm text-yellow-800">
-            Admin token not found in localStorage. Please log in again.
-          </div>
+          <div className="mb-6 rounded-xl border border-yellow-300 bg-yellow-50 p-4 text-sm text-yellow-800">{tr("Admin token not found in localStorage. Please log in again.")}</div>
         )}
 
         {error && (
           <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            {error}
+            {trError(error)}
           </div>
         )}
 
@@ -382,17 +390,17 @@ export default function AdminAuditPage() {
           <>
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               <StatCard
-                title="Audit Events (7 days)"
+                title={tr("Audit Events (7 days)")}
                 value={formatNumber(summary?.audit?.totalEvents)}
                 subtitle="Recent tracked activity"
               />
               <StatCard
-                title="Failed Audit Events"
+                title={tr("Failed Audit Events")}
                 value={formatNumber(summary?.audit?.failedEvents)}
                 subtitle="Errors and blocked operations"
               />
               <StatCard
-                title="Application Create Failures"
+                title={tr("Application Create Failures")}
                 value={formatNumber(summary?.audit?.applicationCreateFailures)}
                 subtitle="Recent failed application attempts"
               />
@@ -400,33 +408,33 @@ export default function AdminAuditPage() {
 
             <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               <StatCard
-                title="Open Fraud Alerts"
+                title={tr("Open Fraud Alerts")}
                 value={formatNumber(summary?.fraud?.openAlerts)}
                 subtitle="Needs admin review"
               />
               <StatCard
-                title="Confirmed Fraud Alerts"
+                title={tr("Confirmed Fraud Alerts")}
                 value={formatNumber(summary?.fraud?.confirmedAlerts)}
                 subtitle="Confirmed suspicious activity"
               />
               <StatCard
-                title="High Severity Alerts (7 days)"
+                title={tr("High Severity Alerts (7 days)")}
                 value={formatNumber(summary?.fraud?.highSeverityRecent)}
                 subtitle="Recent critical risk signals"
               />
             </div>
 
             <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <StatCard title="Total Fraud Alerts" value={formatNumber(fraudSummary?.totalAlerts)} />
-              <StatCard title="Reviewed Alerts" value={formatNumber(fraudSummary?.byStatus?.reviewed)} />
-              <StatCard title="Dismissed Alerts" value={formatNumber(fraudSummary?.byStatus?.dismissed)} />
-              <StatCard title="Low / Medium / High" value={`${formatNumber(fraudSummary?.bySeverity?.low)} / ${formatNumber(fraudSummary?.bySeverity?.medium)} / ${formatNumber(fraudSummary?.bySeverity?.high)}`} />
+              <StatCard title={tr("Total Fraud Alerts")} value={formatNumber(fraudSummary?.totalAlerts)} />
+              <StatCard title={tr("Reviewed Alerts")} value={formatNumber(fraudSummary?.byStatus?.reviewed)} />
+              <StatCard title={tr("Dismissed Alerts")} value={formatNumber(fraudSummary?.byStatus?.dismissed)} />
+              <StatCard title={tr("Low / Medium / High")} value={`${formatNumber(fraudSummary?.bySeverity?.low)} / ${formatNumber(fraudSummary?.bySeverity?.medium)} / ${formatNumber(fraudSummary?.bySeverity?.high)}`} />
             </div>
 
             <div className="mt-8">
               <Section
-                title="Audit Logs"
-                description="Filter and inspect sensitive system activity across your platform."
+                title={tr("Audit Logs")}
+                description={tr("Filter and inspect sensitive system activity across your platform.")}
               >
                 <div className="mb-5 grid gap-3 md:grid-cols-4">
                   <select
@@ -434,9 +442,9 @@ export default function AdminAuditPage() {
                     onChange={(e) => setAuditStatusFilter(e.target.value)}
                     className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-blue-500"
                   >
-                    <option value="">All statuses</option>
-                    <option value="success">Success</option>
-                    <option value="failure">Failure</option>
+                    <option value="">{tr("All statuses")}</option>
+                    <option value="success">{tr("Success")}</option>
+                    <option value="failure">{tr("Failure")}</option>
                   </select>
 
                   <select
@@ -444,10 +452,10 @@ export default function AdminAuditPage() {
                     onChange={(e) => setAuditActionFilter(e.target.value)}
                     className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-blue-500"
                   >
-                    <option value="">All actions</option>
+                    <option value="">{tr("All actions")}</option>
                     {auditActionOptions.map((action) => (
                       <option key={action} value={action}>
-                        {action}
+                        {tr(action)}
                       </option>
                     ))}
                   </select>
@@ -457,10 +465,10 @@ export default function AdminAuditPage() {
                     onChange={(e) => setAuditEntityFilter(e.target.value)}
                     className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-blue-500"
                   >
-                    <option value="">All entities</option>
+                    <option value="">{tr("All entities")}</option>
                     {auditEntityOptions.map((entity) => (
                       <option key={entity} value={entity}>
-                        {entity}
+                        {tr(entity)}
                       </option>
                     ))}
                   </select>
@@ -472,9 +480,7 @@ export default function AdminAuditPage() {
                       setAuditEntityFilter('');
                     }}
                     className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                  >
-                    Reset filters
-                  </button>
+                  >{tr("Reset filters")}</button>
                 </div>
 
                 {auditLogs.length > 0 ? (
@@ -482,41 +488,41 @@ export default function AdminAuditPage() {
                     <table className="min-w-full text-sm">
                       <thead>
                         <tr className="border-b border-gray-200 text-left text-gray-500">
-                          <th className="pb-3 pr-4 font-medium">Time</th>
-                          <th className="pb-3 pr-4 font-medium">Action</th>
-                          <th className="pb-3 pr-4 font-medium">Entity</th>
-                          <th className="pb-3 pr-4 font-medium">Actor</th>
-                          <th className="pb-3 pr-4 font-medium">Status</th>
-                          <th className="pb-3 pr-4 font-medium">IP</th>
-                          <th className="pb-3 pr-0 font-medium">Details</th>
+                          <th className="pb-3 pr-4 font-medium">{tr("Time")}</th>
+                          <th className="pb-3 pr-4 font-medium">{tr("Action")}</th>
+                          <th className="pb-3 pr-4 font-medium">{tr("Entity")}</th>
+                          <th className="pb-3 pr-4 font-medium">{tr("Actor")}</th>
+                          <th className="pb-3 pr-4 font-medium">{tr("Status")}</th>
+                          <th className="pb-3 pr-4 font-medium">{tr("IP")}</th>
+                          <th className="pb-3 pr-0 font-medium">{tr("Details")}</th>
                         </tr>
                       </thead>
                       <tbody>
                         {auditLogs.map((log) => (
                           <tr key={log.id} className="border-b border-gray-100 last:border-b-0 align-top">
                             <td className="py-3 pr-4 text-gray-700 whitespace-nowrap">
-                              {formatDateTime(log.createdAt)}
+                              {tr(formatDateTime(log.createdAt))}
                             </td>
                             <td className="py-3 pr-4">
-                              <Badge tone="blue">{log.action}</Badge>
+                              <Badge tone="blue">{tr(log.action)}</Badge>
                             </td>
                             <td className="py-3 pr-4 text-gray-700">
-                              <div className="font-medium text-gray-900">{log.entityType}</div>
-                              <div className="text-xs text-gray-500">{truncate(log.entityId || '-')}</div>
+                              <div className="font-medium text-gray-900">{tr(log.entityType)}</div>
+                              <div className="text-xs text-gray-500">{tr(truncate(log.entityId || '-'))}</div>
                             </td>
                             <td className="py-3 pr-4 text-gray-700">
-                              <div className="font-medium text-gray-900">{log.actorRole || 'Unknown'}</div>
-                              <div className="text-xs text-gray-500">{truncate(log.actorId || '-')}</div>
+                              <div className="font-medium text-gray-900">{tr(log.actorRole || 'Unknown')}</div>
+                              <div className="text-xs text-gray-500">{tr(truncate(log.actorId || '-'))}</div>
                             </td>
                             <td className="py-3 pr-4">
                               <Badge tone={log.status === 'success' ? 'green' : 'red'}>
-                                {log.status}
+                                {tr(log.status)}
                               </Badge>
                             </td>
-                            <td className="py-3 pr-4 text-gray-700">{log.ipAddress || '-'}</td>
+                            <td className="py-3 pr-4 text-gray-700">{tr(log.ipAddress || '-')}</td>
                             <td className="py-3 pr-0 text-xs text-gray-600">
                               <pre className="max-w-[320px] whitespace-pre-wrap break-words rounded-lg bg-gray-50 p-2">
-                                {JSON.stringify(log.metadata || {}, null, 2)}
+                                {tr(JSON.stringify(log.metadata || {}, null, 2))}
                               </pre>
                             </td>
                           </tr>
@@ -529,17 +535,15 @@ export default function AdminAuditPage() {
                 )}
 
                 {auditPagination ? (
-                  <div className="mt-4 text-xs text-gray-500">
-                    Showing page {auditPagination.page} of {auditPagination.totalPages} · Total {formatNumber(auditPagination.total)} logs
-                  </div>
+                  <div className="mt-4 text-xs text-gray-500">{tr("Showing page ")}{auditPagination.page}{tr(" of ")}{auditPagination.totalPages}{tr(" · Total ")}{tr(formatNumber(auditPagination.total))}{tr(" logs")}</div>
                 ) : null}
               </Section>
             </div>
 
             <div className="mt-8">
               <Section
-                title="Fraud Alerts"
-                description="Review suspicious applications, risk scores, and investigation actions."
+                title={tr("Fraud Alerts")}
+                description={tr("Review suspicious applications, risk scores, and investigation actions.")}
               >
                 <div className="mb-5 grid gap-3 md:grid-cols-3">
                   <select
@@ -547,11 +551,11 @@ export default function AdminAuditPage() {
                     onChange={(e) => setFraudStatusFilter(e.target.value)}
                     className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-blue-500"
                   >
-                    <option value="">All statuses</option>
-                    <option value="open">Open</option>
-                    <option value="reviewed">Reviewed</option>
-                    <option value="dismissed">Dismissed</option>
-                    <option value="confirmed">Confirmed</option>
+                    <option value="">{tr("All statuses")}</option>
+                    <option value="open">{tr("Open")}</option>
+                    <option value="reviewed">{tr("Reviewed")}</option>
+                    <option value="dismissed">{tr("Dismissed")}</option>
+                    <option value="confirmed">{tr("Confirmed")}</option>
                   </select>
 
                   <select
@@ -559,10 +563,10 @@ export default function AdminAuditPage() {
                     onChange={(e) => setFraudSeverityFilter(e.target.value)}
                     className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-blue-500"
                   >
-                    <option value="">All severities</option>
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
+                    <option value="">{tr("All severities")}</option>
+                    <option value="low">{tr("Low")}</option>
+                    <option value="medium">{tr("Medium")}</option>
+                    <option value="high">{tr("High")}</option>
                   </select>
 
                   <button
@@ -571,9 +575,7 @@ export default function AdminAuditPage() {
                       setFraudSeverityFilter('');
                     }}
                     className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                  >
-                    Reset filters
-                  </button>
+                  >{tr("Reset filters")}</button>
                 </div>
 
                 {fraudAlerts.length > 0 ? (
@@ -581,24 +583,24 @@ export default function AdminAuditPage() {
                     <table className="min-w-full text-sm">
                       <thead>
                         <tr className="border-b border-gray-200 text-left text-gray-500">
-                          <th className="pb-3 pr-4 font-medium">Created</th>
-                          <th className="pb-3 pr-4 font-medium">Rule</th>
-                          <th className="pb-3 pr-4 font-medium">Severity</th>
-                          <th className="pb-3 pr-4 font-medium">Risk</th>
-                          <th className="pb-3 pr-4 font-medium">Status</th>
-                          <th className="pb-3 pr-4 font-medium">Application</th>
-                          <th className="pb-3 pr-4 font-medium">Reason</th>
-                          <th className="pb-3 pr-0 font-medium">Actions</th>
+                          <th className="pb-3 pr-4 font-medium">{tr("Created")}</th>
+                          <th className="pb-3 pr-4 font-medium">{tr("Rule")}</th>
+                          <th className="pb-3 pr-4 font-medium">{tr("Severity")}</th>
+                          <th className="pb-3 pr-4 font-medium">{tr("Risk")}</th>
+                          <th className="pb-3 pr-4 font-medium">{tr("Status")}</th>
+                          <th className="pb-3 pr-4 font-medium">{tr("Application")}</th>
+                          <th className="pb-3 pr-4 font-medium">{tr("Reason")}</th>
+                          <th className="pb-3 pr-0 font-medium">{tr("Actions")}</th>
                         </tr>
                       </thead>
                       <tbody>
                         {fraudAlerts.map((alert) => (
                           <tr key={alert.id} className="border-b border-gray-100 last:border-b-0 align-top">
                             <td className="py-3 pr-4 whitespace-nowrap text-gray-700">
-                              {formatDateTime(alert.createdAt)}
+                              {tr(formatDateTime(alert.createdAt))}
                             </td>
                             <td className="py-3 pr-4">
-                              <Badge tone="violet">{alert.ruleCode}</Badge>
+                              <Badge tone="violet">{tr(alert.ruleCode)}</Badge>
                             </td>
                             <td className="py-3 pr-4">
                               <Badge
@@ -610,11 +612,11 @@ export default function AdminAuditPage() {
                                     : 'gray'
                                 }
                               >
-                                {alert.severity}
+                                {tr(alert.severity)}
                               </Badge>
                             </td>
                             <td className="py-3 pr-4 font-semibold text-gray-900">
-                              {formatNumber(alert.riskScore)}
+                              {tr(formatNumber(alert.riskScore))}
                             </td>
                             <td className="py-3 pr-4">
                               <Badge
@@ -628,28 +630,25 @@ export default function AdminAuditPage() {
                                     : 'yellow'
                                 }
                               >
-                                {alert.status}
+                                {tr(alert.status)}
                               </Badge>
                             </td>
                             <td className="py-3 pr-4 text-gray-700">
                               <div className="font-medium text-gray-900">
-                                {truncate(alert.applicationId || '-')}
+                                {tr(truncate(alert.applicationId || '-'))}
                               </div>
-                              <div className="text-xs text-gray-500">
-                                App Status: {alert.application?.status || '-'}
+                              <div className="text-xs text-gray-500">{tr("App Status: ")}{tr(alert.application?.status || '-')}
                               </div>
-                              <div className="text-xs text-gray-500">
-                                Review: {alert.application?.manualReviewStatus || '-'}
+                              <div className="text-xs text-gray-500">{tr("Review: ")}{tr(alert.application?.manualReviewStatus || '-')}
                               </div>
-                              <div className="text-xs text-gray-500">
-                                AI Score: {alert.application?.aiScore ?? '-'}
+                              <div className="text-xs text-gray-500">{tr("AI Score: ")}{tr(alert.application?.aiScore ?? '-')}
                               </div>
                             </td>
                             <td className="py-3 pr-4 text-gray-700">
-                              <div className="max-w-xs">{alert.reason}</div>
+                              <div className="max-w-xs">{tr(alert.reason)}</div>
                               {alert.metadata ? (
                                 <pre className="mt-2 max-w-[280px] whitespace-pre-wrap break-words rounded-lg bg-gray-50 p-2 text-xs text-gray-600">
-                                  {JSON.stringify(alert.metadata, null, 2)}
+                                  {tr(JSON.stringify(alert.metadata, null, 2))}
                                 </pre>
                               ) : null}
                             </td>
@@ -659,23 +658,17 @@ export default function AdminAuditPage() {
                                   onClick={() => void updateFraudAlertStatus(alert.id, 'reviewed')}
                                   disabled={updatingAlertId === alert.id}
                                   className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-60"
-                                >
-                                  Review
-                                </button>
+                                >{tr("Review")}</button>
                                 <button
                                   onClick={() => void updateFraudAlertStatus(alert.id, 'dismissed')}
                                   disabled={updatingAlertId === alert.id}
                                   className="rounded-lg bg-gray-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-800 disabled:opacity-60"
-                                >
-                                  Dismiss
-                                </button>
+                                >{tr("Dismiss")}</button>
                                 <button
                                   onClick={() => void updateFraudAlertStatus(alert.id, 'confirmed')}
                                   disabled={updatingAlertId === alert.id}
                                   className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-60"
-                                >
-                                  Confirm
-                                </button>
+                                >{tr("Confirm")}</button>
                               </div>
                             </td>
                           </tr>
@@ -688,9 +681,7 @@ export default function AdminAuditPage() {
                 )}
 
                 {fraudPagination ? (
-                  <div className="mt-4 text-xs text-gray-500">
-                    Showing page {fraudPagination.page} of {fraudPagination.totalPages} · Total {formatNumber(fraudPagination.total)} alerts
-                  </div>
+                  <div className="mt-4 text-xs text-gray-500">{tr("Showing page ")}{fraudPagination.page}{tr(" of ")}{fraudPagination.totalPages}{tr(" · Total ")}{tr(formatNumber(fraudPagination.total))}{tr(" alerts")}</div>
                 ) : null}
               </Section>
             </div>

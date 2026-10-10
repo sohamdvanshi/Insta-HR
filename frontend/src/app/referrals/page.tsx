@@ -1,4 +1,6 @@
 'use client'
+import { tr, trError, useLocale, locale } from '@/lib/localization'
+
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
@@ -82,6 +84,8 @@ function getStatusClass(value?: string | null) {
 }
 
 export default function ReferralsPage() {
+  useLocale()
+
   const router = useRouter()
 
   const [user, setUser] = useState<StoredUser | null>(null)
@@ -251,7 +255,7 @@ export default function ReferralsPage() {
     }
 
     const shareText =
-      `Use my Insta-HR referral code ${referralCode} when applying for a job.`
+      tr('Use my Insta-HR referral code {{value0}} when applying for a job.', { value0: referralCode })
 
     try {
       if (
@@ -259,7 +263,7 @@ export default function ReferralsPage() {
         navigator.share
       ) {
         await navigator.share({
-          title: 'Insta-HR Referral Code',
+          title: tr('Insta-HR Referral Code'),
           text: shareText
         })
 
@@ -297,9 +301,7 @@ export default function ReferralsPage() {
   if (loading) {
     return (
       <main className="min-h-screen bg-gray-50 pt-24 flex items-center justify-center">
-        <p className="text-gray-400">
-          Loading referrals...
-        </p>
+        <p className="text-gray-400">{tr("Loading referrals...")}</p>
       </main>
     )
   }
@@ -311,34 +313,26 @@ export default function ReferralsPage() {
           <Link
             href="/dashboard"
             className="text-sm text-blue-100 hover:text-white"
-          >
-            ← Back to Dashboard
-          </Link>
+          >{tr("← Back to Dashboard")}</Link>
 
-          <p className="text-sm font-semibold uppercase tracking-wider text-blue-200 mt-6">
-            Invite and earn
-          </p>
+          <p className="text-sm font-semibold uppercase tracking-wider text-blue-200 mt-6">{tr("Invite and earn")}</p>
 
-          <h1 className="text-3xl font-bold text-white mt-2">
-            Referrals & Loyalty
-          </h1>
+          <h1 className="text-3xl font-bold text-white mt-2">{tr("Referrals & Loyalty")}</h1>
 
-          <p className="text-blue-100 mt-2 max-w-2xl">
-            Share your unique referral code with another candidate. They can enter this code while applying for a job.
-          </p>
+          <p className="text-blue-100 mt-2 max-w-2xl">{tr("Share your unique referral code with another candidate. They can enter this code while applying for a job.")}</p>
         </div>
       </section>
 
       <div className="max-w-6xl mx-auto px-6 py-8">
         {error && (
           <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
+            {trError(error)}
           </div>
         )}
 
         {message && (
           <div className="mb-6 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-            {message}
+            {tr(message)}
           </div>
         )}
 
@@ -381,22 +375,16 @@ export default function ReferralsPage() {
         <section className="bg-white rounded-2xl border border-violet-100 shadow-sm p-6 mb-8">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-wide text-violet-600">
-                Your unique code
-              </p>
+              <p className="text-sm font-semibold uppercase tracking-wide text-violet-600">{tr("Your unique code")}</p>
 
-              <h2 className="text-2xl font-bold text-gray-900 mt-2">
-                Share your referral code
-              </h2>
+              <h2 className="text-2xl font-bold text-gray-900 mt-2">{tr("Share your referral code")}</h2>
 
-              <p className="text-sm text-gray-500 mt-2 max-w-xl">
-                Your referral code is generated automatically by Insta-HR and is unique to your account.
-              </p>
+              <p className="text-sm text-gray-500 mt-2 max-w-xl">{tr("Your referral code is generated automatically by Insta-HR and is unique to your account.")}</p>
             </div>
 
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <code className="rounded-xl bg-gray-100 border border-gray-200 px-5 py-3 text-center text-lg font-bold tracking-widest text-gray-900">
-                {referralCode || 'Not available'}
+                {tr(referralCode || 'Not available')}
               </code>
 
               <button
@@ -405,7 +393,7 @@ export default function ReferralsPage() {
                 disabled={!referralCode}
                 className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {copied ? 'Copied!' : 'Copy Code'}
+                {tr(copied ? 'Copied!' : 'Copy Code')}
               </button>
 
               <button
@@ -413,68 +401,54 @@ export default function ReferralsPage() {
                 onClick={handleShareCode}
                 disabled={!referralCode}
                 className="rounded-xl bg-violet-600 px-5 py-3 text-sm font-semibold text-white hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Share Code
-              </button>
+              >{tr("Share Code")}</button>
             </div>
           </div>
 
           {!referralCode && (
-            <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-              Referral code is not available yet. Please log out and log in again after confirming the backend user model update.
-            </div>
+            <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">{tr("Referral code is not available yet. Please log out and log in again after confirming the backend user model update.")}</div>
           )}
         </section>
 
         <section className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-8">
-          <h2 className="text-lg font-bold text-gray-900">
-            How referrals work
-          </h2>
+          <h2 className="text-lg font-bold text-gray-900">{tr("How referrals work")}</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-5">
             <StepCard
               number="1"
-              title="Copy your code"
-              description="Copy the unique referral code shown above."
+              title={tr("Copy your code")}
+              description={tr("Copy the unique referral code shown above.")}
             />
 
             <StepCard
               number="2"
-              title="Share it"
-              description="Send the code to another candidate."
+              title={tr("Share it")}
+              description={tr("Send the code to another candidate.")}
             />
 
             <StepCard
               number="3"
-              title="Candidate applies"
-              description="The candidate enters your code while applying for a job."
+              title={tr("Candidate applies")}
+              description={tr("The candidate enters your code while applying for a job.")}
             />
           </div>
         </section>
 
         <section className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-8">
           <div className="flex items-center justify-between gap-4 mb-5">
-            <h2 className="text-lg font-bold text-gray-900">
-              Referred applications
-            </h2>
+            <h2 className="text-lg font-bold text-gray-900">{tr("Referred applications")}</h2>
 
             <Link
               href="/jobs"
               className="text-sm font-semibold text-blue-600 hover:underline"
-            >
-              Find jobs
-            </Link>
+            >{tr("Find jobs")}</Link>
           </div>
 
           {referrals.length === 0 ? (
             <div className="rounded-xl border border-dashed border-gray-200 p-10 text-center">
-              <p className="text-gray-500">
-                No referred applications yet.
-              </p>
+              <p className="text-gray-500">{tr("No referred applications yet.")}</p>
 
-              <p className="text-sm text-gray-400 mt-2">
-                When someone applies using your code, their application will appear here.
-              </p>
+              <p className="text-sm text-gray-400 mt-2">{tr("When someone applies using your code, their application will appear here.")}</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -486,21 +460,17 @@ export default function ReferralsPage() {
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                     <div>
                       <h3 className="font-semibold text-gray-900">
-                        {referral.job?.title ||
-                          'Job application'}
+                        {referral.job?.title || tr('Job application')}
                       </h3>
 
-                      <p className="text-sm text-gray-500 mt-1">
-                        Candidate:{' '}
-                        {referral.candidate?.email ||
-                          'Candidate'}
+                      <p className="text-sm text-gray-500 mt-1">{tr("Candidate:")}{tr(' ')}
+                        {referral.candidate?.email || tr('Candidate')}
                       </p>
 
-                      <p className="text-xs text-gray-400 mt-1">
-                        Applied:{' '}
-                        {new Date(
+                      <p className="text-xs text-gray-400 mt-1">{tr("Applied:")}{tr(' ')}
+                        {tr(new Date(
                           referral.createdAt
-                        ).toLocaleDateString()}
+                        ).toLocaleDateString(locale()))}
                       </p>
                     </div>
 
@@ -545,7 +515,7 @@ export default function ReferralsPage() {
                         referral.referralRewardedAt
                           ? new Date(
                               referral.referralRewardedAt
-                            ).toLocaleDateString()
+                            ).toLocaleDateString(locale())
                           : 'Not rewarded'
                       }
                     />
@@ -558,24 +528,16 @@ export default function ReferralsPage() {
 
         <section className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <div className="flex items-center justify-between gap-4 mb-5">
-            <h2 className="text-lg font-bold text-gray-900">
-              Loyalty transactions
-            </h2>
+            <h2 className="text-lg font-bold text-gray-900">{tr("Loyalty transactions")}</h2>
 
-            <span className="text-sm text-gray-500">
-              Balance: {balance} points
-            </span>
+            <span className="text-sm text-gray-500">{tr("Balance: ")}{balance}{tr(" points")}</span>
           </div>
 
           {transactions.length === 0 ? (
             <div className="rounded-xl border border-dashed border-gray-200 p-10 text-center">
-              <p className="text-gray-500">
-                No loyalty transactions yet.
-              </p>
+              <p className="text-gray-500">{tr("No loyalty transactions yet.")}</p>
 
-              <p className="text-sm text-gray-400 mt-2">
-                Your rewards will appear here when they are credited.
-              </p>
+              <p className="text-sm text-gray-400 mt-2">{tr("Your rewards will appear here when they are credited.")}</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -586,15 +548,15 @@ export default function ReferralsPage() {
                 >
                   <div>
                     <p className="text-sm font-medium text-gray-800">
-                      {transaction.reason ||
+                      {tr(transaction.reason ||
                         transaction.type ||
-                        'Loyalty transaction'}
+                        'Loyalty transaction')}
                     </p>
 
                     <p className="text-xs text-gray-400 mt-1">
-                      {new Date(
+                      {tr(new Date(
                         transaction.createdAt
-                      ).toLocaleDateString()}
+                      ).toLocaleDateString(locale()))}
                     </p>
                   </div>
 
@@ -605,7 +567,7 @@ export default function ReferralsPage() {
                         : 'text-red-600'
                     }`}
                   >
-                    {transaction.points >= 0 ? '+' : ''}
+                    {tr(transaction.points >= 0 ? '+' : '')}
                     {transaction.points}
                   </span>
                 </div>
@@ -629,20 +591,22 @@ function SummaryCard({
   subtitle: string
   valueClass: string
 }) {
+  useLocale()
+
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
       <p className="text-sm text-gray-500">
-        {label}
+        {tr(label)}
       </p>
 
       <p
         className={`text-3xl font-bold mt-2 ${valueClass}`}
       >
-        {value}
+        {tr(value)}
       </p>
 
       <p className="text-xs text-gray-400 mt-1">
-        {subtitle}
+        {tr(subtitle)}
       </p>
     </div>
   )
@@ -655,14 +619,16 @@ function StatusBadge({
   value: string
   prefix?: string
 }) {
+  useLocale()
+
   return (
     <span
       className={`rounded-full border px-3 py-1 text-xs font-semibold ${getStatusClass(
         value
       )}`}
     >
-      {prefix ? `${prefix} ` : ''}
-      {formatLabel(value)}
+      {tr(prefix ? `${prefix} ` : '')}
+      {tr(formatLabel(value))}
     </span>
   )
 }
@@ -674,14 +640,16 @@ function InfoBox({
   label: string
   value: string
 }) {
+  useLocale()
+
   return (
     <div className="rounded-lg bg-gray-50 border border-gray-100 p-3">
       <p className="text-xs text-gray-400">
-        {label}
+        {tr(label)}
       </p>
 
       <p className="text-sm font-semibold text-gray-800 mt-1 truncate">
-        {value}
+        {tr(value)}
       </p>
     </div>
   )
@@ -696,20 +664,22 @@ function StepCard({
   title: string
   description: string
 }) {
+  useLocale()
+
   return (
     <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
       <div className="flex items-center gap-3">
         <span className="flex h-8 w-8 items-center justify-center rounded-full bg-violet-600 text-sm font-bold text-white">
-          {number}
+          {tr(number)}
         </span>
 
         <h3 className="font-semibold text-gray-900">
-          {title}
+          {tr(title)}
         </h3>
       </div>
 
       <p className="mt-3 text-sm leading-6 text-gray-500">
-        {description}
+        {tr(description)}
       </p>
     </div>
   )

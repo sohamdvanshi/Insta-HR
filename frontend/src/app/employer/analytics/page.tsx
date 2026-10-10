@@ -1,4 +1,6 @@
 'use client';
+import { tr, trError, useLocale } from '@/lib/localization'
+
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
@@ -128,11 +130,13 @@ function StatCard({
   value: string | number;
   subtitle?: string;
 }) {
+  useLocale()
+
   return (
     <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
-      <p className="text-sm font-medium text-gray-500">{title}</p>
-      <p className="mt-3 text-2xl font-bold text-gray-900">{value}</p>
-      {subtitle ? <p className="mt-2 text-xs text-gray-400">{subtitle}</p> : null}
+      <p className="text-sm font-medium text-gray-500">{tr(title)}</p>
+      <p className="mt-3 text-2xl font-bold text-gray-900">{tr(value)}</p>
+      {subtitle ? <p className="mt-2 text-xs text-gray-400">{tr(subtitle)}</p> : null}
     </div>
   );
 }
@@ -148,24 +152,30 @@ function SectionCard({
   children: ReactNode;
   heightClass?: string;
 }) {
+  useLocale()
+
   return (
     <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
-      <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
-      {description ? <p className="mt-1 text-sm text-gray-500">{description}</p> : null}
+      <h2 className="text-lg font-semibold text-gray-900">{tr(title)}</h2>
+      {description ? <p className="mt-1 text-sm text-gray-500">{tr(description)}</p> : null}
       <div className={`mt-6 ${heightClass}`}>{children}</div>
     </div>
   );
 }
 
 function EmptyState({ message }: { message: string }) {
+  useLocale()
+
   return (
     <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50 text-sm text-gray-500">
-      {message}
+      {tr(message)}
     </div>
   );
 }
 
 export default function EmployerAnalyticsPage() {
+  useLocale()
+
   const [token, setToken] = useState<string>('');
   const [data, setData] = useState<EmployerFunnelData | null>(null);
   const [trends, setTrends] = useState<EmployerTrendsData | null>(null);
@@ -489,10 +499,8 @@ export default function EmployerAnalyticsPage() {
       <div className="mx-auto max-w-7xl">
         <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Employer Analytics</h1>
-            <p className="mt-2 text-sm text-gray-600">
-              Track application flow, conversion rates, hiring trends, top-performing jobs, and segment performance.
-            </p>
+            <h1 className="text-3xl font-bold text-gray-900">{tr("Employer Analytics")}</h1>
+            <p className="mt-2 text-sm text-gray-600">{tr("Track application flow, conversion rates, hiring trends, top-performing jobs, and segment performance.")}</p>
           </div>
 
           <button
@@ -500,19 +508,17 @@ export default function EmployerAnalyticsPage() {
             disabled={!token || refreshing}
             className="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {refreshing ? 'Refreshing...' : 'Refresh'}
+            {tr(refreshing ? 'Refreshing...' : 'Refresh')}
           </button>
         </div>
 
         {!token && (
-          <div className="mb-6 rounded-xl border border-yellow-300 bg-yellow-50 p-4 text-sm text-yellow-800">
-            JWT token not found in localStorage. Please log in again as employer.
-          </div>
+          <div className="mb-6 rounded-xl border border-yellow-300 bg-yellow-50 p-4 text-sm text-yellow-800">{tr("JWT token not found in localStorage. Please log in again as employer.")}</div>
         )}
 
         {error && (
           <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            {error}
+            {trError(error)}
           </div>
         )}
 
@@ -542,49 +548,49 @@ export default function EmployerAnalyticsPage() {
         ) : (
           <>
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <StatCard title="Jobs Posted" value={formatNumber(data?.jobsPosted)} />
+              <StatCard title={tr("Jobs Posted")} value={formatNumber(data?.jobsPosted)} />
               <StatCard
-                title="Applications"
+                title={tr("Applications")}
                 value={formatNumber(trends?.summary?.applications ?? data?.applications)}
               />
-              <StatCard title="Shortlisted" value={formatNumber(data?.shortlisted)} />
-              <StatCard title="Hired" value={formatNumber(trends?.summary?.hired ?? data?.hired)} />
+              <StatCard title={tr("Shortlisted")} value={formatNumber(data?.shortlisted)} />
+              <StatCard title={tr("Hired")} value={formatNumber(trends?.summary?.hired ?? data?.hired)} />
             </div>
 
             <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {conversionCards.map((card) => (
-                <StatCard key={card.title} title={card.title} value={card.value} />
+                <StatCard key={card.title} title={tr(card.title)} value={card.value} />
               ))}
             </div>
 
             <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <StatCard
-                title="Avg Days to Interview"
+                title={tr("Avg Days to Interview")}
                 value={formatDays(trends?.summary?.avgDaysToInterview)}
               />
               <StatCard
-                title="Avg Days to Hire"
+                title={tr("Avg Days to Hire")}
                 value={formatDays(trends?.summary?.avgDaysToHire)}
               />
               <StatCard
-                title="Interviews"
+                title={tr("Interviews")}
                 value={formatNumber(trends?.summary?.interviews ?? data?.interview)}
               />
               <StatCard
-                title="Rejected"
+                title={tr("Rejected")}
                 value={formatNumber(data?.rejected)}
               />
             </div>
 
             <div className="mt-8 grid gap-8 lg:grid-cols-2">
               <SectionCard
-                title="Hiring Funnel"
-                description="See how candidates move from application to hire."
+                title={tr("Hiring Funnel")}
+                description={tr("See how candidates move from application to hire.")}
               >
                 {funnelData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <FunnelChart>
-                      <Tooltip />
+                      <Tooltip labelFormatter={(value) => tr(value)} />
                       <Funnel data={funnelData} dataKey="value">
                         <LabelList
                           dataKey="stage"
@@ -601,8 +607,8 @@ export default function EmployerAnalyticsPage() {
               </SectionCard>
 
               <SectionCard
-                title="Pipeline Outcome Split"
-                description="Distribution across active and final outcomes."
+                title={tr("Pipeline Outcome Split")}
+                description={tr("Distribution across active and final outcomes.")}
               >
                 {stageDropoffData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
@@ -621,8 +627,8 @@ export default function EmployerAnalyticsPage() {
                           />
                         ))}
                       </Pie>
-                      <Tooltip />
-                      <Legend />
+                      <Tooltip labelFormatter={(value) => tr(value)} />
+                      <Legend formatter={(value) => tr(value)} />
                     </PieChart>
                   </ResponsiveContainer>
                 ) : (
@@ -633,8 +639,8 @@ export default function EmployerAnalyticsPage() {
 
             <div className="mt-8 grid gap-8 lg:grid-cols-2">
               <SectionCard
-                title="Top Jobs Performance"
-                description="Applications vs hires across your best jobs."
+                title={tr("Top Jobs Performance")}
+                description={tr("Applications vs hires across your best jobs.")}
               >
                 {topJobsChartData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
@@ -649,11 +655,11 @@ export default function EmployerAnalyticsPage() {
                         interval={0}
                         angle={topJobsChartData.length > 3 ? -10 : 0}
                         textAnchor={topJobsChartData.length > 3 ? 'end' : 'middle'}
-                        height={topJobsChartData.length > 3 ? 55 : 30}
+                        height={topJobsChartData.length > 3 ? 55 : 30} tickFormatter={(value) => tr(value)}
                       />
-                      <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
-                      <Tooltip />
-                      <Legend />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 12 }} tickFormatter={(value) => tr(value)} />
+                      <Tooltip labelFormatter={(value) => tr(value)} />
+                      <Legend formatter={(value) => tr(value)} />
                       <Bar
                         dataKey="applications"
                         fill="#2563eb"
@@ -672,23 +678,21 @@ export default function EmployerAnalyticsPage() {
               </SectionCard>
 
               <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
-                <h2 className="text-lg font-semibold text-gray-900">Top Jobs Table</h2>
-                <p className="mt-1 text-sm text-gray-500">
-                  Detailed funnel breakdown by job.
-                </p>
+                <h2 className="text-lg font-semibold text-gray-900">{tr("Top Jobs Table")}</h2>
+                <p className="mt-1 text-sm text-gray-500">{tr("Detailed funnel breakdown by job.")}</p>
 
                 <div className="mt-6 overflow-x-auto">
                   {data?.topJobs?.length ? (
                     <table className="min-w-full text-sm">
                       <thead>
                         <tr className="border-b border-gray-200 text-left text-gray-500">
-                          <th className="pb-3 pr-4 font-medium">Job</th>
-                          <th className="pb-3 pr-4 font-medium">Apps</th>
-                          <th className="pb-3 pr-4 font-medium">Shortlisted</th>
-                          <th className="pb-3 pr-4 font-medium">Interview</th>
-                          <th className="pb-3 pr-4 font-medium">Hired</th>
-                          <th className="pb-3 pr-4 font-medium">Rejected</th>
-                          <th className="pb-3 pr-0 font-medium">Hire Rate</th>
+                          <th className="pb-3 pr-4 font-medium">{tr("Job")}</th>
+                          <th className="pb-3 pr-4 font-medium">{tr("Apps")}</th>
+                          <th className="pb-3 pr-4 font-medium">{tr("Shortlisted")}</th>
+                          <th className="pb-3 pr-4 font-medium">{tr("Interview")}</th>
+                          <th className="pb-3 pr-4 font-medium">{tr("Hired")}</th>
+                          <th className="pb-3 pr-4 font-medium">{tr("Rejected")}</th>
+                          <th className="pb-3 pr-0 font-medium">{tr("Hire Rate")}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -698,25 +702,25 @@ export default function EmployerAnalyticsPage() {
                             className="border-b border-gray-100 last:border-b-0"
                           >
                             <td className="py-3 pr-4 font-medium text-gray-900">
-                              {job.jobTitle}
+                              {tr(job.jobTitle)}
                             </td>
                             <td className="py-3 pr-4 text-gray-700">
-                              {formatNumber(job.applications)}
+                              {tr(formatNumber(job.applications))}
                             </td>
                             <td className="py-3 pr-4 text-gray-700">
-                              {formatNumber(job.shortlisted)}
+                              {tr(formatNumber(job.shortlisted))}
                             </td>
                             <td className="py-3 pr-4 text-gray-700">
-                              {formatNumber(job.interview)}
+                              {tr(formatNumber(job.interview))}
                             </td>
                             <td className="py-3 pr-4 text-gray-700">
-                              {formatNumber(job.hired)}
+                              {tr(formatNumber(job.hired))}
                             </td>
                             <td className="py-3 pr-4 text-gray-700">
-                              {formatNumber(job.rejected)}
+                              {tr(formatNumber(job.rejected))}
                             </td>
                             <td className="py-3 pr-0 font-semibold text-emerald-600">
-                              {formatPercent(job.applicationToHireRate)}
+                              {tr(formatPercent(job.applicationToHireRate))}
                             </td>
                           </tr>
                         ))}
@@ -733,30 +737,30 @@ export default function EmployerAnalyticsPage() {
 
             <div className="mt-8 grid gap-8 lg:grid-cols-2">
               <SectionCard
-                title="Applications vs Hires Trend"
-                description="Monthly comparison of incoming applications and successful hires."
+                title={tr("Applications vs Hires Trend")}
+                description={tr("Monthly comparison of incoming applications and successful hires.")}
               >
                 {trendChartData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={trendChartData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                      <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                      <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
-                      <Tooltip />
-                      <Legend />
+                      <XAxis dataKey="month" tick={{ fontSize: 12 }} tickFormatter={(value) => tr(value)} />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 12 }} tickFormatter={(value) => tr(value)} />
+                      <Tooltip labelFormatter={(value) => tr(value)} />
+                      <Legend formatter={(value) => tr(value)} />
                       <Line
                         type="monotone"
                         dataKey="applications"
                         stroke={TREND_COLORS.applications}
                         strokeWidth={3}
-                        name="Applications"
+                        name={tr("Applications")}
                       />
                       <Line
                         type="monotone"
                         dataKey="hires"
                         stroke={TREND_COLORS.hires}
                         strokeWidth={3}
-                        name="Hires"
+                        name={tr("Hires")}
                       />
                     </LineChart>
                   </ResponsiveContainer>
@@ -766,8 +770,8 @@ export default function EmployerAnalyticsPage() {
               </SectionCard>
 
               <SectionCard
-                title="Slowest Jobs by Time to Hire"
-                description="Jobs taking the longest average time to convert to hired."
+                title={tr("Slowest Jobs by Time to Hire")}
+                description={tr("Jobs taking the longest average time to convert to hired.")}
               >
                 {slowJobsChartData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
@@ -782,10 +786,10 @@ export default function EmployerAnalyticsPage() {
                         interval={0}
                         angle={slowJobsChartData.length > 3 ? -10 : 0}
                         textAnchor={slowJobsChartData.length > 3 ? 'end' : 'middle'}
-                        height={slowJobsChartData.length > 3 ? 55 : 30}
+                        height={slowJobsChartData.length > 3 ? 55 : 30} tickFormatter={(value) => tr(value)}
                       />
-                      <YAxis tick={{ fontSize: 12 }} />
-                      <Tooltip />
+                      <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => tr(value)} />
+                      <Tooltip labelFormatter={(value) => tr(value)} />
                       <Bar
                         dataKey="avgDaysToHire"
                         fill={TREND_COLORS.slowJobs}
@@ -800,20 +804,18 @@ export default function EmployerAnalyticsPage() {
             </div>
 
             <div className="mt-8 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Slow Jobs Table</h2>
-              <p className="mt-1 text-sm text-gray-500">
-                Detailed job-level hiring speed metrics.
-              </p>
+              <h2 className="text-lg font-semibold text-gray-900">{tr("Slow Jobs Table")}</h2>
+              <p className="mt-1 text-sm text-gray-500">{tr("Detailed job-level hiring speed metrics.")}</p>
 
               <div className="mt-6 overflow-x-auto">
                 {trends?.slowJobs?.length ? (
                   <table className="min-w-full text-sm">
                     <thead>
                       <tr className="border-b border-gray-200 text-left text-gray-500">
-                        <th className="pb-3 pr-4 font-medium">Job</th>
-                        <th className="pb-3 pr-4 font-medium">Applications</th>
-                        <th className="pb-3 pr-4 font-medium">Hired</th>
-                        <th className="pb-3 pr-0 font-medium">Avg Days to Hire</th>
+                        <th className="pb-3 pr-4 font-medium">{tr("Job")}</th>
+                        <th className="pb-3 pr-4 font-medium">{tr("Applications")}</th>
+                        <th className="pb-3 pr-4 font-medium">{tr("Hired")}</th>
+                        <th className="pb-3 pr-0 font-medium">{tr("Avg Days to Hire")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -823,16 +825,16 @@ export default function EmployerAnalyticsPage() {
                           className="border-b border-gray-100 last:border-b-0"
                         >
                           <td className="py-3 pr-4 font-medium text-gray-900">
-                            {job.jobTitle}
+                            {tr(job.jobTitle)}
                           </td>
                           <td className="py-3 pr-4 text-gray-700">
-                            {formatNumber(job.applications)}
+                            {tr(formatNumber(job.applications))}
                           </td>
                           <td className="py-3 pr-4 text-gray-700">
-                            {formatNumber(job.hired)}
+                            {tr(formatNumber(job.hired))}
                           </td>
                           <td className="py-3 pr-0 font-semibold text-amber-600">
-                            {formatDays(job.avgDaysToHire)}
+                            {tr(formatDays(job.avgDaysToHire))}
                           </td>
                         </tr>
                       ))}
@@ -848,8 +850,8 @@ export default function EmployerAnalyticsPage() {
 
             <div className="mt-8 grid gap-8 lg:grid-cols-2">
               <SectionCard
-                title="Job Type Performance"
-                description="Compare applications and hires across job types."
+                title={tr("Job Type Performance")}
+                description={tr("Compare applications and hires across job types.")}
               >
                 {jobTypeChartData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
@@ -864,11 +866,11 @@ export default function EmployerAnalyticsPage() {
                         interval={0}
                         angle={jobTypeChartData.length > 3 ? -10 : 0}
                         textAnchor={jobTypeChartData.length > 3 ? 'end' : 'middle'}
-                        height={jobTypeChartData.length > 3 ? 55 : 30}
+                        height={jobTypeChartData.length > 3 ? 55 : 30} tickFormatter={(value) => tr(value)}
                       />
-                      <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
-                      <Tooltip />
-                      <Legend />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 12 }} tickFormatter={(value) => tr(value)} />
+                      <Tooltip labelFormatter={(value) => tr(value)} />
+                      <Legend formatter={(value) => tr(value)} />
                       <Bar dataKey="applications" fill="#2563eb" radius={[8, 8, 0, 0]} />
                       <Bar dataKey="hired" fill="#16a34a" radius={[8, 8, 0, 0]} />
                     </BarChart>
@@ -879,8 +881,8 @@ export default function EmployerAnalyticsPage() {
               </SectionCard>
 
               <SectionCard
-                title="Industry Hire Rate"
-                description="See which industries convert applications to hires best."
+                title={tr("Industry Hire Rate")}
+                description={tr("See which industries convert applications to hires best.")}
               >
                 {industryHireRateData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
@@ -895,10 +897,10 @@ export default function EmployerAnalyticsPage() {
                         interval={0}
                         angle={industryHireRateData.length > 3 ? -10 : 0}
                         textAnchor={industryHireRateData.length > 3 ? 'end' : 'middle'}
-                        height={industryHireRateData.length > 3 ? 55 : 30}
+                        height={industryHireRateData.length > 3 ? 55 : 30} tickFormatter={(value) => tr(value)}
                       />
-                      <YAxis tick={{ fontSize: 12 }} />
-                      <Tooltip formatter={(value) => `${Number(value).toFixed(2)}%`} />
+                      <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => tr(value)} />
+                      <Tooltip formatter={(value) => `${Number(value).toFixed(2)}%`} labelFormatter={(value) => tr(value)} />
                       <Bar dataKey="hireRate" fill="#f59e0b" radius={[8, 8, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -910,8 +912,8 @@ export default function EmployerAnalyticsPage() {
 
             <div className="mt-8 grid gap-8 lg:grid-cols-2">
               <SectionCard
-                title="Experience Level Demand"
-                description="Application share across role seniority levels."
+                title={tr("Experience Level Demand")}
+                description={tr("Application share across role seniority levels.")}
               >
                 {experienceLevelData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
@@ -930,8 +932,8 @@ export default function EmployerAnalyticsPage() {
                           />
                         ))}
                       </Pie>
-                      <Tooltip />
-                      <Legend />
+                      <Tooltip labelFormatter={(value) => tr(value)} />
+                      <Legend formatter={(value) => tr(value)} />
                     </PieChart>
                   </ResponsiveContainer>
                 ) : (
@@ -940,33 +942,31 @@ export default function EmployerAnalyticsPage() {
               </SectionCard>
 
               <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
-                <h2 className="text-lg font-semibold text-gray-900">Segment Performance Table</h2>
-                <p className="mt-1 text-sm text-gray-500">
-                  Detailed breakdown by job type, industry, and experience level.
-                </p>
+                <h2 className="text-lg font-semibold text-gray-900">{tr("Segment Performance Table")}</h2>
+                <p className="mt-1 text-sm text-gray-500">{tr("Detailed breakdown by job type, industry, and experience level.")}</p>
 
                 <div className="mt-6 space-y-8">
                   <div>
-                    <h3 className="mb-3 text-sm font-semibold text-gray-700">By Job Type</h3>
+                    <h3 className="mb-3 text-sm font-semibold text-gray-700">{tr("By Job Type")}</h3>
                     {(segments?.byJobType || []).length > 0 ? (
                       <div className="overflow-x-auto">
                         <table className="min-w-full text-sm">
                           <thead>
                             <tr className="border-b border-gray-200 text-left text-gray-500">
-                              <th className="pb-3 pr-4 font-medium">Job Type</th>
-                              <th className="pb-3 pr-4 font-medium">Applications</th>
-                              <th className="pb-3 pr-4 font-medium">Hired</th>
-                              <th className="pb-3 pr-0 font-medium">Hire Rate</th>
+                              <th className="pb-3 pr-4 font-medium">{tr("Job Type")}</th>
+                              <th className="pb-3 pr-4 font-medium">{tr("Applications")}</th>
+                              <th className="pb-3 pr-4 font-medium">{tr("Hired")}</th>
+                              <th className="pb-3 pr-0 font-medium">{tr("Hire Rate")}</th>
                             </tr>
                           </thead>
                           <tbody>
                             {(segments?.byJobType || []).map((item) => (
                               <tr key={item.label} className="border-b border-gray-100 last:border-b-0">
-                                <td className="py-3 pr-4 font-medium text-gray-900">{item.label}</td>
-                                <td className="py-3 pr-4 text-gray-700">{formatNumber(item.applications)}</td>
-                                <td className="py-3 pr-4 text-gray-700">{formatNumber(item.hired)}</td>
+                                <td className="py-3 pr-4 font-medium text-gray-900">{tr(item.label)}</td>
+                                <td className="py-3 pr-4 text-gray-700">{tr(formatNumber(item.applications))}</td>
+                                <td className="py-3 pr-4 text-gray-700">{tr(formatNumber(item.hired))}</td>
                                 <td className="py-3 pr-0 font-semibold text-emerald-600">
-                                  {formatPercent(item.hireRate)}
+                                  {tr(formatPercent(item.hireRate))}
                                 </td>
                               </tr>
                             ))}
@@ -981,26 +981,26 @@ export default function EmployerAnalyticsPage() {
                   </div>
 
                   <div>
-                    <h3 className="mb-3 text-sm font-semibold text-gray-700">By Industry</h3>
+                    <h3 className="mb-3 text-sm font-semibold text-gray-700">{tr("By Industry")}</h3>
                     {(segments?.byIndustry || []).length > 0 ? (
                       <div className="overflow-x-auto">
                         <table className="min-w-full text-sm">
                           <thead>
                             <tr className="border-b border-gray-200 text-left text-gray-500">
-                              <th className="pb-3 pr-4 font-medium">Industry</th>
-                              <th className="pb-3 pr-4 font-medium">Applications</th>
-                              <th className="pb-3 pr-4 font-medium">Hired</th>
-                              <th className="pb-3 pr-0 font-medium">Hire Rate</th>
+                              <th className="pb-3 pr-4 font-medium">{tr("Industry")}</th>
+                              <th className="pb-3 pr-4 font-medium">{tr("Applications")}</th>
+                              <th className="pb-3 pr-4 font-medium">{tr("Hired")}</th>
+                              <th className="pb-3 pr-0 font-medium">{tr("Hire Rate")}</th>
                             </tr>
                           </thead>
                           <tbody>
                             {(segments?.byIndustry || []).map((item) => (
                               <tr key={item.label} className="border-b border-gray-100 last:border-b-0">
-                                <td className="py-3 pr-4 font-medium text-gray-900">{item.label}</td>
-                                <td className="py-3 pr-4 text-gray-700">{formatNumber(item.applications)}</td>
-                                <td className="py-3 pr-4 text-gray-700">{formatNumber(item.hired)}</td>
+                                <td className="py-3 pr-4 font-medium text-gray-900">{tr(item.label)}</td>
+                                <td className="py-3 pr-4 text-gray-700">{tr(formatNumber(item.applications))}</td>
+                                <td className="py-3 pr-4 text-gray-700">{tr(formatNumber(item.hired))}</td>
                                 <td className="py-3 pr-0 font-semibold text-amber-600">
-                                  {formatPercent(item.hireRate)}
+                                  {tr(formatPercent(item.hireRate))}
                                 </td>
                               </tr>
                             ))}
@@ -1015,26 +1015,26 @@ export default function EmployerAnalyticsPage() {
                   </div>
 
                   <div>
-                    <h3 className="mb-3 text-sm font-semibold text-gray-700">By Experience Level</h3>
+                    <h3 className="mb-3 text-sm font-semibold text-gray-700">{tr("By Experience Level")}</h3>
                     {(segments?.byExperienceLevel || []).length > 0 ? (
                       <div className="overflow-x-auto">
                         <table className="min-w-full text-sm">
                           <thead>
                             <tr className="border-b border-gray-200 text-left text-gray-500">
-                              <th className="pb-3 pr-4 font-medium">Experience Level</th>
-                              <th className="pb-3 pr-4 font-medium">Applications</th>
-                              <th className="pb-3 pr-4 font-medium">Hired</th>
-                              <th className="pb-3 pr-0 font-medium">Hire Rate</th>
+                              <th className="pb-3 pr-4 font-medium">{tr("Experience Level")}</th>
+                              <th className="pb-3 pr-4 font-medium">{tr("Applications")}</th>
+                              <th className="pb-3 pr-4 font-medium">{tr("Hired")}</th>
+                              <th className="pb-3 pr-0 font-medium">{tr("Hire Rate")}</th>
                             </tr>
                           </thead>
                           <tbody>
                             {(segments?.byExperienceLevel || []).map((item) => (
                               <tr key={item.label} className="border-b border-gray-100 last:border-b-0">
-                                <td className="py-3 pr-4 font-medium text-gray-900">{item.label}</td>
-                                <td className="py-3 pr-4 text-gray-700">{formatNumber(item.applications)}</td>
-                                <td className="py-3 pr-4 text-gray-700">{formatNumber(item.hired)}</td>
+                                <td className="py-3 pr-4 font-medium text-gray-900">{tr(item.label)}</td>
+                                <td className="py-3 pr-4 text-gray-700">{tr(formatNumber(item.applications))}</td>
+                                <td className="py-3 pr-4 text-gray-700">{tr(formatNumber(item.hired))}</td>
                                 <td className="py-3 pr-0 font-semibold text-violet-600">
-                                  {formatPercent(item.hireRate)}
+                                  {tr(formatPercent(item.hireRate))}
                                 </td>
                               </tr>
                             ))}
@@ -1052,40 +1052,38 @@ export default function EmployerAnalyticsPage() {
             </div>
 
             <div className="mt-8 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Funnel Snapshot</h2>
-              <p className="mt-1 text-sm text-gray-500">
-                A quick summary of your current hiring pipeline.
-              </p>
+              <h2 className="text-lg font-semibold text-gray-900">{tr("Funnel Snapshot")}</h2>
+              <p className="mt-1 text-sm text-gray-500">{tr("A quick summary of your current hiring pipeline.")}</p>
 
               <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
                 <div className="rounded-xl bg-gray-50 p-4">
-                  <p className="text-xs uppercase tracking-wide text-gray-500">Applications</p>
+                  <p className="text-xs uppercase tracking-wide text-gray-500">{tr("Applications")}</p>
                   <p className="mt-2 text-xl font-bold text-gray-900">
-                    {formatNumber(trends?.summary?.applications ?? data?.applications)}
+                    {tr(formatNumber(trends?.summary?.applications ?? data?.applications))}
                   </p>
                 </div>
                 <div className="rounded-xl bg-gray-50 p-4">
-                  <p className="text-xs uppercase tracking-wide text-gray-500">Interview</p>
+                  <p className="text-xs uppercase tracking-wide text-gray-500">{tr("Interview")}</p>
                   <p className="mt-2 text-xl font-bold text-gray-900">
-                    {formatNumber(trends?.summary?.interviews ?? data?.interview)}
+                    {tr(formatNumber(trends?.summary?.interviews ?? data?.interview))}
                   </p>
                 </div>
                 <div className="rounded-xl bg-gray-50 p-4">
-                  <p className="text-xs uppercase tracking-wide text-gray-500">Rejected</p>
+                  <p className="text-xs uppercase tracking-wide text-gray-500">{tr("Rejected")}</p>
                   <p className="mt-2 text-xl font-bold text-gray-900">
-                    {formatNumber(data?.rejected)}
+                    {tr(formatNumber(data?.rejected))}
                   </p>
                 </div>
                 <div className="rounded-xl bg-gray-50 p-4">
-                  <p className="text-xs uppercase tracking-wide text-gray-500">Hired</p>
+                  <p className="text-xs uppercase tracking-wide text-gray-500">{tr("Hired")}</p>
                   <p className="mt-2 text-xl font-bold text-gray-900">
-                    {formatNumber(trends?.summary?.hired ?? data?.hired)}
+                    {tr(formatNumber(trends?.summary?.hired ?? data?.hired))}
                   </p>
                 </div>
                 <div className="rounded-xl bg-gray-50 p-4">
-                  <p className="text-xs uppercase tracking-wide text-gray-500">Overall Hire Rate</p>
+                  <p className="text-xs uppercase tracking-wide text-gray-500">{tr("Overall Hire Rate")}</p>
                   <p className="mt-2 text-xl font-bold text-gray-900">
-                    {formatPercent(data?.conversionRates?.applicationToHired)}
+                    {tr(formatPercent(data?.conversionRates?.applicationToHired))}
                   </p>
                 </div>
               </div>

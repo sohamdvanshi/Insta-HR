@@ -1,4 +1,6 @@
 'use client';
+import { tr, trError, useLocale } from '@/lib/localization'
+
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
@@ -141,11 +143,13 @@ function DashboardCard({
   value: string | number;
   hint?: string;
 }) {
+  useLocale()
+
   return (
     <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
-      <p className="text-sm font-medium text-gray-500">{label}</p>
-      <p className="mt-3 break-words text-2xl font-bold text-gray-900">{value}</p>
-      {hint ? <p className="mt-2 text-xs text-gray-400">{hint}</p> : null}
+      <p className="text-sm font-medium text-gray-500">{tr(label)}</p>
+      <p className="mt-3 break-words text-2xl font-bold text-gray-900">{tr(value)}</p>
+      {hint ? <p className="mt-2 text-xs text-gray-400">{tr(hint)}</p> : null}
     </div>
   );
 }
@@ -161,19 +165,23 @@ function SectionCard({
   children: ReactNode;
   heightClass?: string;
 }) {
+  useLocale()
+
   return (
     <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
-      <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
-      {description ? <p className="mt-1 text-sm text-gray-500">{description}</p> : null}
+      <h2 className="text-lg font-semibold text-gray-900">{tr(title)}</h2>
+      {description ? <p className="mt-1 text-sm text-gray-500">{tr(description)}</p> : null}
       <div className={`mt-6 ${heightClass}`}>{children}</div>
     </div>
   );
 }
 
 function EmptyState({ message }: { message: string }) {
+  useLocale()
+
   return (
     <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50 text-sm text-gray-500">
-      {message}
+      {tr(message)}
     </div>
   );
 }
@@ -189,8 +197,10 @@ function RankingList({
   labelKey: string;
   valueLabel: string;
 }) {
+  useLocale()
+
   if (!items.length) {
-    return <p className="text-sm text-gray-500">No data found.</p>;
+    return <p className="text-sm text-gray-500">{tr("No data found.")}</p>;
   }
 
   return (
@@ -200,12 +210,12 @@ function RankingList({
           <div className="flex items-center justify-between gap-4">
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-gray-900">
-                #{index + 1} {String(item?.[labelKey] ?? 'Unknown')}
+                #{index + 1} {tr(String(item?.[labelKey] ?? 'Unknown'))}
               </p>
-              <p className="text-xs text-gray-500">{valueLabel}</p>
+              <p className="text-xs text-gray-500">{tr(valueLabel)}</p>
             </div>
             <p className="shrink-0 text-lg font-bold text-gray-900">
-              {formatNumber(toNumber(item?.[valueKey]))}
+              {tr(formatNumber(toNumber(item?.[valueKey])))}
             </p>
           </div>
         </div>
@@ -215,6 +225,8 @@ function RankingList({
 }
 
 export default function AdminAnalyticsPage() {
+  useLocale()
+
   const [token, setToken] = useState<string>('');
   const [summary, setSummary] = useState<Summary | null>(null);
   const [applicationsTrend, setApplicationsTrend] = useState<CountItem[]>([]);
@@ -426,10 +438,8 @@ export default function AdminAnalyticsPage() {
       <div className="mx-auto max-w-7xl">
         <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">BI Analytics Dashboard</h1>
-            <p className="mt-2 text-sm text-gray-600">
-              Platform-wide hiring, payroll, billing, training, and employer performance analytics.
-            </p>
+            <h1 className="text-3xl font-bold text-gray-900">{tr("BI Analytics Dashboard")}</h1>
+            <p className="mt-2 text-sm text-gray-600">{tr("Platform-wide hiring, payroll, billing, training, and employer performance analytics.")}</p>
           </div>
 
           <button
@@ -437,19 +447,17 @@ export default function AdminAnalyticsPage() {
             disabled={!token || refreshing}
             className="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {refreshing ? 'Refreshing...' : 'Refresh'}
+            {tr(refreshing ? 'Refreshing...' : 'Refresh')}
           </button>
         </div>
 
         {!token && (
-          <div className="mb-6 rounded-xl border border-yellow-300 bg-yellow-50 p-4 text-sm text-yellow-800">
-            JWT token not found in localStorage. Please log in again as admin.
-          </div>
+          <div className="mb-6 rounded-xl border border-yellow-300 bg-yellow-50 p-4 text-sm text-yellow-800">{tr("JWT token not found in localStorage. Please log in again as admin.")}</div>
         )}
 
         {error && (
           <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            {error}
+            {trError(error)}
           </div>
         )}
 
@@ -477,14 +485,14 @@ export default function AdminAnalyticsPage() {
             </div>
 
             <div className="mt-8 grid gap-8 lg:grid-cols-2">
-              <SectionCard title="Applications Trend" description="Monthly application volume.">
+              <SectionCard title={tr("Applications Trend")} description={tr("Monthly application volume.")}>
                 {applicationsTrend.length > 0 && hasPositiveCounts(applicationsTrend) ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={applicationsTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                      <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                      <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
-                      <Tooltip />
+                      <XAxis dataKey="month" tick={{ fontSize: 12 }} tickFormatter={(value) => tr(value)} />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 12 }} tickFormatter={(value) => tr(value)} />
+                      <Tooltip labelFormatter={(value) => tr(value)} />
                       <Line
                         type="monotone"
                         dataKey="count"
@@ -500,7 +508,7 @@ export default function AdminAnalyticsPage() {
                 )}
               </SectionCard>
 
-              <SectionCard title="Jobs by Industry" description="Industry-wise job distribution.">
+              <SectionCard title={tr("Jobs by Industry")} description={tr("Industry-wise job distribution.")}>
                 {jobsByIndustry.length > 0 && hasPositiveCounts(jobsByIndustry) ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={jobsByIndustry} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
@@ -511,10 +519,10 @@ export default function AdminAnalyticsPage() {
                         interval={0}
                         angle={jobsByIndustry.length > 4 ? -15 : 0}
                         textAnchor={jobsByIndustry.length > 4 ? 'end' : 'middle'}
-                        height={jobsByIndustry.length > 4 ? 60 : 30}
+                        height={jobsByIndustry.length > 4 ? 60 : 30} tickFormatter={(value) => tr(value)}
                       />
-                      <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
-                      <Tooltip />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 12 }} tickFormatter={(value) => tr(value)} />
+                      <Tooltip labelFormatter={(value) => tr(value)} />
                       <Bar dataKey="count" fill="#16a34a" radius={[8, 8, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -525,11 +533,11 @@ export default function AdminAnalyticsPage() {
             </div>
 
             <div className="mt-8 grid gap-8 lg:grid-cols-3">
-              <SectionCard title="Hiring Funnel" description="Stage movement from applied to hired.">
+              <SectionCard title={tr("Hiring Funnel")} description={tr("Stage movement from applied to hired.")}>
                 {hiringFunnel.length > 0 && hasPositiveCounts(hiringFunnel) ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <FunnelChart>
-                      <Tooltip />
+                      <Tooltip labelFormatter={(value) => tr(value)} />
                       <Funnel data={hiringFunnel} dataKey="count">
                         <LabelList dataKey="stage" position="right" fill="#111827" stroke="none" />
                       </Funnel>
@@ -541,8 +549,8 @@ export default function AdminAnalyticsPage() {
               </SectionCard>
 
               <SectionCard
-                title="Payroll Status"
-                description="Status split across payroll records."
+                title={tr("Payroll Status")}
+                description={tr("Status split across payroll records.")}
                 heightClass="h-72"
               >
                 {payrollSummary?.statuses?.length && hasPositiveCounts(payrollSummary.statuses as CountItem[]) ? (
@@ -559,8 +567,8 @@ export default function AdminAnalyticsPage() {
                           <Cell key={`${entry.status}-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip />
-                      <Legend />
+                      <Tooltip labelFormatter={(value) => tr(value)} />
+                      <Legend formatter={(value) => tr(value)} />
                     </PieChart>
                   </ResponsiveContainer>
                 ) : (
@@ -569,8 +577,8 @@ export default function AdminAnalyticsPage() {
               </SectionCard>
 
               <SectionCard
-                title="Invoice Status"
-                description="Status split across invoices."
+                title={tr("Invoice Status")}
+                description={tr("Status split across invoices.")}
                 heightClass="h-72"
               >
                 {invoiceSummary?.statuses?.length && hasPositiveCounts(invoiceSummary.statuses as CountItem[]) ? (
@@ -587,8 +595,8 @@ export default function AdminAnalyticsPage() {
                           <Cell key={`${entry.status}-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip />
-                      <Legend />
+                      <Tooltip labelFormatter={(value) => tr(value)} />
+                      <Legend formatter={(value) => tr(value)} />
                     </PieChart>
                   </ResponsiveContainer>
                 ) : (
@@ -599,66 +607,64 @@ export default function AdminAnalyticsPage() {
 
             <div className="mt-4 grid gap-4 lg:grid-cols-2">
               <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-200">
-                <p className="text-sm text-gray-500">Total Payrolls</p>
+                <p className="text-sm text-gray-500">{tr("Total Payrolls")}</p>
                 <p className="mt-2 text-xl font-bold text-gray-900">
-                  {formatNumber(payrollSummary?.totalPayrolls)}
+                  {tr(formatNumber(payrollSummary?.totalPayrolls))}
                 </p>
-                <p className="mt-1 text-sm text-gray-500">
-                  Total Net Salary: {formatCurrency(payrollSummary?.totalNetSalary)}
+                <p className="mt-1 text-sm text-gray-500">{tr("Total Net Salary: ")}{tr(formatCurrency(payrollSummary?.totalNetSalary))}
                 </p>
               </div>
 
               <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-200">
-                <p className="text-sm text-gray-500">Total Invoices</p>
+                <p className="text-sm text-gray-500">{tr("Total Invoices")}</p>
                 <p className="mt-2 text-xl font-bold text-gray-900">
-                  {formatNumber(invoiceSummary?.totalInvoices)}
+                  {tr(formatNumber(invoiceSummary?.totalInvoices))}
                 </p>
-                <p className="mt-1 text-sm text-gray-500">
-                  Total Invoice Amount: {formatCurrency(invoiceSummary?.totalInvoiceAmount)}
+                <p className="mt-1 text-sm text-gray-500">{tr("Total Invoice Amount: ")}{tr(formatCurrency(invoiceSummary?.totalInvoiceAmount))}
                 </p>
               </div>
             </div>
 
             <div className="mt-8 grid gap-8 lg:grid-cols-3">
               <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
-                <h2 className="text-lg font-semibold text-gray-900">Training Analytics</h2>
-                <p className="mt-1 text-sm text-gray-500">Learning engagement and completion.</p>
+                <h2 className="text-lg font-semibold text-gray-900">{tr("Training Analytics")}</h2>
+                <p className="mt-1 text-sm text-gray-500">{tr("Learning engagement and completion.")}</p>
 
                 <div className="mt-6 grid gap-4">
                   <div className="rounded-xl bg-gray-50 p-4">
-                    <p className="text-sm text-gray-500">Total Courses</p>
+                    <p className="text-sm text-gray-500">{tr("Total Courses")}</p>
                     <p className="mt-1 text-2xl font-bold text-gray-900">
-                      {formatNumber(trainingAnalytics?.totalCourses)}
+                      {tr(formatNumber(trainingAnalytics?.totalCourses))}
                     </p>
                   </div>
 
                   <div className="rounded-xl bg-gray-50 p-4">
-                    <p className="text-sm text-gray-500">Total Enrollments</p>
+                    <p className="text-sm text-gray-500">{tr("Total Enrollments")}</p>
                     <p className="mt-1 text-2xl font-bold text-gray-900">
-                      {formatNumber(trainingAnalytics?.totalEnrollments)}
+                      {tr(formatNumber(trainingAnalytics?.totalEnrollments))}
                     </p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="rounded-xl bg-green-50 p-4">
-                      <p className="text-sm text-green-700">Completed</p>
+                      <p className="text-sm text-green-700">{tr("Completed")}</p>
                       <p className="mt-1 text-2xl font-bold text-green-600">
-                        {formatNumber(trainingAnalytics?.completedEnrollments)}
+                        {tr(formatNumber(trainingAnalytics?.completedEnrollments))}
                       </p>
                     </div>
 
                     <div className="rounded-xl bg-blue-50 p-4">
-                      <p className="text-sm text-blue-700">In Progress</p>
+                      <p className="text-sm text-blue-700">{tr("In Progress")}</p>
                       <p className="mt-1 text-2xl font-bold text-blue-600">
-                        {formatNumber(trainingAnalytics?.inProgressEnrollments)}
+                        {tr(formatNumber(trainingAnalytics?.inProgressEnrollments))}
                       </p>
                     </div>
                   </div>
 
                   <div className="rounded-xl bg-indigo-50 p-4">
-                    <p className="text-sm text-indigo-700">Completion Rate</p>
+                    <p className="text-sm text-indigo-700">{tr("Completion Rate")}</p>
                     <p className="mt-1 text-2xl font-bold text-indigo-800">
-                      {toNumber(trainingAnalytics?.completionRate).toFixed(2)}%
+                      {tr(toNumber(trainingAnalytics?.completionRate).toFixed(2))}%
                     </p>
                   </div>
 
@@ -680,8 +686,8 @@ export default function AdminAnalyticsPage() {
                               />
                             ))}
                           </Pie>
-                          <Tooltip />
-                          <Legend />
+                          <Tooltip labelFormatter={(value) => tr(value)} />
+                          <Legend formatter={(value) => tr(value)} />
                         </PieChart>
                       </ResponsiveContainer>
                     ) : (
@@ -692,8 +698,8 @@ export default function AdminAnalyticsPage() {
               </div>
 
               <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
-                <h2 className="text-lg font-semibold text-gray-900">Top Employers</h2>
-                <p className="mt-1 text-sm text-gray-500">Ranked by jobs posted.</p>
+                <h2 className="text-lg font-semibold text-gray-900">{tr("Top Employers")}</h2>
+                <p className="mt-1 text-sm text-gray-500">{tr("Ranked by jobs posted.")}</p>
                 <div className="mt-6">
                   <RankingList
                     items={topEmployers as Array<Record<string, unknown>>}
@@ -705,8 +711,8 @@ export default function AdminAnalyticsPage() {
               </div>
 
               <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
-                <h2 className="text-lg font-semibold text-gray-900">Top Jobs</h2>
-                <p className="mt-1 text-sm text-gray-500">Ranked by applications received.</p>
+                <h2 className="text-lg font-semibold text-gray-900">{tr("Top Jobs")}</h2>
+                <p className="mt-1 text-sm text-gray-500">{tr("Ranked by applications received.")}</p>
                 <div className="mt-6">
                   <RankingList
                     items={topJobs as Array<Record<string, unknown>>}
@@ -719,37 +725,35 @@ export default function AdminAnalyticsPage() {
             </div>
 
             <div className="mt-8 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Quick Snapshot</h2>
-              <p className="mt-1 text-sm text-gray-500">
-                Compact view of the most important totals.
-              </p>
+              <h2 className="text-lg font-semibold text-gray-900">{tr("Quick Snapshot")}</h2>
+              <p className="mt-1 text-sm text-gray-500">{tr("Compact view of the most important totals.")}</p>
 
               <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <div className="rounded-xl bg-gray-50 p-4">
-                  <p className="text-xs uppercase tracking-wide text-gray-500">Users</p>
+                  <p className="text-xs uppercase tracking-wide text-gray-500">{tr("Users")}</p>
                   <p className="mt-2 text-xl font-bold text-gray-900">
-                    {formatCompact(summary?.totalUsers)}
+                    {tr(formatCompact(summary?.totalUsers))}
                   </p>
                 </div>
 
                 <div className="rounded-xl bg-gray-50 p-4">
-                  <p className="text-xs uppercase tracking-wide text-gray-500">Applications</p>
+                  <p className="text-xs uppercase tracking-wide text-gray-500">{tr("Applications")}</p>
                   <p className="mt-2 text-xl font-bold text-gray-900">
-                    {formatCompact(summary?.totalApplications)}
+                    {tr(formatCompact(summary?.totalApplications))}
                   </p>
                 </div>
 
                 <div className="rounded-xl bg-gray-50 p-4">
-                  <p className="text-xs uppercase tracking-wide text-gray-500">Revenue</p>
+                  <p className="text-xs uppercase tracking-wide text-gray-500">{tr("Revenue")}</p>
                   <p className="mt-2 text-xl font-bold text-gray-900">
-                    {formatCurrency(summary?.totalRevenue)}
+                    {tr(formatCurrency(summary?.totalRevenue))}
                   </p>
                 </div>
 
                 <div className="rounded-xl bg-gray-50 p-4">
-                  <p className="text-xs uppercase tracking-wide text-gray-500">Completion Rate</p>
+                  <p className="text-xs uppercase tracking-wide text-gray-500">{tr("Completion Rate")}</p>
                   <p className="mt-2 text-xl font-bold text-gray-900">
-                    {toNumber(trainingAnalytics?.completionRate).toFixed(2)}%
+                    {tr(toNumber(trainingAnalytics?.completionRate).toFixed(2))}%
                   </p>
                 </div>
               </div>

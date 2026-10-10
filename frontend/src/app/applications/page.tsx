@@ -1,4 +1,6 @@
 'use client'
+import { tr, useLocale, locale } from '@/lib/localization'
+
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
@@ -54,6 +56,8 @@ const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
 }
 
 export default function ApplicationsPage() {
+  useLocale()
+
   const [applications, setApplications] = useState<Application[]>([])
   const [loading, setLoading] = useState(true)
   const router = useRouter()
@@ -92,7 +96,7 @@ export default function ApplicationsPage() {
   if (loading) {
     return (
       <main className="min-h-screen bg-gray-50 pt-24 flex items-center justify-center">
-        <p className="text-gray-400">Loading applications...</p>
+        <p className="text-gray-400">{tr("Loading applications...")}</p>
       </main>
     )
   }
@@ -101,8 +105,8 @@ export default function ApplicationsPage() {
     <main className="min-h-screen bg-gray-50 pt-16">
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 py-12 px-6">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-3xl font-bold text-white mb-2">My Applications</h1>
-          <p className="text-blue-100">Track all your job applications</p>
+          <h1 className="text-3xl font-bold text-white mb-2">{tr("My Applications")}</h1>
+          <p className="text-blue-100">{tr("Track all your job applications")}</p>
         </div>
       </div>
 
@@ -128,21 +132,19 @@ export default function ApplicationsPage() {
               className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center"
             >
               <div className="text-2xl font-bold text-blue-600 mb-1">{stat.value}</div>
-              <div className="text-gray-500 text-sm">{stat.label}</div>
+              <div className="text-gray-500 text-sm">{tr(stat.label)}</div>
             </div>
           ))}
         </div>
 
         {applications.length === 0 ? (
           <div className="text-center py-20">
-            <p className="text-gray-400 text-lg mb-4">No applications yet</p>
+            <p className="text-gray-400 text-lg mb-4">{tr("No applications yet")}</p>
 
             <Link
               href="/jobs"
               className="px-6 py-3 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition-colors"
-            >
-              Browse Jobs
-            </Link>
+            >{tr("Browse Jobs")}</Link>
           </div>
         ) : (
           <div className="space-y-4">
@@ -160,55 +162,52 @@ export default function ApplicationsPage() {
                   <div className="flex items-start justify-between mb-3 gap-4">
                     <div>
                       <h3 className="text-lg font-bold text-gray-900 mb-1">
-                        {app.job?.title ?? 'Job Title'}
+                        {app.job?.title ?? tr('Job Title')}
                       </h3>
 
                       <p className="text-gray-500 text-sm">
-                        {app.job?.location ?? 'Location'} • {app.job?.industry ?? 'Industry'} •{' '}
-                        {app.job?.jobType ?? 'Type'}
+                        {app.job?.location ?? tr('Location')} • {tr(app.job?.industry ?? 'Industry')} •{tr(' ')}
+                        {tr(app.job?.jobType ?? 'Type')}
                       </p>
                     </div>
 
                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${status.color}`}>
-                      {status.label}
+                      {tr(status.label)}
                     </span>
                   </div>
 
                   <div className="flex flex-wrap gap-3 mb-3 text-xs text-gray-500">
-                    <p>Applied on {new Date(app.createdAt).toLocaleDateString()}</p>
+                    <p>{tr("Applied on ")}{tr(new Date(app.createdAt).toLocaleDateString(locale()))}</p>
 
                     {typeof app.aiScore === 'number' && (
-                      <p>AI Score: {app.aiScore}</p>
+                      <p>{tr("AI Score: ")}{app.aiScore}</p>
                     )}
 
                     {app.manualReviewStatus && (
-                      <p>Review: {app.manualReviewStatus.replaceAll('_', ' ')}</p>
+                      <p>{tr("Review: ")}{tr(app.manualReviewStatus.replaceAll('_', ' '))}</p>
                     )}
                   </div>
 
                   {app.aiSummary && (
                     <div className="mb-3 bg-blue-50 rounded-xl p-3">
                       <p className="text-blue-700 text-sm">
-                        <span className="font-medium">AI Summary:</span> {app.aiSummary}
+                        <span className="font-medium">{tr("AI Summary:")}</span> {tr(app.aiSummary)}
                       </p>
                     </div>
                   )}
 
                   {app.interviewDate && (
                     <div className="mt-3 bg-purple-50 rounded-xl p-4 border border-purple-100">
-                      <p className="text-purple-700 text-sm font-medium mb-1">
-                        📅 Interview: {new Date(app.interviewDate).toLocaleString()}
+                      <p className="text-purple-700 text-sm font-medium mb-1">{tr("📅 Interview: ")}{tr(new Date(app.interviewDate).toLocaleString(locale()))}
                       </p>
 
                       {app.interviewStatus && (
-                        <p className="text-purple-700 text-sm mb-1">
-                          Status: {app.interviewStatus}
+                        <p className="text-purple-700 text-sm mb-1">{tr("Status: ")}{tr(app.interviewStatus)}
                         </p>
                       )}
 
                       {app.interviewMode && (
-                        <p className="text-purple-700 text-sm mb-1">
-                          Mode: {app.interviewMode === 'online' ? 'Online' : 'Offline'}
+                        <p className="text-purple-700 text-sm mb-1">{tr("Mode: ")}{tr(app.interviewMode === 'online' ? 'Online' : 'Offline')}
                         </p>
                       )}
 
@@ -218,20 +217,16 @@ export default function ApplicationsPage() {
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-purple-700 text-sm underline block mb-1"
-                        >
-                          Join Meeting
-                        </a>
+                        >{tr("Join Meeting")}</a>
                       )}
 
                       {app.interviewLocation && (
-                        <p className="text-purple-700 text-sm mb-1">
-                          Location: {app.interviewLocation}
+                        <p className="text-purple-700 text-sm mb-1">{tr("Location: ")}{tr(app.interviewLocation)}
                         </p>
                       )}
 
                       {app.interviewNotes && (
-                        <p className="text-purple-700 text-sm">
-                          Notes: {app.interviewNotes}
+                        <p className="text-purple-700 text-sm">{tr("Notes: ")}{tr(app.interviewNotes)}
                         </p>
                       )}
                     </div>
@@ -242,9 +237,7 @@ export default function ApplicationsPage() {
                     <Link
                       href={`/jobs/${app.jobId}`}
                       className="px-4 py-2 bg-blue-50 text-blue-600 text-sm font-medium rounded-xl hover:bg-blue-100 transition-colors"
-                    >
-                      View Job
-                    </Link>
+                    >{tr("View Job")}</Link>
                   </div>
                 </div>
               )

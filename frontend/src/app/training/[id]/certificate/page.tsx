@@ -1,4 +1,6 @@
 'use client'
+import { tr, trError, useLocale, locale } from '@/lib/localization'
+
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
@@ -7,6 +9,8 @@ import Link from 'next/link'
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1').replace(/\/$/, '')
 
 export default function CourseCertificatePage() {
+  useLocale()
+
   const params = useParams()
   const router = useRouter()
   const courseId = params?.id as string
@@ -113,7 +117,7 @@ export default function CourseCertificatePage() {
   if (loading) {
     return (
       <main className="min-h-screen bg-gray-50 pt-24 flex items-center justify-center">
-        <p className="text-gray-400">Loading certificate...</p>
+        <p className="text-gray-400">{tr("Loading certificate...")}</p>
       </main>
     )
   }
@@ -124,27 +128,21 @@ export default function CourseCertificatePage() {
         <div className="max-w-3xl mx-auto px-6 py-12">
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center">
             <div className="text-6xl mb-4">🏆</div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-3">
-              Certificate Not Available Yet
-            </h1>
+            <h1 className="text-2xl font-bold text-gray-900 mb-3">{tr("Certificate Not Available Yet")}</h1>
             <p className="text-gray-500 mb-6">
-              {error}
+              {trError(error)}
             </p>
 
             <div className="flex flex-wrap justify-center gap-3">
               <Link
                 href={'/training/' + courseId}
                 className="px-5 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors"
-              >
-                Back to Course
-              </Link>
+              >{tr("Back to Course")}</Link>
 
               <Link
                 href={'/training/' + courseId + '/quiz'}
                 className="px-5 py-3 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-colors"
-              >
-                Go to Quiz
-              </Link>
+              >{tr("Go to Quiz")}</Link>
             </div>
           </div>
         </div>
@@ -159,35 +157,25 @@ export default function CourseCertificatePage() {
           <Link
             href={'/training/' + courseId}
             className="text-sm text-blue-600 hover:underline"
-          >
-            ← Back to Course
-          </Link>
+          >{tr("← Back to Course")}</Link>
         </div>
 
         <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="bg-gradient-to-r from-green-600 to-emerald-500 px-8 py-10 text-center">
             <div className="text-6xl mb-4">🏅</div>
-            <h1 className="text-3xl font-bold text-white">
-              Certificate of Completion
-            </h1>
-            <p className="text-white/80 mt-2">
-              Congratulations on successfully completing your training and quiz
-            </p>
+            <h1 className="text-3xl font-bold text-white">{tr("Certificate of Completion")}</h1>
+            <p className="text-white/80 mt-2">{tr("Congratulations on successfully completing your training and quiz")}</p>
           </div>
 
           <div className="p-8 md:p-12">
             <div className="border-2 border-dashed border-green-200 rounded-3xl p-8 md:p-12 text-center bg-gradient-to-br from-green-50 to-white">
-              <p className="text-sm uppercase tracking-[0.2em] text-gray-500 mb-4">
-                This certificate is proudly presented to
-              </p>
+              <p className="text-sm uppercase tracking-[0.2em] text-gray-500 mb-4">{tr("This certificate is proudly presented to")}</p>
 
               <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
                 {certificate?.learnerName}
               </h2>
 
-              <p className="text-gray-600 text-lg mb-2">
-                for successfully completing the course
-              </p>
+              <p className="text-gray-600 text-lg mb-2">{tr("for successfully completing the course")}</p>
 
               <h3 className="text-2xl md:text-3xl font-bold text-green-700 mb-6">
                 {certificate?.courseTitle}
@@ -195,38 +183,30 @@ export default function CourseCertificatePage() {
 
               <div className="max-w-2xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-4 text-left mt-8">
                 <div className="bg-white border border-gray-100 rounded-2xl p-4">
-                  <p className="text-xs uppercase tracking-wide text-gray-400 mb-1">
-                    Certificate ID
-                  </p>
+                  <p className="text-xs uppercase tracking-wide text-gray-400 mb-1">{tr("Certificate ID")}</p>
                   <p className="text-sm font-semibold text-gray-900 break-all">
                     {certificate?.certificateId}
                   </p>
                 </div>
 
                 <div className="bg-white border border-gray-100 rounded-2xl p-4">
-                  <p className="text-xs uppercase tracking-wide text-gray-400 mb-1">
-                    Completion Date
-                  </p>
+                  <p className="text-xs uppercase tracking-wide text-gray-400 mb-1">{tr("Completion Date")}</p>
                   <p className="text-sm font-semibold text-gray-900">
-                    {certificate?.completionDate
-                      ? new Date(certificate.completionDate).toLocaleDateString()
-                      : '-'}
+                    {tr(certificate?.completionDate
+                      ? new Date(certificate.completionDate).toLocaleDateString(locale())
+                      : '-')}
                   </p>
                 </div>
 
                 <div className="bg-white border border-gray-100 rounded-2xl p-4">
-                  <p className="text-xs uppercase tracking-wide text-gray-400 mb-1">
-                    Category
-                  </p>
+                  <p className="text-xs uppercase tracking-wide text-gray-400 mb-1">{tr("Category")}</p>
                   <p className="text-sm font-semibold text-gray-900">
                     {certificate?.category || '-'}
                   </p>
                 </div>
 
                 <div className="bg-white border border-gray-100 rounded-2xl p-4">
-                  <p className="text-xs uppercase tracking-wide text-gray-400 mb-1">
-                    Issued By
-                  </p>
+                  <p className="text-xs uppercase tracking-wide text-gray-400 mb-1">{tr("Issued By")}</p>
                   <p className="text-sm font-semibold text-gray-900">
                     {certificate?.issuedBy}
                   </p>
@@ -235,9 +215,7 @@ export default function CourseCertificatePage() {
 
               {certificate?.skills?.length > 0 && (
                 <div className="mt-8">
-                  <p className="text-sm font-medium text-gray-500 mb-3">
-                    Skills Covered
-                  </p>
+                  <p className="text-sm font-medium text-gray-500 mb-3">{tr("Skills Covered")}</p>
 
                   <div className="flex flex-wrap justify-center gap-2">
                     {certificate.skills.map((skill: string) => (
@@ -259,20 +237,18 @@ export default function CourseCertificatePage() {
                 disabled={downloading}
                 className="px-6 py-3 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 transition-colors disabled:opacity-50"
               >
-                {downloading ? 'Downloading PDF...' : 'Download Certificate PDF'}
+                {tr(downloading ? 'Downloading PDF...' : 'Download Certificate PDF')}
               </button>
 
               <Link
                 href={'/training/' + courseId}
                 className="px-6 py-3 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-colors"
-              >
-                Back to Course
-              </Link>
+              >{tr("Back to Course")}</Link>
             </div>
 
             {error && (
               <div className="mt-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
-                {error}
+                {trError(error)}
               </div>
             )}
           </div>

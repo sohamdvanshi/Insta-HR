@@ -1,4 +1,6 @@
 "use client"
+import { tr, trError, useLocale } from '@/lib/localization'
+
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
@@ -24,6 +26,8 @@ interface Candidate {
 }
 
 export default function EmployerCandidatesPage() {
+  useLocale()
+
   const router = useRouter()
 
   const [candidates, setCandidates] = useState<Candidate[]>([])
@@ -135,7 +139,7 @@ export default function EmployerCandidatesPage() {
   if (loading) {
     return (
       <main className="min-h-screen bg-gray-50 pt-24 flex items-center justify-center">
-        <p className="text-gray-400">Loading candidates...</p>
+        <p className="text-gray-400">{tr("Loading candidates...")}</p>
       </main>
     )
   }
@@ -144,15 +148,13 @@ export default function EmployerCandidatesPage() {
     <main className="min-h-screen bg-gray-50 pt-16">
       <div className="max-w-7xl mx-auto px-6 py-10">
         <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white mb-8">
-          <h1 className="text-3xl font-bold mb-1">Resume Databank</h1>
-          <p className="text-blue-100">
-            Search public candidate profiles by skill, location, industry, and experience
-          </p>
+          <h1 className="text-3xl font-bold mb-1">{tr("Resume Databank")}</h1>
+          <p className="text-blue-100">{tr("Search public candidate profiles by skill, location, industry, and experience")}</p>
         </div>
 
         {error && (
           <div className="bg-red-50 text-red-700 px-4 py-3 rounded-xl mb-6 font-medium">
-            {error}
+            {trError(error)}
           </div>
         )}
 
@@ -160,7 +162,7 @@ export default function EmployerCandidatesPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
             <input
               type="text"
-              placeholder="Keyword"
+              placeholder={tr("Keyword")}
               value={filters.keyword}
               onChange={(e) => setFilters((prev) => ({ ...prev, keyword: e.target.value }))}
               className="px-4 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:border-blue-500"
@@ -168,7 +170,7 @@ export default function EmployerCandidatesPage() {
 
             <input
               type="text"
-              placeholder="Location"
+              placeholder={tr("Location")}
               value={filters.location}
               onChange={(e) => setFilters((prev) => ({ ...prev, location: e.target.value }))}
               className="px-4 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:border-blue-500"
@@ -176,7 +178,7 @@ export default function EmployerCandidatesPage() {
 
             <input
               type="text"
-              placeholder="Industry"
+              placeholder={tr("Industry")}
               value={filters.industry}
               onChange={(e) => setFilters((prev) => ({ ...prev, industry: e.target.value }))}
               className="px-4 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:border-blue-500"
@@ -186,7 +188,7 @@ export default function EmployerCandidatesPage() {
               type="number"
               min="0"
               step="0.1"
-              placeholder="Min Experience"
+              placeholder={tr("Min Experience")}
               value={filters.minExperience}
               onChange={(e) => setFilters((prev) => ({ ...prev, minExperience: e.target.value }))}
               className="px-4 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:border-blue-500"
@@ -194,7 +196,7 @@ export default function EmployerCandidatesPage() {
 
             <input
               type="text"
-              placeholder="Skills (comma separated)"
+              placeholder={tr("Skills (comma separated)")}
               value={filters.skills}
               onChange={(e) => setFilters((prev) => ({ ...prev, skills: e.target.value }))}
               className="px-4 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:border-blue-500"
@@ -207,22 +209,20 @@ export default function EmployerCandidatesPage() {
               disabled={searching}
               className="px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 disabled:opacity-50"
             >
-              {searching ? "Searching..." : "Search Candidates"}
+              {tr(searching ? "Searching..." : "Search Candidates")}
             </button>
 
             <button
               onClick={clearFilters}
               className="px-5 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-200"
-            >
-              Clear Filters
-            </button>
+            >{tr("Clear Filters")}</button>
           </div>
         </div>
 
         {candidates.length === 0 ? (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center text-gray-400">
-            <p className="text-lg mb-2">No candidates found</p>
-            <p className="text-sm">Try changing your filters or search terms</p>
+            <p className="text-lg mb-2">{tr("No candidates found")}</p>
+            <p className="text-sm">{tr("Try changing your filters or search terms")}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -245,10 +245,10 @@ export default function EmployerCandidatesPage() {
                   <div className="flex items-start justify-between gap-4 mb-3">
                     <div>
                       <h2 className="text-lg font-bold text-gray-900">
-                        {getCandidateName(candidate)}
+                        {tr(getCandidateName(candidate))}
                       </h2>
                       <p className="text-gray-500 text-sm">
-                        {candidate.email || "No email available"}
+                        {candidate.email || tr("No email available")}
                       </p>
 
                       {hasHeadline && (
@@ -258,24 +258,23 @@ export default function EmployerCandidatesPage() {
 
                     {showCompleteness && (
                       <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full whitespace-nowrap">
-                        {candidate.profileCompleteness}% complete
-                      </span>
+                        {candidate.profileCompleteness}{tr("% complete")}</span>
                     )}
                   </div>
 
                   {(experienceValue !== null || hasLocation || hasIndustry || hasPhone) && (
                     <div className="flex flex-wrap gap-3 mb-3 text-xs text-gray-500">
-                      {experienceValue !== null && <span>Exp: {experienceValue} yrs</span>}
-                      {hasLocation && <span>Location: {candidate.currentLocation}</span>}
-                      {hasIndustry && <span>Industry: {candidate.industry}</span>}
-                      {hasPhone && <span>Phone: {candidate.phone}</span>}
+                      {experienceValue !== null && <span>{tr("Exp: ")}{experienceValue}{tr(" yrs")}</span>}
+                      {hasLocation && <span>{tr("Location: ")}{tr(candidate.currentLocation)}</span>}
+                      {hasIndustry && <span>{tr("Industry: ")}{tr(candidate.industry)}</span>}
+                      {hasPhone && <span>{tr("Phone: ")}{candidate.phone}</span>}
                     </div>
                   )}
 
                   {hasSummary ? (
                     <p className="text-gray-600 text-sm mb-3 leading-6">{candidate.summary}</p>
                   ) : (
-                    <p className="text-gray-400 text-sm mb-3 italic">No summary added yet.</p>
+                    <p className="text-gray-400 text-sm mb-3 italic">{tr("No summary added yet.")}</p>
                   )}
 
                   {hasSkills && (
@@ -298,18 +297,14 @@ export default function EmployerCandidatesPage() {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-blue-600 text-sm hover:underline"
-                      >
-                        View Resume
-                      </a>
+                      >{tr("View Resume")}</a>
                     )}
 
                     {candidate.email && (
                       <a
                         href={`mailto:${candidate.email}`}
                         className="text-purple-600 text-sm hover:underline"
-                      >
-                        Contact Candidate
-                      </a>
+                      >{tr("Contact Candidate")}</a>
                     )}
                   </div>
                 </div>

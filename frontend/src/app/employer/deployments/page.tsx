@@ -1,4 +1,6 @@
 'use client';
+import { tr, trError, useLocale } from '@/lib/localization'
+
 
 import { useEffect, useState } from 'react';
 
@@ -42,6 +44,8 @@ type ManpowerRequestOption = {
 };
 
 export default function EmployerDeploymentsPage() {
+  useLocale()
+
   const [token, setToken] = useState('');
   const [deployments, setDeployments] = useState<Deployment[]>([]);
   const [candidates, setCandidates] = useState<CandidateOption[]>([]);
@@ -228,37 +232,31 @@ export default function EmployerDeploymentsPage() {
     <div className="min-h-screen bg-gray-50 px-4 py-8 md:px-8">
       <div className="mx-auto max-w-7xl">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Candidate Deployments</h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Assign selected candidates to sites and manage post-selection deployment tracking.
-          </p>
+          <h1 className="text-3xl font-bold text-gray-900">{tr("Candidate Deployments")}</h1>
+          <p className="mt-2 text-sm text-gray-600">{tr("Assign selected candidates to sites and manage post-selection deployment tracking.")}</p>
         </div>
 
         {!token && (
-          <div className="mb-6 rounded-xl border border-yellow-300 bg-yellow-50 p-4 text-sm text-yellow-800">
-            JWT token not found in localStorage. Please login again as employer.
-          </div>
+          <div className="mb-6 rounded-xl border border-yellow-300 bg-yellow-50 p-4 text-sm text-yellow-800">{tr("JWT token not found in localStorage. Please login again as employer.")}</div>
         )}
 
         {error && (
           <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            {error}
+            {trError(error)}
           </div>
         )}
 
         {success && (
           <div className="mb-6 rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-700">
-            {success}
+            {tr(success)}
           </div>
         )}
 
         <div className="grid gap-8 lg:grid-cols-5">
           <div className="lg:col-span-2">
             <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">Create Deployment</h2>
-              <p className="mt-1 text-sm text-gray-500">
-                Map a candidate to a manpower request, site, shift, and assignment period.
-              </p>
+              <h2 className="text-xl font-semibold text-gray-900">{tr("Create Deployment")}</h2>
+              <p className="mt-1 text-sm text-gray-500">{tr("Map a candidate to a manpower request, site, shift, and assignment period.")}</p>
 
               <form onSubmit={handleSubmit} className="mt-6 space-y-4">
                 <select
@@ -267,10 +265,10 @@ export default function EmployerDeploymentsPage() {
                   onChange={handleChange}
                   className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
                 >
-                  <option value="">Select Manpower Request (Optional)</option>
+                  <option value="">{tr("Select Manpower Request (Optional)")}</option>
                   {requests.map(request => (
                     <option key={request.id} value={request.id}>
-                      {request.jobTitle}
+                      {tr(request.jobTitle)}
                     </option>
                   ))}
                 </select>
@@ -281,10 +279,10 @@ export default function EmployerDeploymentsPage() {
                   onChange={handleChange}
                   className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
                 >
-                  <option value="">Select Candidate</option>
+                  <option value="">{tr("Select Candidate")}</option>
                   {candidates.map(candidate => (
                     <option key={candidate.userId} value={candidate.userId}>
-                      {getCandidateLabel(candidate)}
+                      {tr(getCandidateLabel(candidate))}
                     </option>
                   ))}
                 </select>
@@ -293,7 +291,7 @@ export default function EmployerDeploymentsPage() {
                   name="siteName"
                   value={form.siteName}
                   onChange={handleChange}
-                  placeholder="Site Name"
+                  placeholder={tr("Site Name")}
                   className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
                 />
 
@@ -301,7 +299,7 @@ export default function EmployerDeploymentsPage() {
                   name="location"
                   value={form.location}
                   onChange={handleChange}
-                  placeholder="Location"
+                  placeholder={tr("Location")}
                   className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
                 />
 
@@ -309,7 +307,7 @@ export default function EmployerDeploymentsPage() {
                   name="reportingManager"
                   value={form.reportingManager}
                   onChange={handleChange}
-                  placeholder="Reporting Manager"
+                  placeholder={tr("Reporting Manager")}
                   className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
                 />
 
@@ -335,17 +333,17 @@ export default function EmployerDeploymentsPage() {
                   onChange={handleChange}
                   className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
                 >
-                  <option value="general">General</option>
-                  <option value="day">Day</option>
-                  <option value="night">Night</option>
-                  <option value="rotational">Rotational</option>
+                  <option value="general">{tr("General")}</option>
+                  <option value="day">{tr("Day")}</option>
+                  <option value="night">{tr("Night")}</option>
+                  <option value="rotational">{tr("Rotational")}</option>
                 </select>
 
                 <input
                   name="salaryOffered"
                   value={form.salaryOffered}
                   onChange={handleChange}
-                  placeholder="Salary Offered"
+                  placeholder={tr("Salary Offered")}
                   className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
                 />
 
@@ -353,7 +351,7 @@ export default function EmployerDeploymentsPage() {
                   name="billingRate"
                   value={form.billingRate}
                   onChange={handleChange}
-                  placeholder="Billing Rate"
+                  placeholder={tr("Billing Rate")}
                   className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
                 />
 
@@ -362,7 +360,7 @@ export default function EmployerDeploymentsPage() {
                   value={form.notes}
                   onChange={handleChange}
                   rows={4}
-                  placeholder="Notes"
+                  placeholder={tr("Notes")}
                   className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
                 />
 
@@ -371,7 +369,7 @@ export default function EmployerDeploymentsPage() {
                   disabled={submitting || !token}
                   className="w-full rounded-xl bg-black px-4 py-3 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-400"
                 >
-                  {submitting ? 'Submitting...' : 'Create Deployment'}
+                  {tr(submitting ? 'Submitting...' : 'Create Deployment')}
                 </button>
               </form>
             </div>
@@ -381,67 +379,59 @@ export default function EmployerDeploymentsPage() {
             <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-900">Deployment History</h2>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Track site assignments, worker status, and deployment progression.
-                  </p>
+                  <h2 className="text-xl font-semibold text-gray-900">{tr("Deployment History")}</h2>
+                  <p className="mt-1 text-sm text-gray-500">{tr("Track site assignments, worker status, and deployment progression.")}</p>
                 </div>
 
                 <button
                   onClick={fetchDeployments}
                   className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  Refresh
-                </button>
+                >{tr("Refresh")}</button>
               </div>
 
               <div className="mt-6 overflow-x-auto">
                 <table className="min-w-full border-separate border-spacing-y-3">
                   <thead>
                     <tr className="text-left text-xs uppercase tracking-wide text-gray-500">
-                      <th className="px-3 py-2">Candidate</th>
-                      <th className="px-3 py-2">Site</th>
-                      <th className="px-3 py-2">Location</th>
-                      <th className="px-3 py-2">Start Date</th>
-                      <th className="px-3 py-2">Shift</th>
-                      <th className="px-3 py-2">Status</th>
+                      <th className="px-3 py-2">{tr("Candidate")}</th>
+                      <th className="px-3 py-2">{tr("Site")}</th>
+                      <th className="px-3 py-2">{tr("Location")}</th>
+                      <th className="px-3 py-2">{tr("Start Date")}</th>
+                      <th className="px-3 py-2">{tr("Shift")}</th>
+                      <th className="px-3 py-2">{tr("Status")}</th>
                     </tr>
                   </thead>
 
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan={6} className="px-3 py-8 text-center text-sm text-gray-500">
-                          Loading deployments...
-                        </td>
+                        <td colSpan={6} className="px-3 py-8 text-center text-sm text-gray-500">{tr("Loading deployments...")}</td>
                       </tr>
                     ) : deployments.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-3 py-8 text-center text-sm text-gray-500">
-                          No deployments created yet.
-                        </td>
+                        <td colSpan={6} className="px-3 py-8 text-center text-sm text-gray-500">{tr("No deployments created yet.")}</td>
                       </tr>
                     ) : (
                       deployments.map(item => (
                         <tr key={item.id} className="rounded-2xl bg-gray-50 text-sm text-gray-800">
                           <td className="rounded-l-2xl px-3 py-4 font-medium">
-                            {item.candidate?.email || '—'}
+                            {item.candidate?.email || tr('—')}
                           </td>
-                          <td className="px-3 py-4">{item.siteName}</td>
+                          <td className="px-3 py-4">{tr(item.siteName)}</td>
                           <td className="px-3 py-4">{item.location}</td>
-                          <td className="px-3 py-4">{item.startDate}</td>
-                          <td className="px-3 py-4">{item.shiftType}</td>
+                          <td className="px-3 py-4">{tr(item.startDate)}</td>
+                          <td className="px-3 py-4">{tr(item.shiftType)}</td>
                           <td className="rounded-r-2xl px-3 py-4">
                             <select
                               value={item.status}
                               onChange={e => handleStatusChange(item.id, e.target.value)}
                               className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-medium outline-none focus:border-black"
                             >
-                              <option value="assigned">Assigned</option>
-                              <option value="active">Active</option>
-                              <option value="completed">Completed</option>
-                              <option value="cancelled">Cancelled</option>
-                              <option value="on_hold">On Hold</option>
+                              <option value="assigned">{tr("Assigned")}</option>
+                              <option value="active">{tr("Active")}</option>
+                              <option value="completed">{tr("Completed")}</option>
+                              <option value="cancelled">{tr("Cancelled")}</option>
+                              <option value="on_hold">{tr("On Hold")}</option>
                             </select>
                           </td>
                         </tr>

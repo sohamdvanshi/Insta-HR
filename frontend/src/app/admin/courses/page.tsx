@@ -1,4 +1,6 @@
 'use client'
+import { tr, trError, useLocale, locale } from '@/lib/localization'
+
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
@@ -9,6 +11,8 @@ const CATEGORIES = ['IT', 'Finance', 'Banking', 'Healthcare', 'HR', 'Marketing',
 const EMOJIS = ['💻', '📊', '💰', '🏦', '🏥', '👥', '📱', '🏗️', '🗣️', '📈', '🔴', '📚', '🎯', '⚙️', '🔧']
 
 export default function AdminCoursesPage() {
+  useLocale()
+
   const router = useRouter()
   const [isTrainer, setIsTrainer] = useState(false)
   const [courses, setCourses] = useState<any[]>([])
@@ -232,7 +236,7 @@ export default function AdminCoursesPage() {
   }
 
   const handleDelete = async (courseId: string) => {
-    if (!confirm('Are you sure you want to delete this course?')) return
+    if (!confirm(tr('Are you sure you want to delete this course?'))) return
 
     const token = localStorage.getItem('token')
 
@@ -259,7 +263,7 @@ export default function AdminCoursesPage() {
   if (loading) {
     return (
       <main className="min-h-screen bg-gray-50 pt-24 flex items-center justify-center">
-        <p className="text-gray-400">Loading...</p>
+        <p className="text-gray-400">{tr("Loading...")}</p>
       </main>
     )
   }
@@ -270,13 +274,11 @@ export default function AdminCoursesPage() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <Link href="/admin" className="text-gray-400 hover:text-gray-600 text-sm">
-                ← Admin Panel
-              </Link>
+              <Link href="/admin" className="text-gray-400 hover:text-gray-600 text-sm">{tr("← Admin Panel")}</Link>
             </div>
-            <Link href={isTrainer ? '/trainer' : '/admin/training'} className="mr-5 text-blue-700 underline">Batches, classes & attendance</Link>
-            <h1 className="text-3xl font-bold text-gray-900">Course Management</h1>
-            <p className="text-gray-500">Create and manage training courses</p>
+            <Link href={isTrainer ? '/trainer' : '/admin/training'} className="mr-5 text-blue-700 underline">{tr("Batches, classes & attendance")}</Link>
+            <h1 className="text-3xl font-bold text-gray-900">{tr("Course Management")}</h1>
+            <p className="text-gray-500">{tr("Create and manage training courses")}</p>
           </div>
 
           <button
@@ -286,77 +288,77 @@ export default function AdminCoursesPage() {
             }}
             className="px-6 py-3 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition-colors"
           >
-            {showForm ? '✕ Cancel' : '+ New Course'}
+            {tr(showForm ? '✕ Cancel' : '+ New Course')}
           </button>
         </div>
 
         {message && (
           <div className="bg-green-50 text-green-700 px-4 py-3 rounded-xl mb-6 font-medium">
-            ✓ {message}
+            ✓ {tr(message)}
           </div>
         )}
 
         {error && (
           <div className="bg-red-50 text-red-700 px-4 py-3 rounded-xl mb-6">
-            {error}
+            {trError(error)}
           </div>
         )}
 
         {showForm && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mb-8">
             <h2 className="text-xl font-bold text-gray-900 mb-6">
-              {editCourse ? 'Edit Course' : 'Create New Course'}
+              {tr(editCourse ? 'Edit Course' : 'Create New Course')}
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Course Title *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{tr("Course Title *")}</label>
                 <input
                   value={form.title}
                   onChange={e => setForm({ ...form, title: e.target.value })}
-                  placeholder="e.g. Full Stack Web Development"
+                  placeholder={tr("e.g. Full Stack Web Development")}
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500"
                 />
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Description *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{tr("Description *")}</label>
                 <textarea
                   value={form.description}
                   onChange={e => setForm({ ...form, description: e.target.value })}
                   rows={3}
-                  placeholder="Describe what students will learn..."
+                  placeholder={tr("Describe what students will learn...")}
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500 resize-none"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{tr("Category")}</label>
                 <select
                   value={form.category}
                   onChange={e => setForm({ ...form, category: e.target.value })}
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500"
                 >
                   {CATEGORIES.map(c => (
-                    <option key={c} value={c}>{c}</option>
+                    <option key={c} value={c}>{tr(c)}</option>
                   ))}
                 </select>
               </div>
 
-              <div><label className="block text-sm font-medium text-gray-700 mb-2">Course status</label><select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })} className="w-full rounded-xl border p-3"><option value="active">Active</option><option value="inactive">Inactive</option></select><p className="mt-2 text-sm text-gray-500">Schedule physical and online classes in the Training workspace.</p></div>
+              <div><label className="block text-sm font-medium text-gray-700 mb-2">{tr("Course status")}</label><select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })} className="w-full rounded-xl border p-3"><option value="active">{tr("Active")}</option><option value="inactive">{tr("Inactive")}</option></select><p className="mt-2 text-sm text-gray-500">{tr("Schedule physical and online classes in the Training workspace.")}</p></div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Duration *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{tr("Duration *")}</label>
                 <input
                   value={form.duration}
                   onChange={e => setForm({ ...form, duration: e.target.value })}
-                  placeholder="e.g. 10 min, 2 hours, 8 weeks"
+                  placeholder={tr("e.g. 10 min, 2 hours, 8 weeks")}
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Course Emoji</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{tr("Course Emoji")}</label>
                 <div className="flex flex-wrap gap-2">
                   {EMOJIS.map(e => (
                     <button
@@ -370,26 +372,24 @@ export default function AdminCoursesPage() {
                           : 'border-gray-200 hover:border-gray-400')
                       }
                     >
-                      {e}
+                      {tr(e)}
                     </button>
                   ))}
                 </div>
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Skills (comma separated)
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{tr("Skills (comma separated)")}</label>
                 <input
                   value={form.skills}
                   onChange={e => setForm({ ...form, skills: e.target.value })}
-                  placeholder="e.g. React, Node.js, PostgreSQL"
+                  placeholder={tr("e.g. React, Node.js, PostgreSQL")}
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Pricing</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{tr("Pricing")}</label>
                 <div className="flex items-center gap-4 mb-3">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
@@ -398,7 +398,7 @@ export default function AdminCoursesPage() {
                       onChange={e => setForm({ ...form, isFree: e.target.checked })}
                       className="w-4 h-4"
                     />
-                    <span className="text-sm text-gray-700">Free Course</span>
+                    <span className="text-sm text-gray-700">{tr("Free Course")}</span>
                   </label>
                 </div>
 
@@ -408,7 +408,7 @@ export default function AdminCoursesPage() {
                     min="0"
                     value={form.price}
                     onChange={e => setForm({ ...form, price: e.target.value })}
-                    placeholder="Price in ₹"
+                    placeholder={tr("Price in ₹")}
                     className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500"
                   />
                 )}
@@ -416,13 +416,11 @@ export default function AdminCoursesPage() {
 
               {form.type === 'video' && (
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Upload Video (optional for classroom courses) (MP4, MOV, AVI — max 500MB)
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{tr("Upload Video (optional for classroom courses) (MP4, MOV, AVI — max 500MB)")}</label>
 
                   <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-blue-400 transition-colors">
                     <div className="text-4xl mb-2">🎥</div>
-                    <p className="text-gray-500 text-sm mb-3">Choose a small MP4 for quick testing</p>
+                    <p className="text-gray-500 text-sm mb-3">{tr("Choose a small MP4 for quick testing")}</p>
 
                     <input
                       ref={videoRef}
@@ -436,22 +434,18 @@ export default function AdminCoursesPage() {
                     />
 
                     {selectedVideoName && (
-                      <p className="text-blue-600 text-xs mt-2">Selected video: {selectedVideoName}</p>
+                      <p className="text-blue-600 text-xs mt-2">{tr("Selected video: ")}{tr(selectedVideoName)}</p>
                     )}
 
                     {editCourse?.videoUrl && (
-                      <p className="text-green-600 text-xs mt-2">
-                        ✓ Video already uploaded. Select a new file only if you want to replace it.
-                      </p>
+                      <p className="text-green-600 text-xs mt-2">{tr("✓ Video already uploaded. Select a new file only if you want to replace it.")}</p>
                     )}
                   </div>
                 </div>
               )}
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Thumbnail Image (optional — JPG, PNG, WEBP)
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{tr("Thumbnail Image (optional — JPG, PNG, WEBP)")}</label>
                 <input
                   ref={thumbnailRef}
                   type="file"
@@ -464,7 +458,7 @@ export default function AdminCoursesPage() {
                 />
 
                 {selectedThumbnailName && (
-                  <p className="text-purple-600 text-xs mt-2">Selected thumbnail: {selectedThumbnailName}</p>
+                  <p className="text-purple-600 text-xs mt-2">{tr("Selected thumbnail: ")}{tr(selectedThumbnailName)}</p>
                 )}
               </div>
             </div>
@@ -472,7 +466,7 @@ export default function AdminCoursesPage() {
             {uploading && (
               <div className="mt-4 bg-blue-50 text-blue-700 px-4 py-3 rounded-xl flex items-center gap-3">
                 <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                {uploadProgress}
+                {tr(uploadProgress)}
               </div>
             )}
 
@@ -482,7 +476,7 @@ export default function AdminCoursesPage() {
                 disabled={uploading}
                 className="px-8 py-3 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50"
               >
-                {uploading ? 'Uploading...' : editCourse ? 'Update Course' : 'Create Course'}
+                {tr(uploading ? 'Uploading...' : editCourse ? 'Update Course' : 'Create Course')}
               </button>
 
               <button
@@ -491,36 +485,29 @@ export default function AdminCoursesPage() {
                   resetForm()
                 }}
                 className="px-8 py-3 bg-gray-100 text-gray-700 font-medium rounded-xl hover:bg-gray-200 transition-colors"
-              >
-                Cancel
-              </button>
+              >{tr("Cancel")}</button>
             </div>
           </div>
         )}
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-            <h2 className="font-bold text-gray-900">Managed Courses ({courses.length})</h2>
+            <h2 className="font-bold text-gray-900">{tr("Managed Courses (")}{courses.length})</h2>
 
             <div className="flex gap-2 text-xs">
               <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
-                {courses.filter(c => c.type === 'video').length} video
-              </span>
-              <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full">
-                Classes scheduled separately
-              </span>
+                {courses.filter(c => c.type === 'video').length}{tr(" video")}</span>
+              <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full">{tr("Classes scheduled separately")}</span>
             </div>
           </div>
 
           {courses.length === 0 ? (
             <div className="p-12 text-center text-gray-400">
-              <p className="mb-3">No courses yet</p>
+              <p className="mb-3">{tr("No courses yet")}</p>
               <button
                 onClick={() => setShowForm(true)}
                 className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm"
-              >
-                Create First Course
-              </button>
+              >{tr("Create First Course")}</button>
             </div>
           ) : (
             <div className="divide-y divide-gray-50">
@@ -544,7 +531,7 @@ export default function AdminCoursesPage() {
                         <span className="text-xs text-gray-400">•</span>
                         <span className="text-xs text-gray-500">{course.duration}</span>
                         <span className="text-xs text-gray-400">•</span>
-                        <span className="text-xs text-gray-500">{course.enrollmentCount} enrolled</span>
+                        <span className="text-xs text-gray-500">{course.enrollmentCount}{tr(" enrolled")}</span>
                       </div>
 
                       <div className="flex flex-wrap gap-2 mt-2">
@@ -560,19 +547,15 @@ export default function AdminCoursesPage() {
                         </span>
 
                         {course.isFree ? (
-                          <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full">
-                            FREE
-                          </span>
+                          <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full">{tr("FREE")}</span>
                         ) : (
                           <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">
-                            ₹{Number(course.price).toLocaleString()}
+                            ₹{tr(Number(course.price).toLocaleString(locale()))}
                           </span>
                         )}
 
                         {course.videoUrl && (
-                          <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full">
-                            ✓ Video
-                          </span>
+                          <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full">{tr("✓ Video")}</span>
                         )}
 
 
@@ -586,31 +569,23 @@ export default function AdminCoursesPage() {
                       target="_blank"
                       rel="noopener noreferrer"
                       className="px-3 py-1.5 bg-gray-50 text-gray-600 text-xs rounded-lg hover:bg-gray-100"
-                    >
-                      Preview
-                    </a>
+                    >{tr("Preview")}</a>
 
                     {course.canEdit && <>
                     <Link
                       href={(isTrainer ? '/trainer/courses/' : '/admin/courses/') + course.id + '/quiz'}
                       className="px-3 py-1.5 bg-purple-50 text-purple-700 text-xs rounded-lg hover:bg-purple-100"
-                    >
-                      Manage Quiz
-                    </Link>
+                    >{tr("Manage Quiz")}</Link>
 
                     <button
                       onClick={() => handleEdit(course)}
                       className="px-3 py-1.5 bg-blue-50 text-blue-600 text-xs rounded-lg hover:bg-blue-100"
-                    >
-                      Edit
-                    </button>
+                    >{tr("Edit")}</button>
 
                     <button
                       onClick={() => handleDelete(course.id)}
                       className="px-3 py-1.5 bg-red-50 text-red-600 text-xs rounded-lg hover:bg-red-100"
-                    >
-                      Delete
-                    </button>
+                    >{tr("Delete")}</button>
                     </>}
                   </div>
                 </div>

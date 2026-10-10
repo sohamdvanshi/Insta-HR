@@ -1,7 +1,11 @@
 'use client'
+import { tr, useLocale } from '@/lib/localization'
+
 import { useState, useEffect } from 'react'
 
 export default function AIMatchPage() {
+  useLocale()
+
   const [jobs, setJobs] = useState<any[]>([])
   const [selectedJob, setSelectedJob] = useState('')
   const [results, setResults] = useState<any[]>([])
@@ -63,8 +67,8 @@ export default function AIMatchPage() {
       {/* Header */}
       <div className='bg-gradient-to-r from-blue-600 to-purple-600 py-12 px-6'>
         <div className='max-w-6xl mx-auto text-center'>
-          <h1 className='text-3xl font-bold text-white mb-2'>🤖 AI Resume Matching</h1>
-          <p className='text-blue-100'>Find the best candidates for your job using AI</p>
+          <h1 className='text-3xl font-bold text-white mb-2'>{tr("🤖 AI Resume Matching")}</h1>
+          <p className='text-blue-100'>{tr("Find the best candidates for your job using AI")}</p>
         </div>
       </div>
 
@@ -72,7 +76,7 @@ export default function AIMatchPage() {
 
         {/* Job Selector */}
         <div className='bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-8'>
-          <h2 className='font-bold text-gray-900 mb-4'>Select a Job to Match Candidates</h2>
+          <h2 className='font-bold text-gray-900 mb-4'>{tr("Select a Job to Match Candidates")}</h2>
 
           <div className='flex gap-4'>
             <select
@@ -80,7 +84,7 @@ export default function AIMatchPage() {
               onChange={e => setSelectedJob(e.target.value)}
               className='flex-1 px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500 transition-all'
             >
-              <option value=''>-- Select a Job --</option>
+              <option value=''>{tr("-- Select a Job --")}</option>
               {jobs.map(job => (
                 <option key={job.id} value={job.id}>
                   {job.title} — {job.location}
@@ -93,20 +97,19 @@ export default function AIMatchPage() {
               disabled={loading}
               className='px-8 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50'
             >
-              {loading ? 'Matching...' : '🤖 Find Matches'}
+              {tr(loading ? 'Matching...' : '🤖 Find Matches')}
             </button>
           </div>
 
           {message && (
-            <p className='text-red-500 text-sm mt-3'>{message}</p>
+            <p className='text-red-500 text-sm mt-3'>{tr(message)}</p>
           )}
         </div>
 
         {/* Results */}
         {results.length > 0 && (
           <div>
-            <h2 className='font-bold text-gray-900 mb-4 text-xl'>
-              Found {results.length} candidate{results.length > 1 ? 's' : ''}
+            <h2 className='font-bold text-gray-900 mb-4 text-xl'>{tr("Found ")}{results.length}{tr(" candidate")}{tr(results.length > 1 ? 's' : '')}
             </h2>
             <div className='space-y-4'>
               {results.map((candidate, index) => (
@@ -123,7 +126,7 @@ export default function AIMatchPage() {
                         <h3 className='text-lg font-bold text-gray-900'>
                           {candidate.name || 'Unknown Candidate'}
                         </h3>
-                        <p className='text-gray-500 text-sm'>Candidate ID: {candidate.candidateId?.substring(0, 8)}...</p>
+                        <p className='text-gray-500 text-sm'>{tr("Candidate ID: ")}{candidate.candidateId?.substring(0, 8)}...</p>
                       </div>
                     </div>
 
@@ -131,7 +134,7 @@ export default function AIMatchPage() {
                       <div className={`text-3xl font-bold ${getScoreColor(candidate.matchScore)}`}>
                         {candidate.matchScore}%
                       </div>
-                      <div className='text-xs text-gray-400'>Match Score</div>
+                      <div className='text-xs text-gray-400'>{tr("Match Score")}</div>
                     </div>
                   </div>
 
@@ -139,24 +142,24 @@ export default function AIMatchPage() {
                   <div className='grid grid-cols-3 gap-4 mb-4'>
                     <div className='text-center p-3 bg-white rounded-xl border border-gray-100'>
                       <div className='text-lg font-bold text-blue-600'>{candidate.skillScore}%</div>
-                      <div className='text-xs text-gray-400'>Skill Match</div>
+                      <div className='text-xs text-gray-400'>{tr("Skill Match")}</div>
                     </div>
                     <div className='text-center p-3 bg-white rounded-xl border border-gray-100'>
                       <div className='text-lg font-bold text-purple-600'>{candidate.expScore}%</div>
-                      <div className='text-xs text-gray-400'>Experience</div>
+                      <div className='text-xs text-gray-400'>{tr("Experience")}</div>
                     </div>
                     <div className='text-center p-3 bg-white rounded-xl border border-gray-100'>
                       <div className='text-lg font-bold text-green-600'>
                         {candidate.matchedSkills?.length || 0}
                       </div>
-                      <div className='text-xs text-gray-400'>Skills Matched</div>
+                      <div className='text-xs text-gray-400'>{tr("Skills Matched")}</div>
                     </div>
                   </div>
 
                   {/* Matched Skills */}
                   {candidate.matchedSkills?.length > 0 && (
                     <div className='mb-3'>
-                      <p className='text-xs font-medium text-gray-500 mb-2'>MATCHED SKILLS</p>
+                      <p className='text-xs font-medium text-gray-500 mb-2'>{tr("MATCHED SKILLS")}</p>
                       <div className='flex flex-wrap gap-2'>
                         {candidate.matchedSkills.map((skill: string) => (
                           <span key={skill} className='px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full'>
@@ -170,7 +173,7 @@ export default function AIMatchPage() {
                   {/* Missing Skills */}
                   {candidate.missingSkills?.length > 0 && (
                     <div>
-                      <p className='text-xs font-medium text-gray-500 mb-2'>MISSING SKILLS</p>
+                      <p className='text-xs font-medium text-gray-500 mb-2'>{tr("MISSING SKILLS")}</p>
                       <div className='flex flex-wrap gap-2'>
                         {candidate.missingSkills.map((skill: string) => (
                           <span key={skill} className='px-2 py-1 bg-red-100 text-red-600 text-xs font-medium rounded-full'>

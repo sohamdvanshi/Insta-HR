@@ -1,4 +1,6 @@
 'use client'
+import { tr, useLocale } from '@/lib/localization'
+
 
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -24,6 +26,8 @@ type NavGroup = {
 }
 
 export default function Navbar() {
+  const { language } = useLocale()
+
   const { t } = useTranslation()
 
   const [isMobileOpen, setIsMobileOpen] = useState(false)
@@ -43,7 +47,7 @@ export default function Navbar() {
 
     setIsMobileOpen(false)
     setOpenDropdown(null)
-  }, [pathname])
+  }, [pathname, language])
 
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
@@ -235,7 +239,7 @@ export default function Navbar() {
           aria-haspopup="menu"
           className={dropdownButtonClass(active)}
         >
-          {group.label}
+          {tr(group.label)}
           <svg
             className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
             viewBox="0 0 20 20"
@@ -268,7 +272,7 @@ export default function Navbar() {
                     : 'text-gray-700 hover:bg-gray-50 hover:text-blue-600')
                 }
               >
-                {item.label}
+                {tr(item.label)}
               </Link>
             ))}
           </div>
@@ -288,7 +292,7 @@ export default function Navbar() {
           aria-expanded={open}
           className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-gray-800"
         >
-          <span>{group.label}</span>
+          <span>{tr(group.label)}</span>
           <svg
             className={`h-4 w-4 transition-transform ${open ? 'rotate-180' : ''}`}
             viewBox="0 0 20 20"
@@ -312,7 +316,7 @@ export default function Navbar() {
                 onClick={closeMenus}
                 className={mobileLinkClass(item.href)}
               >
-                {item.label}
+                {tr(item.label)}
               </Link>
             ))}
           </div>
@@ -330,7 +334,7 @@ export default function Navbar() {
         <Link href={userMode === 'trainer' ? '/trainer' : '/'} className="flex items-center gap-2" onClick={closeMenus}>
           <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-600 to-purple-600" />
           <span className="text-xl font-bold text-gray-900">
-            {t('appName')}
+            {tr(t('appName'))}
           </span>
         </Link>
 
@@ -341,7 +345,7 @@ export default function Navbar() {
               href={link.href}
               className={desktopLinkClass(link.href)}
             >
-              {link.label}
+              {tr(link.label)}
             </Link>
           ))}
 
@@ -351,7 +355,7 @@ export default function Navbar() {
               href={link.href}
               className={desktopLinkClass(link.href)}
             >
-              {link.label}
+              {tr(link.label)}
             </Link>
           ))}
 
@@ -361,7 +365,7 @@ export default function Navbar() {
               href={link.href}
               className={desktopLinkClass(link.href)}
             >
-              {link.label}
+              {tr(link.label)}
             </Link>
           ))}
 
@@ -378,10 +382,10 @@ export default function Navbar() {
             <>
               <div className="hidden text-right lg:block">
                 <p className="text-sm font-semibold text-gray-900">
-                  {user.firstName || user.name || user.email}
+                  {tr(user.firstName || user.name || user.email)}
                 </p>
                 <p className="text-xs capitalize text-gray-500">
-                  {user.role}
+                  {tr(user.role)}
                 </p>
               </div>
 
@@ -394,7 +398,7 @@ export default function Navbar() {
                     : 'text-gray-700 hover:text-blue-600')
                 }
               >
-                {t('dashboard')}
+                {tr(t('dashboard'))}
               </Link>
 
               <button
@@ -402,7 +406,7 @@ export default function Navbar() {
                 onClick={logout}
                 className="rounded-lg bg-red-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-600"
               >
-                {t('logout')}
+                {tr(t('logout'))}
               </button>
             </>
           ) : (
@@ -411,14 +415,14 @@ export default function Navbar() {
                 href="/login"
                 className="px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:text-blue-600"
               >
-                {t('login')}
+                {tr(t('login'))}
               </Link>
 
               <Link
                 href="/register"
                 className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
               >
-                {t('signup')}
+                {tr(t('signup'))}
               </Link>
             </>
           )}
@@ -428,7 +432,7 @@ export default function Navbar() {
           type="button"
           onClick={() => setIsMobileOpen((previous) => !previous)}
           className="p-2 md:hidden"
-          aria-label="Toggle menu"
+          aria-label={tr("Toggle menu")}
           aria-expanded={isMobileOpen}
         >
           <div className="mb-1 h-0.5 w-5 bg-gray-600" />
@@ -452,7 +456,7 @@ export default function Navbar() {
                   onClick={closeMenus}
                   className={mobileLinkClass(link.href)}
                 >
-                  {link.label}
+                  {tr(link.label)}
                 </Link>
               ))}
             </div>
@@ -466,7 +470,7 @@ export default function Navbar() {
                     onClick={closeMenus}
                     className={mobileLinkClass(link.href)}
                   >
-                    {link.label}
+                    {tr(link.label)}
                   </Link>
                 ))}
               </div>
@@ -481,7 +485,7 @@ export default function Navbar() {
                     onClick={closeMenus}
                     className={mobileLinkClass(link.href)}
                   >
-                    {link.label}
+                    {tr(link.label)}
                   </Link>
                 ))}
               </div>
@@ -499,7 +503,7 @@ export default function Navbar() {
                   onClick={closeMenus}
                   className={mobileLinkClass(getDashboardLink())}
                 >
-                  {t('dashboard')}
+                  {tr(t('dashboard'))}
                 </Link>
 
                 <button
@@ -507,7 +511,7 @@ export default function Navbar() {
                   onClick={logout}
                   className="text-left font-medium text-red-500"
                 >
-                  {t('logout')}
+                  {tr(t('logout'))}
                 </button>
               </div>
             ) : (
@@ -517,7 +521,7 @@ export default function Navbar() {
                   onClick={closeMenus}
                   className={mobileLinkClass('/login')}
                 >
-                  {t('login')}
+                  {tr(t('login'))}
                 </Link>
 
                 <Link
@@ -525,7 +529,7 @@ export default function Navbar() {
                   onClick={closeMenus}
                   className="rounded-lg bg-blue-600 px-4 py-2 text-center font-medium text-white"
                 >
-                  {t('signup')}
+                  {tr(t('signup'))}
                 </Link>
               </div>
             )}

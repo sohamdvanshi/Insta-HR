@@ -1,4 +1,6 @@
 'use client'
+import { tr, trError, useLocale } from '@/lib/localization'
+
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
@@ -64,6 +66,8 @@ const readResponse = async (response: Response): Promise<LoginResponse> => {
 }
 
 export default function LoginPage() {
+  useLocale()
+
   useEffect(() => {
     const next = trainingReturnPath(new URLSearchParams(window.location.search).get('next'))
     if (next) sessionStorage.setItem('trainingReturnTo', next)
@@ -245,33 +249,28 @@ export default function LoginPage() {
         <div className='bg-white rounded-2xl shadow-xl p-8'>
           <div className='flex items-center justify-center gap-2 mb-8'>
             <div className='w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg' />
-            <span className='text-xl font-bold text-gray-900'>InstaHire</span>
+            <span className='text-xl font-bold text-gray-900'>{tr("InstaHire")}</span>
           </div>
 
-          <h1 className='text-2xl font-bold text-gray-900 text-center mb-2'>
-            Welcome back!
-          </h1>
-          <p className='text-gray-500 text-center mb-8'>
-            Login to your account
-          </p>
+          <h1 className='text-2xl font-bold text-gray-900 text-center mb-2'>{tr("Welcome back!")}</h1>
+          <p className='text-gray-500 text-center mb-8'>{tr("Login to your account")}</p>
 
           {error && (
             <div className='bg-red-50 text-red-600 px-4 py-3 rounded-xl mb-4 text-sm'>
-              {error}
+              {trError(error)}
             </div>
           )}
 
           {info && (
             <div className='bg-green-50 text-green-700 px-4 py-3 rounded-xl mb-4 text-sm'>
-              {info}
+              {tr(info)}
             </div>
           )}
 
           {pendingVerification && (
             <div className='bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-4 rounded-xl mb-6'>
-              <p className='text-sm font-medium'>Your email is not verified yet.</p>
-              <p className='text-xs mt-1 break-all'>
-                Account: {pendingVerification.email}
+              <p className='text-sm font-medium'>{tr("Your email is not verified yet.")}</p>
+              <p className='text-xs mt-1 break-all'>{tr("Account: ")}{pendingVerification.email}
               </p>
 
               <div className='mt-4 flex flex-col gap-3 sm:flex-row'>
@@ -279,9 +278,7 @@ export default function LoginPage() {
                   type='button'
                   onClick={goToVerifyPage}
                   className='flex-1 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition-colors'
-                >
-                  Verify your account
-                </button>
+                >{tr("Verify your account")}</button>
 
                 <button
                   type='button'
@@ -289,7 +286,7 @@ export default function LoginPage() {
                   disabled={resendLoading}
                   className='flex-1 rounded-xl border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50'
                 >
-                  {resendLoading ? 'Resending...' : 'Resend OTP'}
+                  {tr(resendLoading ? 'Resending...' : 'Resend OTP')}
                 </button>
               </div>
             </div>
@@ -308,9 +305,7 @@ export default function LoginPage() {
           </div>
 
           {googleLoading && (
-            <p className='text-sm text-center text-gray-500 mb-4'>
-              Signing in with Google...
-            </p>
+            <p className='text-sm text-center text-gray-500 mb-4'>{tr("Signing in with Google...")}</p>
           )}
 
           <div className='relative my-6'>
@@ -318,45 +313,39 @@ export default function LoginPage() {
               <div className='w-full border-t border-gray-200' />
             </div>
             <div className='relative flex justify-center text-sm'>
-              <span className='bg-white px-3 text-gray-400'>or continue with email</span>
+              <span className='bg-white px-3 text-gray-400'>{tr("or continue with email")}</span>
             </div>
           </div>
 
           <form onSubmit={handleSubmit} className='space-y-5'>
             <div>
-              <label className='block text-sm font-medium text-gray-700 mb-2'>
-                Email Address
-              </label>
+              <label className='block text-sm font-medium text-gray-700 mb-2'>{tr("Email Address")}</label>
               <input
                 type='email'
                 name='email'
                 value={formData.email}
                 onChange={handleChange}
-                placeholder='you@example.com'
+                placeholder={tr("you@example.com")}
                 required
                 className='w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all'
               />
             </div>
 
             <div>
-              <label className='block text-sm font-medium text-gray-700 mb-2'>
-                Password
-              </label>
+              <label className='block text-sm font-medium text-gray-700 mb-2'>{tr("Password")}</label>
               <input
                 type='password'
                 name='password'
                 value={formData.password}
                 onChange={handleChange}
-                placeholder='Enter your password'
+                placeholder={tr("Enter your password")}
                 required
                 className='w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all'
               />
             </div>
 
             <div className='text-right'>
-              <Link href='/forgot-password' className='text-sm text-blue-600 hover:underline'>
-                Forgot password?
-              </Link>
+              <Link href='/forgot-password' className='text-sm text-blue-600 hover:underline'>{tr("Forgot password?")}</Link>
             </div>
 
             <button
@@ -364,15 +353,12 @@ export default function LoginPage() {
               disabled={loading}
               className='w-full py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50'
             >
-              {loading ? 'Logging in...' : 'Login'}
+              {tr(loading ? 'Logging in...' : 'Login')}
             </button>
           </form>
 
-          <p className='text-center text-gray-500 text-sm mt-6'>
-            Don&apos;t have an account?{' '}
-            <Link href='/register' className='text-blue-600 font-medium hover:underline'>
-              Create one free
-            </Link>
+          <p className='text-center text-gray-500 text-sm mt-6'>{tr("Don&apos;t have an account?")}{tr(' ')}
+            <Link href='/register' className='text-blue-600 font-medium hover:underline'>{tr("Create one free")}</Link>
           </p>
         </div>
       </div>

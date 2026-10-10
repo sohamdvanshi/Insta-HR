@@ -1,4 +1,6 @@
 'use client'
+import { tr, trError, useLocale, locale } from '@/lib/localization'
+
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
@@ -9,6 +11,8 @@ import { trainingRequest } from '@/lib/trainingApi'
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1').replace(/\/$/, '')
 
 export default function CourseDetailPage() {
+  useLocale()
+
   const router = useRouter()
   const params = useParams()
   const videoRef = useRef<HTMLVideoElement | null>(null)
@@ -166,7 +170,7 @@ export default function CourseDetailPage() {
         setProgressPercent(Number(data.data.progressPercent || 0))
         setWatchTimeSeconds(Number(data.data.watchTimeSeconds || 0))
         setCompleted(!!data.data.completed)
-        setLastSaved(new Date().toLocaleTimeString())
+        setLastSaved(new Date().toLocaleTimeString(locale()))
       }
     } catch {
     }
@@ -244,7 +248,7 @@ export default function CourseDetailPage() {
   if (loading) {
     return (
       <main className="min-h-screen bg-gray-50 pt-24 flex items-center justify-center">
-        <p className="text-gray-400">Loading course...</p>
+        <p className="text-gray-400">{tr("Loading course...")}</p>
       </main>
     )
   }
@@ -253,10 +257,8 @@ export default function CourseDetailPage() {
     return (
       <main className="min-h-screen bg-gray-50 pt-24 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-400 mb-4">{error || 'Course not found'}</p>
-          <Link href="/training" className="text-blue-600 hover:underline">
-            Back to Training
-          </Link>
+          <p className="text-gray-400 mb-4">{tr(error || 'Course not found')}</p>
+          <Link href="/training" className="text-blue-600 hover:underline">{tr("Back to Training")}</Link>
         </div>
       </main>
     )
@@ -264,7 +266,7 @@ export default function CourseDetailPage() {
 
   return (
     <main className="min-h-screen bg-gray-50 pt-16">
-      {error && <p role="alert" className="mx-auto mt-5 max-w-6xl rounded-lg bg-red-50 p-4 text-red-700">{error}</p>}
+      {error && <p role="alert" className="mx-auto mt-5 max-w-6xl rounded-lg bg-red-50 p-4 text-red-700">{trError(error)}</p>}
       <div
         className={
           'py-12 px-6 ' +
@@ -272,9 +274,7 @@ export default function CourseDetailPage() {
         }
       >
         <div className="max-w-6xl mx-auto">
-          <Link href="/training" className="text-white/70 hover:text-white text-sm mb-4 inline-block">
-            ← Back to Training
-          </Link>
+          <Link href="/training" className="text-white/70 hover:text-white text-sm mb-4 inline-block">{tr("← Back to Training")}</Link>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
             <div>
@@ -290,8 +290,8 @@ export default function CourseDetailPage() {
 
               <div className="flex flex-wrap gap-4 text-white/70 text-sm mb-6">
                 <span>⏱ {course.duration}</span>
-                <span>👥 {course.enrollmentCount} enrolled</span>
-                {course.rating > 0 && <span>⭐ {course.rating} rating</span>}
+                <span>👥 {course.enrollmentCount}{tr(" enrolled")}</span>
+                {course.rating > 0 && <span>⭐ {course.rating}{tr(" rating")}</span>}
               </div>
 
               <div className="flex flex-wrap gap-2 mb-6">
@@ -305,7 +305,7 @@ export default function CourseDetailPage() {
               {course.hasVideo && enrolled ? (
                 <div className="bg-white/10 rounded-2xl p-4">
                   <div className="flex items-center justify-between text-white mb-2">
-                    <span className="text-sm font-medium">Your Progress</span>
+                    <span className="text-sm font-medium">{tr("Your Progress")}</span>
                     <span className="text-sm font-bold">{Math.round(progressPercent)}%</span>
                   </div>
 
@@ -320,21 +320,21 @@ export default function CourseDetailPage() {
                   </div>
 
                   <div className="flex flex-wrap gap-4 text-xs text-white/80">
-                    <span>Watch Time: {watchTimeSeconds}s</span>
-                    <span>Status: {completed ? 'Completed ✅' : 'In Progress'}</span>
-                    {lastSaved && <span>Last Saved: {lastSaved}</span>}
-                    {loadingProgress && <span>Loading progress...</span>}
+                    <span>{tr("Watch Time: ")}{watchTimeSeconds}{tr("s")}</span>
+                    <span>{tr("Status: ")}{tr(completed ? 'Completed ✅' : 'In Progress')}</span>
+                    {lastSaved && <span>{tr("Last Saved: ")}{tr(lastSaved)}</span>}
+                    {loadingProgress && <span>{tr("Loading progress...")}</span>}
                   </div>
                 </div>
               ) : course.hasVideo ? (
                 <div className="bg-white/10 rounded-2xl p-4 text-white/90">
-                  <p className="font-medium mb-1">Enroll to start tracking progress.</p>
-                  <p className="text-sm text-white/70">Progress is available only for enrolled users.</p>
+                  <p className="font-medium mb-1">{tr("Enroll to start tracking progress.")}</p>
+                  <p className="text-sm text-white/70">{tr("Progress is available only for enrolled users.")}</p>
                 </div>
               ) : (
                 <div className="bg-white/10 rounded-2xl p-4 text-white/90">
-                  <p className="font-medium mb-1">Progress tracking will appear once a video is uploaded.</p>
-                  <p className="text-sm text-white/70">This course currently has no video content.</p>
+                  <p className="font-medium mb-1">{tr("Progress tracking will appear once a video is uploaded.")}</p>
+                  <p className="text-sm text-white/70">{tr("This course currently has no video content.")}</p>
                 </div>
               )}
             </div>
@@ -343,14 +343,14 @@ export default function CourseDetailPage() {
               <div className="text-8xl mb-4">{course.emoji || '📚'}</div>
               <div className="bg-white/10 rounded-2xl p-6">
                 <div className="text-3xl font-bold text-white mb-1">
-                  {course.isFree ? 'FREE' : '₹' + Number(course.price).toLocaleString()}
+                  {tr(course.isFree ? 'FREE' : '₹' + Number(course.price).toLocaleString(locale()))}
                 </div>
 
-                {!course.isFree && <p className="text-white/60 text-sm mb-4">Contact the training team for paid enrollment</p>}
+                {!course.isFree && <p className="text-white/60 text-sm mb-4">{tr("Contact the training team for paid enrollment")}</p>}
 
                 {message ? (
                   <div className="bg-green-500 text-white px-4 py-3 rounded-xl font-medium">
-                    ✓ {message}
+                    ✓ {tr(message)}
                   </div>
                 ) : (
                   <button
@@ -358,13 +358,13 @@ export default function CourseDetailPage() {
                     disabled={enrolling || enrolled || canPreview}
                     className="w-full py-3 bg-white text-blue-600 font-bold rounded-xl hover:bg-blue-50 transition-colors disabled:opacity-50"
                   >
-                    {canPreview ? 'Staff preview' : enrolling
+                    {tr(canPreview ? 'Staff preview' : enrolling
                       ? 'Enrolling...'
                       : enrolled
                       ? '✓ Enrolled'
                       : course.isFree
                       ? 'Enroll Free'
-                      : 'Enroll Now'}
+                      : 'Enroll Now')}
                   </button>
                 )}
               </div>
@@ -380,9 +380,9 @@ export default function CourseDetailPage() {
             {course.hasVideo && (
               <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
                 <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-                  <h2 className="font-bold text-gray-900">Course Player</h2>
+                  <h2 className="font-bold text-gray-900">{tr("Course Player")}</h2>
                   <span className="text-sm text-gray-500">
-                    {enrolled ? `${Math.round(progressPercent)}% completed` : 'Enroll to watch'}
+                    {tr(enrolled ? `${Math.round(progressPercent)}% completed` : 'Enroll to watch')}
                   </span>
                 </div>
 
@@ -397,14 +397,12 @@ export default function CourseDetailPage() {
                       onTimeUpdate={handleVideoTimeUpdate}
                       onPause={handleVideoPause}
                       onEnded={handleVideoEnded}
-                    >
-                      Your browser does not support video playback.
-                    </video>
+                    >{tr("Your browser does not support video playback.")}</video>
                   ) : (
                     <div className="absolute inset-0 flex flex-col items-center justify-center text-white bg-black/90 px-6 text-center">
                       <div className="text-5xl mb-4">🔒</div>
-                      <p className="text-lg font-semibold mb-2">Enroll to access this course</p>
-                      <p className="text-white/70 text-sm">You need to enroll before watching course content.</p>
+                      <p className="text-lg font-semibold mb-2">{tr("Enroll to access this course")}</p>
+                      <p className="text-white/70 text-sm">{tr("You need to enroll before watching course content.")}</p>
                     </div>
                   )}
                 </div>
@@ -419,9 +417,9 @@ export default function CourseDetailPage() {
                     </div>
 
                     <div className="flex flex-wrap gap-4 text-xs text-gray-500">
-                      <span>{Math.round(progressPercent)}% completed</span>
-                      <span>{watchTimeSeconds}s watched</span>
-                      <span>{completed ? 'Course completed' : 'Complete 90% to finish course'}</span>
+                      <span>{Math.round(progressPercent)}{tr("% completed")}</span>
+                      <span>{watchTimeSeconds}{tr("s watched")}</span>
+                      <span>{tr(completed ? 'Course completed' : 'Complete 90% to finish course')}</span>
                     </div>
                   </div>
                 )}
@@ -431,12 +429,12 @@ export default function CourseDetailPage() {
             {!course.hasVideo && (
               <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
                 <div className="p-4 border-b border-gray-100">
-                  <h2 className="font-bold text-gray-900">Course Video</h2>
+                  <h2 className="font-bold text-gray-900">{tr("Course Video")}</h2>
                 </div>
                 <div className="bg-gradient-to-br from-gray-100 to-gray-200 flex flex-col items-center justify-center py-16">
                   <div className="text-6xl mb-4">{course.emoji || '📚'}</div>
-                  <p className="text-gray-500 font-medium mb-2">Classroom-based course or video content not uploaded yet</p>
-                  <p className="text-gray-400 text-sm">Check My classes after enrolling for scheduled sessions.</p>
+                  <p className="text-gray-500 font-medium mb-2">{tr("Classroom-based course or video content not uploaded yet")}</p>
+                  <p className="text-gray-400 text-sm">{tr("Check My classes after enrolling for scheduled sessions.")}</p>
                 </div>
               </div>
             )}
@@ -446,7 +444,7 @@ export default function CourseDetailPage() {
             {course.curriculum && course.curriculum.length > 0 && (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="p-6 border-b border-gray-100">
-                  <h2 className="font-bold text-gray-900">Course Curriculum</h2>
+                  <h2 className="font-bold text-gray-900">{tr("Course Curriculum")}</h2>
                 </div>
 
                 <div className="divide-y divide-gray-50">
@@ -469,7 +467,7 @@ export default function CourseDetailPage() {
             {(!course.curriculum || course.curriculum.length === 0) && (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="p-6 border-b border-gray-100">
-                  <h2 className="font-bold text-gray-900">What You Will Learn</h2>
+                  <h2 className="font-bold text-gray-900">{tr("What You Will Learn")}</h2>
                 </div>
 
                 <div className="p-6">
@@ -488,58 +486,58 @@ export default function CourseDetailPage() {
 
           <div className="space-y-6">
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-              <h3 className="font-bold text-gray-900 mb-4">Course Details</h3>
+              <h3 className="font-bold text-gray-900 mb-4">{tr("Course Details")}</h3>
 
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Type</span>
+                  <span className="text-gray-500">{tr("Type")}</span>
                   <span className="font-medium text-gray-900 capitalize">{course.type}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Duration</span>
+                  <span className="text-gray-500">{tr("Duration")}</span>
                   <span className="font-medium text-gray-900">{course.duration}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Category</span>
+                  <span className="text-gray-500">{tr("Category")}</span>
                   <span className="font-medium text-gray-900">{course.category}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Students</span>
+                  <span className="text-gray-500">{tr("Students")}</span>
                   <span className="font-medium text-gray-900">{course.enrollmentCount}</span>
                 </div>
                 {course.rating > 0 && (
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Rating</span>
+                    <span className="text-gray-500">{tr("Rating")}</span>
                     <span className="font-medium text-gray-900">⭐ {course.rating}/5</span>
                   </div>
                 )}
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Certificate</span>
-                  <span className="font-medium text-green-600">✓ Yes</span>
+                  <span className="text-gray-500">{tr("Certificate")}</span>
+                  <span className="font-medium text-green-600">{tr("✓ Yes")}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Enrollment</span>
+                  <span className="text-gray-500">{tr("Enrollment")}</span>
                   <span className={'font-medium ' + (enrolled ? 'text-green-600' : 'text-orange-500')}>
-                    {enrolled ? 'Enrolled' : 'Not Enrolled'}
+                    {tr(enrolled ? 'Enrolled' : 'Not Enrolled')}
                   </span>
                 </div>
 
                 {course.videoUrl && enrolled && (
                   <>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Progress</span>
+                      <span className="text-gray-500">{tr("Progress")}</span>
                       <span className="font-medium text-blue-600">{Math.round(progressPercent)}%</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Status</span>
+                      <span className="text-gray-500">{tr("Status")}</span>
                       <span className={'font-medium ' + (completed ? 'text-green-600' : 'text-orange-500')}>
-                        {completed ? 'Completed' : 'In Progress'}
+                        {tr(completed ? 'Completed' : 'In Progress')}
                       </span>
                     </div>
 
                     {completed && (
                       <div className="flex justify-between">
-                        <span className="text-gray-500">Quiz</span>
+                        <span className="text-gray-500">{tr("Quiz")}</span>
                         <span
                           className={
                             'font-medium ' +
@@ -550,7 +548,7 @@ export default function CourseDetailPage() {
                               : 'text-blue-600')
                           }
                         >
-                          {quizResult?.passed ? 'Passed' : quizResult ? 'Attempted' : 'Unlocked'}
+                          {tr(quizResult?.passed ? 'Passed' : quizResult ? 'Attempted' : 'Unlocked')}
                         </span>
                       </div>
                     )}
@@ -562,76 +560,63 @@ export default function CourseDetailPage() {
             {!enrolled && !message && (
               <div className="bg-blue-50 rounded-2xl p-6 border border-blue-100">
                 <div className="text-2xl font-bold text-gray-900 mb-1">
-                  {course.isFree ? 'FREE' : '₹' + Number(course.price).toLocaleString()}
+                  {tr(course.isFree ? 'FREE' : '₹' + Number(course.price).toLocaleString(locale()))}
                 </div>
-                <p className="text-gray-500 text-sm mb-4">Get lifetime access + certificate</p>
+                <p className="text-gray-500 text-sm mb-4">{tr("Get lifetime access + certificate")}</p>
                 <button
                   onClick={handleEnroll}
                   disabled={enrolling}
                   className="w-full py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50"
                 >
-                  {enrolling ? 'Enrolling...' : 'Enroll Now'}
+                  {tr(enrolling ? 'Enrolling...' : 'Enroll Now')}
                 </button>
               </div>
             )}
 
             <div className="bg-yellow-50 rounded-2xl p-6 border border-yellow-100 text-center">
               <div className="text-4xl mb-2">🏆</div>
-              <h3 className="font-bold text-gray-900 mb-1">Get Certified</h3>
-              <p className="text-gray-500 text-sm">
-                Complete this course, pass the quiz, and earn an industry-recognized certificate
-              </p>
+              <h3 className="font-bold text-gray-900 mb-1">{tr("Get Certified")}</h3>
+              <p className="text-gray-500 text-sm">{tr("Complete this course, pass the quiz, and earn an industry-recognized certificate")}</p>
 
               {!enrolled && (
-                <div className="mt-4 px-4 py-2 bg-white text-gray-600 rounded-xl text-sm border border-yellow-200">
-                  Enroll first to unlock progress tracking, quiz, and certificate
-                </div>
+                <div className="mt-4 px-4 py-2 bg-white text-gray-600 rounded-xl text-sm border border-yellow-200">{tr("Enroll first to unlock progress tracking, quiz, and certificate")}</div>
               )}
 
               {enrolled && course.videoUrl && !completed && (
                 <div className="mt-4 space-y-3">
-                  <div className="px-4 py-2 bg-white text-orange-600 rounded-xl text-sm font-medium border border-yellow-200">
-                    Complete at least 90% of the course to unlock the quiz
-                  </div>
+                  <div className="px-4 py-2 bg-white text-orange-600 rounded-xl text-sm font-medium border border-yellow-200">{tr("Complete at least 90% of the course to unlock the quiz")}</div>
                 </div>
               )}
 
               {enrolled && course.videoUrl && completed && (
                 <div className="mt-4 space-y-3">
-                  <div className="px-4 py-2 bg-green-100 text-green-700 rounded-xl text-sm font-medium">
-                    ✓ Course completed successfully
-                  </div>
+                  <div className="px-4 py-2 bg-green-100 text-green-700 rounded-xl text-sm font-medium">{tr("✓ Course completed successfully")}</div>
 
                   {loadingQuizResult ? (
-                    <div className="px-4 py-2 bg-white text-gray-500 rounded-xl text-sm border border-yellow-200">
-                      Checking quiz status...
-                    </div>
+                    <div className="px-4 py-2 bg-white text-gray-500 rounded-xl text-sm border border-yellow-200">{tr("Checking quiz status...")}</div>
                   ) : quizResult?.passed ? (
                     <>
-                      <div className="px-4 py-2 bg-blue-100 text-blue-700 rounded-xl text-sm font-medium">
-                        ✓ Quiz passed ({quizResult.percentage}%)
+                      <div className="px-4 py-2 bg-blue-100 text-blue-700 rounded-xl text-sm font-medium">{tr("✓ Quiz passed (")}{quizResult.percentage}%)
                       </div>
 
                       <Link
                         href={'/training/' + course.id + '/certificate'}
                         className="block w-full py-3 bg-green-600 text-white font-semibold rounded-xl text-center hover:bg-green-700 transition-colors"
-                      >
-                        View Certificate
-                      </Link>
+                      >{tr("View Certificate")}</Link>
                     </>
                   ) : (
                     <>
                       <div className="px-4 py-2 bg-white text-gray-700 rounded-xl text-sm border border-yellow-200">
-                        {quizResult
+                        {tr(quizResult
                           ? `Latest quiz score: ${quizResult.percentage}% — you need to pass to unlock certificate`
-                          : 'Quiz is now unlocked. Take the quiz to get your certificate.'}
+                          : 'Quiz is now unlocked. Take the quiz to get your certificate.')}
                       </div>
 
                       <Link
                         href={'/training/' + course.id + '/quiz'}
                         className="block w-full py-3 bg-blue-600 text-white font-semibold rounded-xl text-center hover:bg-blue-700 transition-colors"
                       >
-                        {quizResult ? 'Retake Quiz' : 'Take Quiz'}
+                        {tr(quizResult ? 'Retake Quiz' : 'Take Quiz')}
                       </Link>
                     </>
                   )}
@@ -639,9 +624,7 @@ export default function CourseDetailPage() {
               )}
 
               {enrolled && !course.videoUrl && (
-                <div className="mt-4 px-4 py-2 bg-white text-gray-600 rounded-xl text-sm border border-yellow-200">
-                  Quiz will be available once video-based course completion is enabled
-                </div>
+                <div className="mt-4 px-4 py-2 bg-white text-gray-600 rounded-xl text-sm border border-yellow-200">{tr("Quiz will be available once video-based course completion is enabled")}</div>
               )}
             </div>
           </div>

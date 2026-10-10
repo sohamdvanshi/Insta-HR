@@ -1,4 +1,6 @@
 'use client'
+import { tr, useLocale } from '@/lib/localization'
+
 
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
@@ -21,6 +23,8 @@ interface JobResponse {
 }
 
 export default function EditJobPage() {
+  useLocale()
+
   const router = useRouter()
   const params = useParams()
 
@@ -223,9 +227,7 @@ export default function EditJobPage() {
     return (
       <main className='min-h-screen bg-gray-50 pt-16'>
         <div className='max-w-3xl mx-auto px-6 py-10'>
-          <div className='bg-white rounded-2xl p-10 shadow-sm border border-gray-100 text-center text-gray-500'>
-            Loading job details...
-          </div>
+          <div className='bg-white rounded-2xl p-10 shadow-sm border border-gray-100 text-center text-gray-500'>{tr("Loading job details...")}</div>
         </div>
       </main>
     )
@@ -236,16 +238,14 @@ export default function EditJobPage() {
       <div className='max-w-3xl mx-auto px-6 py-10'>
         <div className='flex items-center justify-between gap-4 mb-8'>
           <div>
-            <h1 className='text-3xl font-bold text-gray-900 mb-2'>Edit Job</h1>
-            <p className='text-gray-500'>Update your job listing details</p>
+            <h1 className='text-3xl font-bold text-gray-900 mb-2'>{tr("Edit Job")}</h1>
+            <p className='text-gray-500'>{tr("Update your job listing details")}</p>
           </div>
           <button
             type='button'
             onClick={() => router.push('/employer')}
             className='px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-100'
-          >
-            Back
-          </button>
+          >{tr("Back")}</button>
         </div>
 
         {message && (
@@ -256,34 +256,34 @@ export default function EditJobPage() {
                 : 'bg-red-50 text-red-700'
             }`}
           >
-            {message}
+            {tr(message)}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className='space-y-6'>
           <div className='bg-white rounded-2xl p-6 shadow-sm border border-gray-100'>
-            <h2 className='font-bold text-gray-900 mb-4'>Basic Information</h2>
+            <h2 className='font-bold text-gray-900 mb-4'>{tr("Basic Information")}</h2>
 
             <div className='space-y-4'>
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>Job Title *</label>
+                <label className='block text-sm font-medium text-gray-700 mb-2'>{tr("Job Title *")}</label>
                 <input
                   name='title'
                   value={formData.title}
                   onChange={handleChange}
-                  placeholder='e.g. Senior React Developer'
+                  placeholder={tr("e.g. Senior React Developer")}
                   required
                   className='w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500 transition-all'
                 />
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>Location *</label>
+                <label className='block text-sm font-medium text-gray-700 mb-2'>{tr("Location *")}</label>
                 <input
                   name='location'
                   value={formData.location}
                   onChange={handleChange}
-                  placeholder='e.g. Mumbai, Remote'
+                  placeholder={tr("e.g. Mumbai, Remote")}
                   required
                   className='w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500 transition-all'
                 />
@@ -291,7 +291,7 @@ export default function EditJobPage() {
 
               <div className='grid grid-cols-2 gap-4'>
                 <div>
-                  <label className='block text-sm font-medium text-gray-700 mb-2'>Industry *</label>
+                  <label className='block text-sm font-medium text-gray-700 mb-2'>{tr("Industry *")}</label>
                   <select
                     name='industry'
                     value={formData.industry}
@@ -299,7 +299,7 @@ export default function EditJobPage() {
                     required
                     className='w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500 transition-all'
                   >
-                    <option value=''>Select Industry</option>
+                    <option value=''>{tr("Select Industry")}</option>
                     {[
                       'IT',
                       'Finance',
@@ -314,14 +314,14 @@ export default function EditJobPage() {
                       'Others'
                     ].map((ind) => (
                       <option key={ind} value={ind}>
-                        {ind}
+                        {tr(ind)}
                       </option>
                     ))}
                   </select>
                 </div>
 
                 <div>
-                  <label className='block text-sm font-medium text-gray-700 mb-2'>Job Type *</label>
+                  <label className='block text-sm font-medium text-gray-700 mb-2'>{tr("Job Type *")}</label>
                   <select
                     name='jobType'
                     value={formData.jobType}
@@ -329,12 +329,12 @@ export default function EditJobPage() {
                     required
                     className='w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500 transition-all'
                   >
-                    <option value=''>Select Type</option>
-                    <option value='full-time'>Full-time</option>
-                    <option value='part-time'>Part-time</option>
-                    <option value='contract'>Contract</option>
-                    <option value='remote'>Remote</option>
-                    <option value='internship'>Internship</option>
+                    <option value=''>{tr("Select Type")}</option>
+                    <option value='full-time'>{tr("Full-time")}</option>
+                    <option value='part-time'>{tr("Part-time")}</option>
+                    <option value='contract'>{tr("Contract")}</option>
+                    <option value='remote'>{tr("Remote")}</option>
+                    <option value='internship'>{tr("Internship")}</option>
                   </select>
                 </div>
               </div>
@@ -342,49 +342,49 @@ export default function EditJobPage() {
           </div>
 
           <div className='bg-white rounded-2xl p-6 shadow-sm border border-gray-100'>
-            <h2 className='font-bold text-gray-900 mb-4'>Experience & Salary</h2>
+            <h2 className='font-bold text-gray-900 mb-4'>{tr("Experience & Salary")}</h2>
             <div className='grid grid-cols-2 gap-4'>
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>Min Experience (years)</label>
+                <label className='block text-sm font-medium text-gray-700 mb-2'>{tr("Min Experience (years)")}</label>
                 <input
                   name='experienceMin'
                   value={formData.experienceMin}
                   onChange={handleChange}
                   type='number'
-                  placeholder='0'
+                  placeholder={tr("0")}
                   className='w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500 transition-all'
                 />
               </div>
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>Max Experience (years)</label>
+                <label className='block text-sm font-medium text-gray-700 mb-2'>{tr("Max Experience (years)")}</label>
                 <input
                   name='experienceMax'
                   value={formData.experienceMax}
                   onChange={handleChange}
                   type='number'
-                  placeholder='5'
+                  placeholder={tr("5")}
                   className='w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500 transition-all'
                 />
               </div>
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>Min Salary (₹/month)</label>
+                <label className='block text-sm font-medium text-gray-700 mb-2'>{tr("Min Salary (₹/month)")}</label>
                 <input
                   name='salaryMin'
                   value={formData.salaryMin}
                   onChange={handleChange}
                   type='number'
-                  placeholder='30000'
+                  placeholder={tr("30000")}
                   className='w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500 transition-all'
                 />
               </div>
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>Max Salary (₹/month)</label>
+                <label className='block text-sm font-medium text-gray-700 mb-2'>{tr("Max Salary (₹/month)")}</label>
                 <input
                   name='salaryMax'
                   value={formData.salaryMax}
                   onChange={handleChange}
                   type='number'
-                  placeholder='80000'
+                  placeholder={tr("80000")}
                   className='w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500 transition-all'
                 />
               </div>
@@ -392,27 +392,25 @@ export default function EditJobPage() {
           </div>
 
           <div className='bg-white rounded-2xl p-6 shadow-sm border border-gray-100'>
-            <h2 className='font-bold text-gray-900 mb-4'>Skills & Description</h2>
+            <h2 className='font-bold text-gray-900 mb-4'>{tr("Skills & Description")}</h2>
             <div className='space-y-4'>
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>
-                  Required Skills (comma separated)
-                </label>
+                <label className='block text-sm font-medium text-gray-700 mb-2'>{tr("Required Skills (comma separated)")}</label>
                 <input
                   name='skills'
                   value={formData.skills}
                   onChange={handleChange}
-                  placeholder='React, Node.js, PostgreSQL'
+                  placeholder={tr("React, Node.js, PostgreSQL")}
                   className='w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500 transition-all'
                 />
               </div>
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>Job Description *</label>
+                <label className='block text-sm font-medium text-gray-700 mb-2'>{tr("Job Description *")}</label>
                 <textarea
                   name='description'
                   value={formData.description}
                   onChange={handleChange}
-                  placeholder='Describe the role, responsibilities and requirements...'
+                  placeholder={tr("Describe the role, responsibilities and requirements...")}
                   required
                   rows={6}
                   className='w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500 transition-all resize-none'
@@ -422,7 +420,7 @@ export default function EditJobPage() {
           </div>
 
           <div className='bg-white rounded-2xl p-6 shadow-sm border border-gray-100'>
-            <h2 className='font-bold text-gray-900 mb-4'>Visibility</h2>
+            <h2 className='font-bold text-gray-900 mb-4'>{tr("Visibility")}</h2>
 
             {canFeatureJobs ? (
               <label className='flex items-start gap-3 rounded-xl border border-yellow-200 bg-yellow-50 p-4 cursor-pointer'>
@@ -434,18 +432,14 @@ export default function EditJobPage() {
                   className='mt-1 h-4 w-4'
                 />
                 <div>
-                  <p className='font-semibold text-yellow-900'>Feature this job</p>
-                  <p className='text-sm text-yellow-800 mt-1'>
-                    Featured jobs appear above regular listings for 30 days.
-                  </p>
+                  <p className='font-semibold text-yellow-900'>{tr("Feature this job")}</p>
+                  <p className='text-sm text-yellow-800 mt-1'>{tr("Featured jobs appear above regular listings for 30 days.")}</p>
                 </div>
               </label>
             ) : (
               <div className='rounded-xl border border-gray-200 bg-gray-50 p-4'>
-                <p className='font-semibold text-gray-900'>Feature this job</p>
-                <p className='text-sm text-gray-600 mt-1'>
-                  Upgrade to Premium or Enterprise to place this job above regular listings.
-                </p>
+                <p className='font-semibold text-gray-900'>{tr("Feature this job")}</p>
+                <p className='text-sm text-gray-600 mt-1'>{tr("Upgrade to Premium or Enterprise to place this job above regular listings.")}</p>
               </div>
             )}
           </div>
@@ -455,7 +449,7 @@ export default function EditJobPage() {
             disabled={loading}
             className='w-full py-4 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 text-lg'
           >
-            {loading ? 'Updating Job...' : '💾 Save Changes'}
+            {tr(loading ? 'Updating Job...' : '💾 Save Changes')}
           </button>
         </form>
       </div>

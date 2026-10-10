@@ -1,10 +1,14 @@
 'use client'
+import { tr, trError, useLocale } from '@/lib/localization'
+
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 export default function MyLearningPage() {
+  useLocale()
+
   const router = useRouter()
   const [courses, setCourses] = useState<any[]>([])
   const [progressMap, setProgressMap] = useState<Record<string, any>>({})
@@ -94,7 +98,7 @@ export default function MyLearningPage() {
   if (loading) {
     return (
       <main className="min-h-screen bg-gray-50 pt-24 flex items-center justify-center">
-        <p className="text-gray-400">Loading your learning dashboard...</p>
+        <p className="text-gray-400">{tr("Loading your learning dashboard...")}</p>
       </main>
     )
   }
@@ -103,31 +107,27 @@ export default function MyLearningPage() {
     <main className="min-h-screen bg-gray-50 pt-16">
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 py-14 px-6">
         <div className="max-w-6xl mx-auto">
-          <Link href="/training" className="text-white/70 hover:text-white text-sm mb-4 inline-block">
-            ← Back to Training
-          </Link>
+          <Link href="/training" className="text-white/70 hover:text-white text-sm mb-4 inline-block">{tr("← Back to Training")}</Link>
 
-          <h1 className="text-4xl font-bold text-white mb-3">My Learning</h1>
-          <p className="text-blue-100 text-lg mb-8">
-            Access your enrolled courses and continue learning from where you left off
-          </p>
+          <h1 className="text-4xl font-bold text-white mb-3">{tr("My Learning")}</h1>
+          <p className="text-blue-100 text-lg mb-8">{tr("Access your enrolled courses and continue learning from where you left off")}</p>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="bg-white/10 rounded-2xl p-5">
               <div className="text-2xl font-bold text-white">{courses.length}</div>
-              <div className="text-blue-100 text-sm">Enrolled Courses</div>
+              <div className="text-blue-100 text-sm">{tr("Enrolled Courses")}</div>
             </div>
             <div className="bg-white/10 rounded-2xl p-5">
               <div className="text-2xl font-bold text-white">{inProgressCount}</div>
-              <div className="text-blue-100 text-sm">In Progress</div>
+              <div className="text-blue-100 text-sm">{tr("In Progress")}</div>
             </div>
             <div className="bg-white/10 rounded-2xl p-5">
               <div className="text-2xl font-bold text-white">{completedCount}</div>
-              <div className="text-blue-100 text-sm">Completed</div>
+              <div className="text-blue-100 text-sm">{tr("Completed")}</div>
             </div>
             <div className="bg-white/10 rounded-2xl p-5">
               <div className="text-2xl font-bold text-white">{notStartedCount}</div>
-              <div className="text-blue-100 text-sm">Not Started</div>
+              <div className="text-blue-100 text-sm">{tr("Not Started")}</div>
             </div>
           </div>
         </div>
@@ -136,29 +136,25 @@ export default function MyLearningPage() {
       <div className="max-w-6xl mx-auto px-6 py-10">
         {error && (
           <div className="bg-red-50 text-red-700 px-4 py-3 rounded-xl mb-6 border border-red-200">
-            {error}
+            {trError(error)}
           </div>
         )}
 
         {courses.length === 0 ? (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center">
             <div className="text-6xl mb-4">📚</div>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">No enrolled courses yet</h2>
-            <p className="text-gray-500 mb-6">Start learning by enrolling in a course from the training library.</p>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">{tr("No enrolled courses yet")}</h2>
+            <p className="text-gray-500 mb-6">{tr("Start learning by enrolling in a course from the training library.")}</p>
             <Link
               href="/training"
               className="inline-block px-6 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors"
-            >
-              Browse Courses
-            </Link>
+            >{tr("Browse Courses")}</Link>
           </div>
         ) : (
           <>
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-900">Your Courses</h2>
-              <Link href="/training" className="text-blue-600 hover:underline text-sm font-medium">
-                Explore More Courses
-              </Link>
+              <h2 className="text-xl font-bold text-gray-900">{tr("Your Courses")}</h2>
+              <Link href="/training" className="text-blue-600 hover:underline text-sm font-medium">{tr("Explore More Courses")}</Link>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -215,9 +211,7 @@ export default function MyLearningPage() {
                           {course.category}
                         </span>
                         {course.type === 'live' && (
-                          <span className="px-2 py-1 bg-red-600 text-white text-xs font-bold rounded-full">
-                            LIVE
-                          </span>
+                          <span className="px-2 py-1 bg-red-600 text-white text-xs font-bold rounded-full">{tr("LIVE")}</span>
                         )}
                       </div>
                     </div>
@@ -225,10 +219,10 @@ export default function MyLearningPage() {
                     <div className="p-6">
                       <div className="flex items-center justify-between gap-3 mb-3">
                         <span className={'px-2.5 py-1 text-xs font-medium rounded-full ' + statusColor}>
-                          {statusText}
+                          {tr(statusText)}
                         </span>
                         <span className="text-xs text-gray-400">
-                          {hasVideo ? `${progressPercent}%` : 'No video'}
+                          {tr(hasVideo ? `${progressPercent}%` : 'No video')}
                         </span>
                       </div>
 
@@ -237,7 +231,7 @@ export default function MyLearningPage() {
 
                       <div className="flex items-center gap-4 text-xs text-gray-400 mb-4">
                         <span>⏱ {course.duration}</span>
-                        <span>👥 {course.enrollmentCount} enrolled</span>
+                        <span>👥 {course.enrollmentCount}{tr(" enrolled")}</span>
                         {course.rating > 0 && <span>⭐ {course.rating}</span>}
                       </div>
 
@@ -250,22 +244,20 @@ export default function MyLearningPage() {
                             />
                           </div>
                           <div className="flex justify-between text-xs text-gray-500">
-                            <span>{progressPercent}% completed</span>
+                            <span>{progressPercent}{tr("% completed")}</span>
                             <span>
-                              {completed
+                              {tr(completed
                                 ? 'Finished'
                                 : progressPercent > 0
                                 ? 'Continue learning'
-                                : 'Start now'}
+                                : 'Start now')}
                             </span>
                           </div>
                         </div>
                       )}
 
                       {!hasVideo && (
-                        <div className="mb-4 p-3 bg-gray-50 rounded-xl text-xs text-gray-500">
-                          Video lessons have not been uploaded yet for this course.
-                        </div>
+                        <div className="mb-4 p-3 bg-gray-50 rounded-xl text-xs text-gray-500">{tr("Video lessons have not been uploaded yet for this course.")}</div>
                       )}
 
                       <div className="flex flex-wrap gap-1 mb-5">
@@ -284,22 +276,20 @@ export default function MyLearningPage() {
                           href={'/training/' + course.id}
                           className="block w-full py-3 bg-blue-600 text-white font-semibold rounded-xl text-center hover:bg-blue-700 transition-colors"
                         >
-                          {hasVideo
+                          {tr(hasVideo
                             ? completed
                               ? 'Review Course'
                               : progressPercent > 0
                               ? 'Continue Learning'
                               : 'Start Course'
-                            : 'View Course'}
+                            : 'View Course')}
                         </Link>
 
                         {completed && (
                           <Link
                             href={'/training/' + course.id + '/certificate'}
                             className="block w-full py-3 bg-green-50 text-green-700 font-semibold rounded-xl text-center hover:bg-green-100 transition-colors border border-green-200"
-                          >
-                            View Certificate
-                          </Link>
+                          >{tr("View Certificate")}</Link>
                         )}
                       </div>
                     </div>

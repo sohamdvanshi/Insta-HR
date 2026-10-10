@@ -1,4 +1,6 @@
 'use client'
+import { tr, useLocale } from '@/lib/localization'
+
 import { useState, useEffect, useRef } from 'react'
 
 const INDUSTRIES = ['IT','Finance','Banking','Healthcare','Manufacturing','Pharma','Civil','Automation','Mechanical','Logistics','Others']
@@ -39,6 +41,8 @@ interface Profile {
 }
 
 export default function ProfilePage() {
+  useLocale()
+
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -184,7 +188,7 @@ export default function ProfilePage() {
 
   if (loading) return (
     <main className="min-h-screen bg-gray-50 pt-24 flex items-center justify-center">
-      <p className="text-gray-400">Loading profile...</p>
+      <p className="text-gray-400">{tr("Loading profile...")}</p>
     </main>
   )
 
@@ -197,25 +201,25 @@ export default function ProfilePage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">My Profile</h1>
-            <p className="text-gray-500">Keep your profile updated to get better job matches</p>
+            <h1 className="text-3xl font-bold text-gray-900">{tr("My Profile")}</h1>
+            <p className="text-gray-500">{tr("Keep your profile updated to get better job matches")}</p>
           </div>
           <button onClick={handleSave} disabled={saving}
             className="px-6 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50">
-            {saving ? 'Saving...' : 'Save Profile'}
+            {tr(saving ? 'Saving...' : 'Save Profile')}
           </button>
         </div>
 
         {message && (
           <div className={"px-4 py-3 rounded-xl mb-6 font-medium " + (isError ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-700')}>
-            {isError ? '✕ ' : '✓ '}{message}
+            {tr(isError ? '✕ ' : '✓ ')}{tr(message)}
           </div>
         )}
 
         {/* Profile Completeness */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="font-bold text-gray-900">Profile Completeness</h2>
+            <h2 className="font-bold text-gray-900">{tr("Profile Completeness")}</h2>
             <span className={"font-bold text-lg " + (pct >= 80 ? 'text-green-600' : pct >= 50 ? 'text-yellow-600' : 'text-red-500')}>{pct}%</span>
           </div>
           <div className="w-full bg-gray-100 rounded-full h-3">
@@ -223,7 +227,7 @@ export default function ProfilePage() {
               style={{ width: pct + '%' }}></div>
           </div>
           <p className="text-xs text-gray-400 mt-2">
-            {pct < 100 ? 'Add ' + (pct < 50 ? 'photo, resume, skills and summary' : 'more details') + ' to reach 100%' : '🎉 Profile complete!'}
+            {tr(pct < 100 ? 'Add ' + (pct < 50 ? 'photo, resume, skills and summary' : 'more details') + ' to reach 100%' : '🎉 Profile complete!')}
           </p>
         </div>
 
@@ -235,10 +239,10 @@ export default function ProfilePage() {
               <div onClick={() => photoRef.current?.click()}
                 className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center cursor-pointer overflow-hidden hover:opacity-90 transition-opacity">
                 {profile?.photoUrl ? (
-                  <img src={profile.photoUrl} alt="Profile" className="w-full h-full object-cover" />
+                  <img src={profile.photoUrl} alt={tr("Profile")} className="w-full h-full object-cover" />
                 ) : (
                   <span className="text-3xl text-white font-bold">
-                    {form.firstName ? form.firstName[0].toUpperCase() : '?'}
+                    {tr(form.firstName ? form.firstName[0].toUpperCase() : '?')}
                   </span>
                 )}
               </div>
@@ -247,15 +251,15 @@ export default function ProfilePage() {
                 <span className="text-white text-xs">📷</span>
               </div>
               <input ref={photoRef} type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
-              {uploadingPhoto && <p className="text-xs text-blue-600 mt-1 text-center">Uploading...</p>}
+              {uploadingPhoto && <p className="text-xs text-blue-600 mt-1 text-center">{tr("Uploading...")}</p>}
             </div>
 
             <div className="flex-1">
-              <p className="font-bold text-gray-900 text-xl">{form.firstName} {form.lastName}</p>
-              <p className="text-gray-500">{form.headline || 'Add your headline'}</p>
-              <p className="text-gray-400 text-sm">{form.currentLocation || 'Add location'}</p>
+              <p className="font-bold text-gray-900 text-xl">{tr(form.firstName)} {tr(form.lastName)}</p>
+              <p className="text-gray-500">{tr(form.headline || 'Add your headline')}</p>
+              <p className="text-gray-400 text-sm">{tr(form.currentLocation || 'Add location')}</p>
               <p className="text-xs text-blue-600 mt-1 cursor-pointer" onClick={() => photoRef.current?.click()}>
-                {profile?.photoUrl ? 'Change photo' : '+ Upload photo'}
+                {tr(profile?.photoUrl ? 'Change photo' : '+ Upload photo')}
               </p>
             </div>
           </div>
@@ -271,7 +275,7 @@ export default function ProfilePage() {
           ].map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)}
               className={"px-4 py-2 rounded-xl font-medium text-sm whitespace-nowrap transition-colors " + (activeTab === tab.id ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:border-blue-400')}>
-              {tab.label}
+              {tr(tab.label)}
               {tab.id === 'education' && education.length > 0 && <span className="ml-1 text-xs">({education.length})</span>}
               {tab.id === 'experience' && experience.length > 0 && <span className="ml-1 text-xs">({experience.length})</span>}
             </button>
@@ -282,58 +286,58 @@ export default function ProfilePage() {
         {activeTab === 'basic' && (
           <div className="space-y-6">
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-              <h2 className="font-bold text-gray-900 mb-4">Personal Information</h2>
+              <h2 className="font-bold text-gray-900 mb-4">{tr("Personal Information")}</h2>
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{tr("First Name")}</label>
                   <input value={form.firstName} onChange={e => setForm({...form, firstName: e.target.value})}
-                    placeholder="John" className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500" />
+                    placeholder={tr("John")} className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{tr("Last Name")}</label>
                   <input value={form.lastName} onChange={e => setForm({...form, lastName: e.target.value})}
-                    placeholder="Doe" className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500" />
+                    placeholder={tr("Doe")} className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500" />
                 </div>
               </div>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Headline</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{tr("Headline")}</label>
                 <input value={form.headline} onChange={e => setForm({...form, headline: e.target.value})}
-                  placeholder="e.g. Senior React Developer at TCS" className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500" />
+                  placeholder={tr("e.g. Senior React Developer at TCS")} className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500" />
               </div>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Summary</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{tr("Summary")}</label>
                 <textarea value={form.summary} onChange={e => setForm({...form, summary: e.target.value})}
-                  rows={4} placeholder="Tell employers about yourself, your experience and what you're looking for..."
+                  rows={4} placeholder={tr("Tell employers about yourself, your experience and what you're looking for...")}
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500 resize-none" />
               </div>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Current Location</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{tr("Current Location")}</label>
                 <input value={form.currentLocation} onChange={e => setForm({...form, currentLocation: e.target.value})}
-                  placeholder="e.g. Mumbai, Maharashtra" className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500" />
+                  placeholder={tr("e.g. Mumbai, Maharashtra")} className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Industry</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{tr("Industry")}</label>
                   <select value={form.industry} onChange={e => setForm({...form, industry: e.target.value})}
                     className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500">
-                    <option value="">Select Industry</option>
-                    {INDUSTRIES.map(i => <option key={i} value={i}>{i}</option>)}
+                    <option value="">{tr("Select Industry")}</option>
+                    {INDUSTRIES.map(i => <option key={i} value={i}>{tr(i)}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Years of Experience</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{tr("Years of Experience")}</label>
                   <input type="number" value={form.yearsOfExperience} onChange={e => setForm({...form, yearsOfExperience: e.target.value})}
-                    placeholder="e.g. 3" min="0" max="50" className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500" />
+                    placeholder={tr("e.g. 3")} min="0" max="50" className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500" />
                 </div>
               </div>
             </div>
 
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-              <h2 className="font-bold text-gray-900 mb-4">Skills & Salary</h2>
+              <h2 className="font-bold text-gray-900 mb-4">{tr("Skills & Salary")}</h2>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Skills (comma separated)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{tr("Skills (comma separated)")}</label>
                 <input value={form.skills} onChange={e => setForm({...form, skills: e.target.value})}
-                  placeholder="React, Node.js, PostgreSQL, Python" className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500" />
+                  placeholder={tr("React, Node.js, PostgreSQL, Python")} className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500" />
                 {form.skills && (
                   <div className="flex flex-wrap gap-2 mt-3">
                     {form.skills.split(',').map(s => s.trim()).filter(Boolean).map(skill => (
@@ -343,9 +347,9 @@ export default function ProfilePage() {
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Expected Salary (per month ₹)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{tr("Expected Salary (per month ₹)")}</label>
                 <input type="number" value={form.expectedSalary} onChange={e => setForm({...form, expectedSalary: e.target.value})}
-                  placeholder="e.g. 80000" min="0" className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500" />
+                  placeholder={tr("e.g. 80000")} min="0" className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500" />
               </div>
             </div>
           </div>
@@ -357,39 +361,37 @@ export default function ProfilePage() {
             {education.map((edu, i) => (
               <div key={i} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold text-gray-900">Education {i + 1}</h3>
-                  <button onClick={() => removeEducation(i)} className="text-red-500 hover:text-red-700 text-sm">Remove</button>
+                  <h3 className="font-bold text-gray-900">{tr("Education ")}{i + 1}</h3>
+                  <button onClick={() => removeEducation(i)} className="text-red-500 hover:text-red-700 text-sm">{tr("Remove")}</button>
                 </div>
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Degree / Course</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{tr("Degree / Course")}</label>
                     <input value={edu.degree} onChange={e => updateEducation(i, 'degree', e.target.value)}
-                      placeholder="e.g. B.Tech Computer Science" className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500" />
+                      placeholder={tr("e.g. B.Tech Computer Science")} className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Institution</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{tr("Institution")}</label>
                     <input value={edu.institution} onChange={e => updateEducation(i, 'institution', e.target.value)}
-                      placeholder="e.g. IIT Bombay" className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500" />
+                      placeholder={tr("e.g. IIT Bombay")} className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500" />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Passing Year</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{tr("Passing Year")}</label>
                     <input value={edu.year} onChange={e => updateEducation(i, 'year', e.target.value)}
-                      placeholder="e.g. 2022" className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500" />
+                      placeholder={tr("e.g. 2022")} className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Grade / CGPA (optional)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{tr("Grade / CGPA (optional)")}</label>
                     <input value={edu.grade} onChange={e => updateEducation(i, 'grade', e.target.value)}
-                      placeholder="e.g. 8.5 CGPA or 85%" className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500" />
+                      placeholder={tr("e.g. 8.5 CGPA or 85%")} className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500" />
                   </div>
                 </div>
               </div>
             ))}
             <button onClick={addEducation}
-              className="w-full py-4 border-2 border-dashed border-gray-300 text-gray-500 rounded-2xl hover:border-blue-400 hover:text-blue-600 transition-colors font-medium">
-              + Add Education
-            </button>
+              className="w-full py-4 border-2 border-dashed border-gray-300 text-gray-500 rounded-2xl hover:border-blue-400 hover:text-blue-600 transition-colors font-medium">{tr("+ Add Education")}</button>
           </div>
         )}
 
@@ -399,57 +401,55 @@ export default function ProfilePage() {
             {experience.map((exp, i) => (
               <div key={i} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold text-gray-900">Experience {i + 1}</h3>
-                  <button onClick={() => removeExperience(i)} className="text-red-500 hover:text-red-700 text-sm">Remove</button>
+                  <h3 className="font-bold text-gray-900">{tr("Experience ")}{i + 1}</h3>
+                  <button onClick={() => removeExperience(i)} className="text-red-500 hover:text-red-700 text-sm">{tr("Remove")}</button>
                 </div>
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Job Title</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{tr("Job Title")}</label>
                     <input value={exp.title} onChange={e => updateExperience(i, 'title', e.target.value)}
-                      placeholder="e.g. Software Engineer" className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500" />
+                      placeholder={tr("e.g. Software Engineer")} className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Company</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{tr("Company")}</label>
                     <input value={exp.company} onChange={e => updateExperience(i, 'company', e.target.value)}
-                      placeholder="e.g. Infosys" className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500" />
+                      placeholder={tr("e.g. Infosys")} className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500" />
                   </div>
                 </div>
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Location (optional)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{tr("Location (optional)")}</label>
                   <input value={exp.location} onChange={e => updateExperience(i, 'location', e.target.value)}
-                    placeholder="e.g. Pune, Maharashtra" className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500" />
+                    placeholder={tr("e.g. Pune, Maharashtra")} className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500" />
                 </div>
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">From (Month/Year)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{tr("From (Month/Year)")}</label>
                     <input value={exp.from} onChange={e => updateExperience(i, 'from', e.target.value)}
-                      placeholder="e.g. Jan 2021" className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500" />
+                      placeholder={tr("e.g. Jan 2021")} className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">To (Month/Year)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{tr("To (Month/Year)")}</label>
                     <input value={exp.to} onChange={e => updateExperience(i, 'to', e.target.value)}
-                      disabled={exp.current} placeholder={exp.current ? 'Present' : 'e.g. Dec 2023'}
+                      disabled={exp.current} placeholder={tr(exp.current ? 'Present' : 'e.g. Dec 2023')}
                       className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500 disabled:bg-gray-50" />
                   </div>
                 </div>
                 <div className="mb-4">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" checked={exp.current} onChange={e => updateExperience(i, 'current', e.target.checked)} className="w-4 h-4" />
-                    <span className="text-sm text-gray-700">I currently work here</span>
+                    <span className="text-sm text-gray-700">{tr("I currently work here")}</span>
                   </label>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Description (optional)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{tr("Description (optional)")}</label>
                   <textarea value={exp.description} onChange={e => updateExperience(i, 'description', e.target.value)}
-                    rows={3} placeholder="Describe your responsibilities and achievements..."
+                    rows={3} placeholder={tr("Describe your responsibilities and achievements...")}
                     className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500 resize-none" />
                 </div>
               </div>
             ))}
             <button onClick={addExperience}
-              className="w-full py-4 border-2 border-dashed border-gray-300 text-gray-500 rounded-2xl hover:border-blue-400 hover:text-blue-600 transition-colors font-medium">
-              + Add Experience
-            </button>
+              className="w-full py-4 border-2 border-dashed border-gray-300 text-gray-500 rounded-2xl hover:border-blue-400 hover:text-blue-600 transition-colors font-medium">{tr("+ Add Experience")}</button>
           </div>
         )}
 
@@ -457,37 +457,35 @@ export default function ProfilePage() {
         {activeTab === 'resume' && (
           <div className="space-y-6">
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-              <h2 className="font-bold text-gray-900 mb-4">Resume</h2>
+              <h2 className="font-bold text-gray-900 mb-4">{tr("Resume")}</h2>
 
               {profile?.resumeUrl && (
                 <div className="flex items-center justify-between bg-green-50 rounded-xl p-4 mb-6 border border-green-200">
                   <div>
-                    <p className="font-medium text-green-700">✓ Resume Uploaded</p>
-                    <p className="text-sm text-gray-500">Stored on Cloudinary • Visible to employers</p>
+                    <p className="font-medium text-green-700">{tr("✓ Resume Uploaded")}</p>
+                    <p className="text-sm text-gray-500">{tr("Stored on Cloudinary • Visible to employers")}</p>
                   </div>
                   <a href={profile.resumeUrl} target="_blank" rel="noreferrer"
-                    className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-xl hover:bg-green-700">
-                    View Resume
-                  </a>
+                    className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-xl hover:bg-green-700">{tr("View Resume")}</a>
                 </div>
               )}
 
               <label className="block cursor-pointer">
                 <div className="border-2 border-dashed border-gray-200 rounded-xl p-10 text-center hover:border-blue-400 transition-colors">
                   <div className="text-4xl mb-3">📄</div>
-                  <p className="text-gray-700 font-medium mb-1">{uploadingResume ? 'Uploading to Cloudinary...' : profile?.resumeUrl ? 'Upload New Resume' : 'Upload Your Resume'}</p>
-                  <p className="text-xs text-gray-400">PDF, DOC, DOCX — Max 10MB</p>
+                  <p className="text-gray-700 font-medium mb-1">{tr(uploadingResume ? 'Uploading to Cloudinary...' : profile?.resumeUrl ? 'Upload New Resume' : 'Upload Your Resume')}</p>
+                  <p className="text-xs text-gray-400">{tr("PDF, DOC, DOCX — Max 10MB")}</p>
                 </div>
                 <input type="file" accept=".pdf,.doc,.docx" onChange={handleResumeUpload} className="hidden" disabled={uploadingResume} />
               </label>
             </div>
 
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-              <h2 className="font-bold text-gray-900 mb-4">Resume Privacy</h2>
+              <h2 className="font-bold text-gray-900 mb-4">{tr("Resume Privacy")}</h2>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-gray-900">Make resume public</p>
-                  <p className="text-sm text-gray-500">Employers can find and view your resume in the resume bank</p>
+                  <p className="font-medium text-gray-900">{tr("Make resume public")}</p>
+                  <p className="text-sm text-gray-500">{tr("Employers can find and view your resume in the resume bank")}</p>
                 </div>
                 <button onClick={() => setForm({...form, isResumePublic: !form.isResumePublic})}
                   className={"w-12 h-6 rounded-full transition-colors relative " + (form.isResumePublic ? 'bg-blue-600' : 'bg-gray-300')}>
@@ -502,7 +500,7 @@ export default function ProfilePage() {
         <div className="mt-8">
           <button onClick={handleSave} disabled={saving}
             className="w-full py-4 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 text-lg">
-            {saving ? 'Saving...' : 'Save All Changes'}
+            {tr(saving ? 'Saving...' : 'Save All Changes')}
           </button>
         </div>
 

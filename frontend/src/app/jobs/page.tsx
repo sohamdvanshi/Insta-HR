@@ -1,4 +1,6 @@
 'use client'
+import { tr, useLocale, locale } from '@/lib/localization'
+
 
 import { Suspense, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
@@ -43,6 +45,8 @@ const SORT_OPTIONS = [
 ]
 
 function JobsPageContent() {
+  useLocale()
+
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -262,8 +266,8 @@ function JobsPageContent() {
     <main className="min-h-screen bg-gray-50 pt-16">
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 py-12 px-6">
         <div className="max-w-4xl mx-auto text-center mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Find Your Perfect Job</h1>
-          <p className="text-blue-100">Browse thousands of jobs across all industries</p>
+          <h1 className="text-3xl font-bold text-white mb-2">{tr("Find Your Perfect Job")}</h1>
+          <p className="text-blue-100">{tr("Browse thousands of jobs across all industries")}</p>
         </div>
 
         <div className="max-w-4xl mx-auto">
@@ -271,14 +275,14 @@ function JobsPageContent() {
             <input
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
-              placeholder="Job title, skills, keywords..."
+              placeholder={tr("Job title, skills, keywords...")}
               className="flex-1 min-w-48 px-4 py-2 border border-gray-200 rounded-xl outline-none focus:border-blue-500 text-sm"
             />
 
             <input
               value={location}
               onChange={(e) => setLocation(e.target.value)}
-              placeholder="Location"
+              placeholder={tr("Location")}
               className="w-40 px-4 py-2 border border-gray-200 rounded-xl outline-none focus:border-blue-500 text-sm"
             />
 
@@ -287,10 +291,10 @@ function JobsPageContent() {
               onChange={(e) => handleIndustryChange(e.target.value)}
               className="w-40 px-4 py-2 border border-gray-200 rounded-xl outline-none focus:border-blue-500 text-sm"
             >
-              <option value="">All Industries</option>
+              <option value="">{tr("All Industries")}</option>
               {INDUSTRIES.map((i) => (
                 <option key={i} value={i}>
-                  {i}
+                  {tr(i)}
                 </option>
               ))}
             </select>
@@ -300,10 +304,10 @@ function JobsPageContent() {
               onChange={(e) => handleJobTypeChange(e.target.value)}
               className="w-36 px-4 py-2 border border-gray-200 rounded-xl outline-none focus:border-blue-500 text-sm"
             >
-              <option value="">All Types</option>
+              <option value="">{tr("All Types")}</option>
               {JOB_TYPES.map((t) => (
                 <option key={t} value={t}>
-                  {t}
+                  {tr(t)}
                 </option>
               ))}
             </select>
@@ -314,8 +318,7 @@ function JobsPageContent() {
               className="w-44 px-4 py-2 border border-gray-200 rounded-xl outline-none focus:border-blue-500 text-sm"
             >
               {SORT_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  Sort: {option.label}
+                <option key={option.value} value={option.value}>{tr("Sort: ")}{tr(option.label)}
                 </option>
               ))}
             </select>
@@ -326,13 +329,11 @@ function JobsPageContent() {
       <div className="max-w-4xl mx-auto px-6 py-8">
         <div className="flex items-center justify-between mb-6">
           <p className="text-gray-500 text-sm">
-            {loading ? 'Searching...' : `${total} jobs found`}
+            {loading ? tr(tr('Searching...')) : tr(tr('Job results', { count: total }))}
           </p>
 
           {activeFilters && (
-            <button onClick={clearFilters} className="text-blue-600 text-sm hover:underline">
-              Clear filters
-            </button>
+            <button onClick={clearFilters} className="text-blue-600 text-sm hover:underline">{tr("Clear filters")}</button>
           )}
         </div>
 
@@ -352,8 +353,8 @@ function JobsPageContent() {
           </div>
         ) : jobs.length === 0 ? (
           <div className="text-center py-20">
-            <p className="text-gray-400 text-lg mb-2">No jobs found</p>
-            <p className="text-gray-300 text-sm">Try different keywords or filters</p>
+            <p className="text-gray-400 text-lg mb-2">{tr("No jobs found")}</p>
+            <p className="text-gray-300 text-sm">{tr("Try different keywords or filters")}</p>
           </div>
         ) : (
           <>
@@ -373,20 +374,18 @@ function JobsPageContent() {
                       <div className="flex items-center gap-2 flex-wrap mb-1">
                         <h3 className="text-lg font-bold text-gray-900">{job.title}</h3>
                         {job.isFeatured && (
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-yellow-100 text-yellow-800 text-xs font-semibold border border-yellow-200">
-                            ⭐ Featured
-                          </span>
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-yellow-100 text-yellow-800 text-xs font-semibold border border-yellow-200">{tr("⭐ Featured")}</span>
                         )}
                       </div>
 
                       <p className="text-gray-500 text-sm">
-                        {job.location} • {job.experienceLevel}
+                        {job.location} • {tr(job.experienceLevel)}
                       </p>
                     </div>
 
                     <span className="text-green-600 font-semibold text-sm whitespace-nowrap">
-                      ₹{Number(job.salaryMin || 0).toLocaleString()} – ₹
-                      {Number(job.salaryMax || 0).toLocaleString()}
+                      ₹{tr(Number(job.salaryMin || 0).toLocaleString(locale()))} – ₹
+                      {tr(Number(job.salaryMax || 0).toLocaleString(locale()))}
                     </span>
                   </div>
 
@@ -395,13 +394,13 @@ function JobsPageContent() {
                   <div className="flex items-center gap-2 flex-wrap">
                     {job.industry && (
                       <span className="px-3 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-full">
-                        {job.industry}
+                        {tr(job.industry)}
                       </span>
                     )}
 
                     {job.jobType && (
                       <span className="px-3 py-1 bg-purple-50 text-purple-700 text-xs font-medium rounded-full">
-                        {job.jobType}
+                        {tr(job.jobType)}
                       </span>
                     )}
 
@@ -410,7 +409,7 @@ function JobsPageContent() {
                         key={i}
                         className="px-3 py-1 bg-gray-100 text-gray-600 text-xs rounded-full"
                       >
-                        {s}
+                        {tr(s)}
                       </span>
                     ))}
                   </div>
@@ -424,7 +423,7 @@ function JobsPageContent() {
                           : 'bg-white text-gray-700 border-gray-200 hover:border-blue-200'
                       }`}
                     >
-                      {savedJobIds.has(job.id) ? 'Saved' : 'Save Job'}
+                      {tr(savedJobIds.has(job.id) ? 'Saved' : 'Save Job')}
                     </button>
                   </div>
                 </Link>
@@ -437,21 +436,16 @@ function JobsPageContent() {
                   onClick={() => goToPage(pageParam - 1)}
                   disabled={pageParam <= 1}
                   className="px-4 py-2 rounded-xl border border-gray-200 bg-white text-sm disabled:opacity-50"
-                >
-                  Previous
-                </button>
+                >{tr("Previous")}</button>
 
-                <span className="text-sm text-gray-600">
-                  Page {pageParam} of {totalPages}
+                <span className="text-sm text-gray-600">{tr("Page ")}{pageParam}{tr(" of ")}{totalPages}
                 </span>
 
                 <button
                   onClick={() => goToPage(pageParam + 1)}
                   disabled={pageParam >= totalPages}
                   className="px-4 py-2 rounded-xl border border-gray-200 bg-white text-sm disabled:opacity-50"
-                >
-                  Next
-                </button>
+                >{tr("Next")}</button>
               </div>
             )}
           </>
@@ -462,5 +456,7 @@ function JobsPageContent() {
 }
 
 export default function JobsPage() {
-  return <Suspense fallback={<main className="pt-24 text-center">Loading...</main>}><JobsPageContent /></Suspense>
+  useLocale()
+
+  return <Suspense fallback={<main className="pt-24 text-center">{tr("Loading...")}</main>}><JobsPageContent /></Suspense>
 }

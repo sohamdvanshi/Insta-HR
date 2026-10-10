@@ -1,4 +1,6 @@
 'use client'
+import { tr, trError, useLocale } from '@/lib/localization'
+
 
 import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
@@ -56,6 +58,8 @@ const getRecipientLabel = (status?: RecipientStatus) => {
 }
 
 export default function EmployerCampaignsPage() {
+  useLocale()
+
   const [token, setToken] = useState('')
   const [jobs, setJobs] = useState<Job[]>([])
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
@@ -284,64 +288,54 @@ export default function EmployerCampaignsPage() {
     <div className="min-h-screen bg-gray-50 px-4 py-8 md:px-8">
       <div className="mx-auto max-w-7xl">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Email Campaigns</h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Send email campaigns to candidates based on their application status.
-          </p>
+          <h1 className="text-3xl font-bold text-gray-900">{tr("Email Campaigns")}</h1>
+          <p className="mt-2 text-sm text-gray-600">{tr("Send email campaigns to candidates based on their application status.")}</p>
         </div>
 
         {!token && (
-          <div className="mb-6 rounded-xl border border-yellow-300 bg-yellow-50 p-4 text-sm text-yellow-800">
-            JWT token not found in localStorage. Please login again as employer.
-          </div>
+          <div className="mb-6 rounded-xl border border-yellow-300 bg-yellow-50 p-4 text-sm text-yellow-800">{tr("JWT token not found in localStorage. Please login again as employer.")}</div>
         )}
 
         {error && (
           <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            {error}
+            {trError(error)}
           </div>
         )}
 
         {success && (
           <div className="mb-6 rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-700">
-            {success}
+            {tr(success)}
           </div>
         )}
 
         <div className="grid gap-8 lg:grid-cols-5">
           <div className="lg:col-span-2">
             <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">Create Campaign</h2>
-              <p className="mt-1 text-sm text-gray-500">
-                Select a job, candidate category, subject and message.
-              </p>
+              <h2 className="text-xl font-semibold text-gray-900">{tr("Create Campaign")}</h2>
+              <p className="mt-1 text-sm text-gray-500">{tr("Select a job, candidate category, subject and message.")}</p>
 
               <form onSubmit={handleCreateCampaign} className="mt-6 space-y-5">
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">
-                    Select Job
-                  </label>
+                  <label className="mb-2 block text-sm font-medium text-gray-700">{tr("Select Job")}</label>
                   <select
                     value={selectedJobId}
                     onChange={(event) => setSelectedJobId(event.target.value)}
                     className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
                   >
-                    <option value="">Choose a job</option>
+                    <option value="">{tr("Choose a job")}</option>
                     {jobs.map((job) => (
                       <option key={job.id} value={job.id}>
-                        {job.title} {job.companyName ? `- ${job.companyName}` : ''}
+                        {job.title} {tr(job.companyName ? `- ${job.companyName}` : '')}
                       </option>
                     ))}
                   </select>
                   {loadingJobs && (
-                    <p className="mt-2 text-xs text-gray-500">Loading jobs...</p>
+                    <p className="mt-2 text-xs text-gray-500">{tr("Loading jobs...")}</p>
                   )}
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">
-                    Send To
-                  </label>
+                  <label className="mb-2 block text-sm font-medium text-gray-700">{tr("Send To")}</label>
                   <select
                     value={recipientStatus}
                     onChange={(event) => setRecipientStatus(event.target.value as RecipientStatus)}
@@ -349,7 +343,7 @@ export default function EmployerCampaignsPage() {
                   >
                     {RECIPIENT_OPTIONS.map((option) => (
                       <option key={option.value} value={option.value}>
-                        {option.label}
+                        {tr(option.label)}
                       </option>
                     ))}
                   </select>
@@ -357,40 +351,35 @@ export default function EmployerCampaignsPage() {
 
                 <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
                   <p className="text-sm font-medium text-gray-700">
-                    {getRecipientLabel(recipientStatus)}
+                    {tr(getRecipientLabel(recipientStatus))}
                   </p>
                   <p className="mt-1 text-2xl font-bold text-gray-900">
-                    {loadingRecipients ? '...' : recipientCount}
+                    {tr(loadingRecipients ? '...' : recipientCount)}
                   </p>
                   {selectedJob && (
-                    <p className="mt-1 text-xs text-gray-500">
-                      For job: {selectedJob.title}
+                    <p className="mt-1 text-xs text-gray-500">{tr("For job: ")}{selectedJob.title}
                     </p>
                   )}
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">
-                    Subject
-                  </label>
+                  <label className="mb-2 block text-sm font-medium text-gray-700">{tr("Subject")}</label>
                   <input
                     type="text"
                     value={subject}
                     onChange={(event) => setSubject(event.target.value)}
-                    placeholder="Enter email subject"
+                    placeholder={tr("Enter email subject")}
                     className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
                   />
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-gray-700">
-                    Message
-                  </label>
+                  <label className="mb-2 block text-sm font-medium text-gray-700">{tr("Message")}</label>
                   <textarea
                     rows={8}
                     value={message}
                     onChange={(event) => setMessage(event.target.value)}
-                    placeholder="Write your campaign message here..."
+                    placeholder={tr("Write your campaign message here...")}
                     className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
                   />
                 </div>
@@ -400,7 +389,7 @@ export default function EmployerCampaignsPage() {
                   disabled={creating || !token}
                   className="w-full rounded-xl bg-black px-4 py-3 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-400"
                 >
-                  {creating ? 'Creating...' : 'Create Campaign'}
+                  {tr(creating ? 'Creating...' : 'Create Campaign')}
                 </button>
               </form>
             </div>
@@ -410,59 +399,51 @@ export default function EmployerCampaignsPage() {
             <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-900">Campaign History</h2>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Review, track, and send your drafted campaigns.
-                  </p>
+                  <h2 className="text-xl font-semibold text-gray-900">{tr("Campaign History")}</h2>
+                  <p className="mt-1 text-sm text-gray-500">{tr("Review, track, and send your drafted campaigns.")}</p>
                 </div>
                 <button
                   type="button"
                   onClick={fetchCampaigns}
                   className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  Refresh
-                </button>
+                >{tr("Refresh")}</button>
               </div>
 
               <div className="mt-6 overflow-x-auto">
                 <table className="min-w-full border-separate border-spacing-y-3">
                   <thead>
                     <tr className="text-left text-xs uppercase tracking-wide text-gray-500">
-                      <th className="px-3 py-2">Job</th>
-                      <th className="px-3 py-2">Send To</th>
-                      <th className="px-3 py-2">Subject</th>
-                      <th className="px-3 py-2">Status</th>
-                      <th className="px-3 py-2">Recipients</th>
-                      <th className="px-3 py-2">Sent</th>
-                      <th className="px-3 py-2">Failed</th>
-                      <th className="px-3 py-2">Action</th>
+                      <th className="px-3 py-2">{tr("Job")}</th>
+                      <th className="px-3 py-2">{tr("Send To")}</th>
+                      <th className="px-3 py-2">{tr("Subject")}</th>
+                      <th className="px-3 py-2">{tr("Status")}</th>
+                      <th className="px-3 py-2">{tr("Recipients")}</th>
+                      <th className="px-3 py-2">{tr("Sent")}</th>
+                      <th className="px-3 py-2">{tr("Failed")}</th>
+                      <th className="px-3 py-2">{tr("Action")}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {loadingCampaigns ? (
                       <tr>
-                        <td colSpan={8} className="px-3 py-8 text-center text-sm text-gray-500">
-                          Loading campaigns...
-                        </td>
+                        <td colSpan={8} className="px-3 py-8 text-center text-sm text-gray-500">{tr("Loading campaigns...")}</td>
                       </tr>
                     ) : campaigns.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="px-3 py-8 text-center text-sm text-gray-500">
-                          No campaigns created yet.
-                        </td>
+                        <td colSpan={8} className="px-3 py-8 text-center text-sm text-gray-500">{tr("No campaigns created yet.")}</td>
                       </tr>
                     ) : (
                       campaigns.map((campaign) => (
                         <tr key={campaign.id} className="rounded-2xl bg-gray-50 text-sm text-gray-800">
                           <td className="rounded-l-2xl px-3 py-4 font-medium">
-                            {campaign.job?.title || '—'}
+                            {campaign.job?.title || tr('—')}
                           </td>
                           <td className="whitespace-nowrap px-3 py-4">
                             <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold capitalize text-blue-700">
-                              {campaign.recipientStatus || 'shortlisted'}
+                              {tr(campaign.recipientStatus || 'shortlisted')}
                             </span>
                           </td>
-                          <td className="px-3 py-4">{campaign.subject}</td>
+                          <td className="px-3 py-4">{tr(campaign.subject)}</td>
                           <td className="px-3 py-4">
                             <span
                               className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
@@ -475,7 +456,7 @@ export default function EmployerCampaignsPage() {
                                       : 'bg-gray-200 text-gray-700'
                               }`}
                             >
-                              {campaign.status}
+                              {tr(campaign.status)}
                             </span>
                           </td>
                           <td className="px-3 py-4">{campaign.recipientCount}</td>
@@ -496,13 +477,13 @@ export default function EmployerCampaignsPage() {
                               }
                               className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-400"
                             >
-                              {sendingCampaignId === campaign.id
+                              {tr(sendingCampaignId === campaign.id
                                 ? 'Sending...'
                                 : campaign.status === 'sent'
                                   ? 'Sent'
                                   : campaign.recipientCount === 0
                                     ? 'No Recipients'
-                                    : 'Send Now'}
+                                    : 'Send Now')}
                             </button>
                           </td>
                         </tr>

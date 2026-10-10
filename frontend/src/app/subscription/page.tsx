@@ -1,4 +1,6 @@
 'use client'
+import { tr, trError, useLocale, locale } from '@/lib/localization'
+
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
@@ -9,9 +11,11 @@ declare global {
 }
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1').replace(/\/$/, '')
-type Plan = { id: string; name: string; price: number; priceLabel: string; period: string; color: string; badge: string; features: string[]; missing: string[]; cta: string; disabled: boolean }
+type Plan = { id: string; name: string; price: number; durationDays: number; priceLabel: string; period: string; color: string; badge: string; features: string[]; missing: string[]; cta: string; disabled: boolean }
 
 export default function SubscriptionPage() {
+  useLocale()
+
   const router = useRouter()
   const [plans, setPlans] = useState<Plan[]>([])
   const [planError, setPlanError] = useState('')
@@ -32,7 +36,7 @@ export default function SubscriptionPage() {
       const result = await response.json()
       if (!response.ok || !result.success) throw new Error(result.message || 'Unable to load plans')
       const colors: Record<string, string> = { free: 'gray', standard: 'blue', premium: 'purple', enterprise: 'gold' }
-      setPlans(result.data.map((plan: any) => ({ id: plan.id, name: plan.name, price: plan.amountPaise / 100, priceLabel: `₹${(plan.amountPaise / 100).toLocaleString('en-IN')}`, period: plan.id === 'free' ? 'forever' : `/${plan.durationDays} days`, color: colors[plan.id] || 'blue', badge: '', features: plan.features, missing: [], cta: `Get ${plan.name}`, disabled: plan.id === 'free' })))
+      setPlans(result.data.map((plan: any) => ({ id: plan.id, name: plan.name, price: plan.amountPaise / 100, durationDays: plan.durationDays, priceLabel: `₹${(plan.amountPaise / 100).toLocaleString(locale())}`, period: plan.id === 'free' ? 'forever' : `/${plan.durationDays} days`, color: colors[plan.id] || 'blue', badge: '', features: plan.features, missing: [], cta: `Get ${plan.name}`, disabled: plan.id === 'free' })))
     }).catch(error => setPlanError(error.message)).finally(() => setPlansLoading(false))
     fetchSubscription()
   }, [])
@@ -111,7 +115,7 @@ export default function SubscriptionPage() {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
-        alert(data.message || 'Failed to download invoice')
+        alert(tr(data.message || 'Failed to download invoice'))
         return
       }
 
@@ -126,7 +130,7 @@ export default function SubscriptionPage() {
       window.URL.revokeObjectURL(url)
     } catch (error) {
       console.error('Invoice download failed', error)
-      alert('Something went wrong while downloading invoice')
+      alert(tr('Something went wrong while downloading invoice'))
     }
   }
 
@@ -138,7 +142,7 @@ export default function SubscriptionPage() {
     }
 
     if (user?.role !== 'employer') {
-      alert('Only employers can subscribe to plans. Please login as an employer.')
+      alert(tr('Only employers can subscribe to plans. Please login as an employer.'))
       return
     }
 
@@ -157,7 +161,7 @@ export default function SubscriptionPage() {
       const orderData = await orderRes.json()
 
       if (!orderData.success) {
-        alert(orderData.message || 'Failed to create order')
+        alert(tr(orderData.message || 'Failed to create order'))
         setProcessingPlan(null)
         return
       }
@@ -198,13 +202,13 @@ export default function SubscriptionPage() {
               setUser(verifyData.user)
             }
 
-            alert('🎉 Payment successful! Your ' + planId + ' plan is now active.')
+            alert(tr('🎉 Payment successful! Your ' + planId + ' plan is now active.'))
 
             if (showHistory) {
               fetchHistory()
             }
           } else {
-            alert('Payment verification failed. Please contact support.')
+            alert(tr('Payment verification failed. Please contact support.'))
           }
 
           setProcessingPlan(null)
@@ -223,7 +227,7 @@ export default function SubscriptionPage() {
       rzp.open()
     } catch (err) {
       console.error(err)
-      alert('Something went wrong. Please try again.')
+      alert(tr('Something went wrong. Please try again.'))
       setProcessingPlan(null)
     }
   }
@@ -258,29 +262,26 @@ export default function SubscriptionPage() {
   return (
     <main className="min-h-screen bg-gray-50 pt-16">
       <div className="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-16 px-6 text-center">
-        <h1 className="text-4xl font-bold mb-3">Simple, Transparent Pricing</h1>
-        <p className="text-blue-100 text-lg max-w-xl mx-auto">
-          Choose the plan that fits your hiring needs. Upgrade or cancel anytime.
-        </p>
+        <h1 className="text-4xl font-bold mb-3">{tr("Simple, Transparent Pricing")}</h1>
+        <p className="text-blue-100 text-lg max-w-xl mx-auto">{tr("Choose the plan that fits your hiring needs. Upgrade or cancel anytime.")}</p>
 
         {!loading && currentPlan !== 'free' && expiresAt && (
           <div className="mt-4 inline-block bg-white/20 rounded-xl px-6 py-3">
-            <p className="text-sm">
-              Active Plan: <span className="font-bold capitalize">{currentPlan}</span> — Expires{' '}
-              {new Date(expiresAt).toLocaleDateString('en-IN', {
+            <p className="text-sm">{tr("Active Plan: ")}<span className="font-bold capitalize">{tr(currentPlan)}</span>{tr(" — Expires")}{tr(' ')}
+              {tr(new Date(expiresAt).toLocaleDateString(locale(), {
                 day: 'numeric',
                 month: 'long',
                 year: 'numeric'
-              })}
+              }))}
             </p>
           </div>
         )}
       </div>
 
       <div className="max-w-6xl mx-auto px-6 py-12">
-        {plansLoading && <p role="status" className="mb-4">Loading current plans…</p>}
-        {planError && <p role="alert" className="mb-4 rounded-lg bg-red-50 p-4 text-red-800">{planError}</p>}
-        {!plansLoading && !planError && !plans.length && <p>No plans are available right now.</p>}
+        {plansLoading && <p role="status" className="mb-4">{tr("Loading current plans…")}</p>}
+        {planError && <p role="alert" className="mb-4 rounded-lg bg-red-50 p-4 text-red-800">{trError(planError)}</p>}
+        {!plansLoading && !planError && !plans.length && <p>{tr("No plans are available right now.")}</p>}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {plans.map(plan => {
             const colors = colorMap[plan.color]
@@ -297,22 +298,20 @@ export default function SubscriptionPage() {
                 }
               >
                 {isCurrent && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full">
-                    ✓ Active Plan
-                  </div>
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full">{tr("✓ Active Plan")}</div>
                 )}
 
                 {plan.badge && !isCurrent && (
                   <div className={'absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-bold px-3 py-1 rounded-full ' + colors.badge}>
-                    {plan.badge}
+                    {tr(plan.badge)}
                   </div>
                 )}
 
                 <div className={'rounded-xl p-4 mb-4 ' + colors.header}>
-                  <h3 className="font-bold text-gray-900 text-lg">{plan.name}</h3>
+                  <h3 className="font-bold text-gray-900 text-lg">{tr(plan.name)}</h3>
                   <div className="flex items-end gap-1 mt-1">
-                    <span className="text-3xl font-bold text-gray-900">{plan.priceLabel}</span>
-                    <span className="text-gray-500 text-sm mb-1">{plan.period}</span>
+                    <span className="text-3xl font-bold text-gray-900">{new Intl.NumberFormat(locale(), { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(plan.price)}</span>
+                    <span className="text-gray-500 text-sm mb-1">{plan.id === 'free' ? tr('forever') : tr('/{{value0}} days', { value0: new Intl.NumberFormat(locale()).format(plan.durationDays) })}</span>
                   </div>
                 </div>
 
@@ -320,13 +319,13 @@ export default function SubscriptionPage() {
                   {plan.features.map(f => (
                     <li key={f} className="flex items-start gap-2 text-sm text-gray-700">
                       <span className="text-green-500 mt-0.5 flex-shrink-0">✓</span>
-                      {f}
+                      {tr(f)}
                     </li>
                   ))}
                   {plan.missing.map(f => (
                     <li key={f} className="flex items-start gap-2 text-sm text-gray-400 line-through">
                       <span className="mt-0.5 flex-shrink-0">✗</span>
-                      {f}
+                      {tr(f)}
                     </li>
                   ))}
                 </ul>
@@ -346,10 +345,8 @@ export default function SubscriptionPage() {
                 >
                   {isProcessing ? (
                     <span className="flex items-center justify-center gap-2">
-                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                      Processing...
-                    </span>
-                  ) : isCurrent ? '✓ Current Plan' : plan.cta}
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>{tr("Processing...")}</span>
+                  ) : isCurrent ? tr('✓ Current Plan') : tr('Get {{value0}}', { value0: tr(plan.name) })}
                 </button>
               </div>
             )
@@ -358,18 +355,18 @@ export default function SubscriptionPage() {
 
         <div className="mt-16 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="p-6 border-b border-gray-100">
-            <h2 className="text-xl font-bold text-gray-900">Full Feature Comparison</h2>
+            <h2 className="text-xl font-bold text-gray-900">{tr("Full Feature Comparison")}</h2>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50">
-                  <th className="text-left p-4 font-semibold text-gray-700">Feature</th>
-                  <th className="text-center p-4 font-semibold text-gray-500">Free</th>
-                  <th className="text-center p-4 font-semibold text-blue-600">Standard</th>
-                  <th className="text-center p-4 font-semibold text-purple-600">Premium</th>
-                  <th className="text-center p-4 font-semibold text-yellow-600">Enterprise</th>
+                  <th className="text-left p-4 font-semibold text-gray-700">{tr("Feature")}</th>
+                  <th className="text-center p-4 font-semibold text-gray-500">{tr("Free")}</th>
+                  <th className="text-center p-4 font-semibold text-blue-600">{tr("Standard")}</th>
+                  <th className="text-center p-4 font-semibold text-purple-600">{tr("Premium")}</th>
+                  <th className="text-center p-4 font-semibold text-yellow-600">{tr("Enterprise")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -384,11 +381,11 @@ export default function SubscriptionPage() {
                   ['API Access', '✗', '✗', '✗', '✓'],
                 ].map(([feature, ...vals]) => (
                   <tr key={feature} className="hover:bg-gray-50">
-                    <td className="p-4 text-gray-700 font-medium">{feature}</td>
+                    <td className="p-4 text-gray-700 font-medium">{tr(feature)}</td>
                     {vals.map((val, i) => (
                       <td key={i} className="p-4 text-center">
                         <span className={val === '✗' ? 'text-gray-300 text-lg' : val === '✓' ? 'text-green-500 text-lg font-bold' : 'text-gray-700'}>
-                          {val}
+                          {tr(val)}
                         </span>
                       </td>
                     ))}
@@ -405,34 +402,31 @@ export default function SubscriptionPage() {
               onClick={showHistory ? () => setShowHistory(false) : fetchHistory}
               className="text-blue-600 font-medium hover:underline text-sm"
             >
-              {showHistory ? 'Hide' : 'View'} Payment History
-            </button>
+              {tr(showHistory ? 'Hide' : 'View')}{tr(" Payment History")}</button>
 
             {showHistory && (
               <div className="mt-4 bg-white rounded-2xl border border-gray-100 overflow-hidden text-left">
-                <div className="p-4 border-b border-gray-100 font-bold text-gray-900">
-                  Payment History
-                </div>
+                <div className="p-4 border-b border-gray-100 font-bold text-gray-900">{tr("Payment History")}</div>
 
                 {paymentHistory.length === 0 ? (
-                  <p className="p-6 text-gray-400 text-center">No payments yet</p>
+                  <p className="p-6 text-gray-400 text-center">{tr("No payments yet")}</p>
                 ) : (
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="p-4 text-left text-gray-600">Plan</th>
-                        <th className="p-4 text-left text-gray-600">Amount</th>
-                        <th className="p-4 text-left text-gray-600">Status</th>
-                        <th className="p-4 text-left text-gray-600">Date</th>
-                        <th className="p-4 text-left text-gray-600">Expires</th>
-                        <th className="p-4 text-left text-gray-600">Invoice</th>
+                        <th className="p-4 text-left text-gray-600">{tr("Plan")}</th>
+                        <th className="p-4 text-left text-gray-600">{tr("Amount")}</th>
+                        <th className="p-4 text-left text-gray-600">{tr("Status")}</th>
+                        <th className="p-4 text-left text-gray-600">{tr("Date")}</th>
+                        <th className="p-4 text-left text-gray-600">{tr("Expires")}</th>
+                        <th className="p-4 text-left text-gray-600">{tr("Invoice")}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                       {paymentHistory.map((p: any) => (
                         <tr key={p.id}>
                           <td className="p-4 capitalize font-medium text-gray-900">{p.planName}</td>
-                          <td className="p-4 text-gray-700">₹{p.amount.toLocaleString()}</td>
+                          <td className="p-4 text-gray-700">₹{p.amount.toLocaleString(locale())}</td>
                           <td className="p-4">
                             <span
                               className={
@@ -446,19 +440,17 @@ export default function SubscriptionPage() {
                             </span>
                           </td>
                           <td className="p-4 text-gray-500">
-                            {new Date(p.createdAt).toLocaleDateString('en-IN')}
+                            {tr(new Date(p.createdAt).toLocaleDateString(locale()))}
                           </td>
                           <td className="p-4 text-gray-500">
-                            {new Date(p.expiresAt).toLocaleDateString('en-IN')}
+                            {tr(new Date(p.expiresAt).toLocaleDateString(locale()))}
                           </td>
                           <td className="p-4">
                             {p.status === 'success' ? (
                               <button
                                 onClick={() => downloadInvoice(p.id)}
                                 className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-xs font-semibold hover:bg-blue-100 transition-colors"
-                              >
-                                Download PDF
-                              </button>
+                              >{tr("Download PDF")}</button>
                             ) : (
                               <span className="text-gray-300 text-xs">—</span>
                             )}
@@ -476,20 +468,20 @@ export default function SubscriptionPage() {
         <div className="mt-12 grid grid-cols-3 gap-6 text-center">
           <div className="bg-white rounded-xl p-4 border border-gray-100">
             <div className="text-2xl mb-2">🔒</div>
-            <p className="font-semibold text-gray-900 text-sm">Secure Payments</p>
-            <p className="text-xs text-gray-500">256-bit SSL encryption via Razorpay</p>
+            <p className="font-semibold text-gray-900 text-sm">{tr("Secure Payments")}</p>
+            <p className="text-xs text-gray-500">{tr("256-bit SSL encryption via Razorpay")}</p>
           </div>
 
           <div className="bg-white rounded-xl p-4 border border-gray-100">
             <div className="text-2xl mb-2">🔄</div>
-            <p className="font-semibold text-gray-900 text-sm">Cancel Anytime</p>
-            <p className="text-xs text-gray-500">No long-term contracts or commitments</p>
+            <p className="font-semibold text-gray-900 text-sm">{tr("Cancel Anytime")}</p>
+            <p className="text-xs text-gray-500">{tr("No long-term contracts or commitments")}</p>
           </div>
 
           <div className="bg-white rounded-xl p-4 border border-gray-100">
             <div className="text-2xl mb-2">📞</div>
-            <p className="font-semibold text-gray-900 text-sm">24/7 Support</p>
-            <p className="text-xs text-gray-500">Our team is always here to help</p>
+            <p className="font-semibold text-gray-900 text-sm">{tr("24/7 Support")}</p>
+            <p className="text-xs text-gray-500">{tr("Our team is always here to help")}</p>
           </div>
         </div>
       </div>

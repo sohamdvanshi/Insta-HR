@@ -1,10 +1,14 @@
 'use client'
+import { tr, trError, useLocale } from '@/lib/localization'
+
 import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { loginDestination } from '@/lib/trainingApi'
 
 function VerifyOTPPageContent() {
+  useLocale()
+
   const router = useRouter()
   const searchParams = useSearchParams()
   const userId = searchParams.get('userId')
@@ -76,24 +80,21 @@ function VerifyOTPPageContent() {
           <div className='w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4'>
             <span className='text-3xl'>📧</span>
           </div>
-          <h1 className='text-2xl font-bold text-gray-900'>Verify Your Email</h1>
-          <p className='text-gray-500 mt-2'>
-            We sent a 6-digit OTP to<br />
-            <span className='font-semibold text-blue-600'>{email || 'your email'}</span>
+          <h1 className='text-2xl font-bold text-gray-900'>{tr("Verify Your Email")}</h1>
+          <p className='text-gray-500 mt-2'>{tr("We sent a 6-digit OTP to")}<br />
+            <span className='font-semibold text-blue-600'>{tr(email || 'your email')}</span>
           </p>
         </div>
 
         {/* OTP Input */}
         <div className='mb-6'>
-          <label className='block text-sm font-medium text-gray-700 mb-2'>
-            Enter OTP
-          </label>
+          <label className='block text-sm font-medium text-gray-700 mb-2'>{tr("Enter OTP")}</label>
           <input
             type='text'
             maxLength={6}
             value={otp}
             onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-            placeholder='000000'
+            placeholder={tr("000000")}
             className='w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-center text-2xl font-bold tracking-widest focus:border-blue-500 focus:outline-none'
           />
         </div>
@@ -101,12 +102,12 @@ function VerifyOTPPageContent() {
         {/* Error / Success */}
         {error && (
           <div className='mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm'>
-            {error}
+            {trError(error)}
           </div>
         )}
         {success && (
           <div className='mb-4 p-3 bg-green-50 border border-green-200 rounded-xl text-green-600 text-sm'>
-            {success}
+            {tr(success)}
           </div>
         )}
 
@@ -116,27 +117,22 @@ function VerifyOTPPageContent() {
           disabled={loading}
           className='w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-all disabled:opacity-50'
         >
-          {loading ? 'Verifying...' : 'Verify Email'}
+          {tr(loading ? 'Verifying...' : 'Verify Email')}
         </button>
 
         {/* Resend */}
         <div className='text-center mt-4'>
-          <p className='text-gray-500 text-sm'>
-            Didn't receive the OTP?{' '}
+          <p className='text-gray-500 text-sm'>{tr("Didn't receive the OTP?")}{tr(' ')}
             <button
               onClick={handleResend}
               className='text-blue-600 font-semibold hover:underline'
-            >
-              Resend OTP
-            </button>
+            >{tr("Resend OTP")}</button>
           </p>
         </div>
 
         {/* Back to login */}
         <div className='text-center mt-4'>
-          <Link href='/auth/login' className='text-gray-400 text-sm hover:text-gray-600'>
-            ← Back to Login
-          </Link>
+          <Link href='/auth/login' className='text-gray-400 text-sm hover:text-gray-600'>{tr("← Back to Login")}</Link>
         </div>
 
       </div>
@@ -145,5 +141,7 @@ function VerifyOTPPageContent() {
 }
 
 export default function VerifyOTPPage() {
-  return <Suspense fallback={<main className="pt-24 text-center">Loading...</main>}><VerifyOTPPageContent /></Suspense>
+  useLocale()
+
+  return <Suspense fallback={<main className="pt-24 text-center">{tr("Loading...")}</main>}><VerifyOTPPageContent /></Suspense>
 }

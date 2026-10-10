@@ -1,4 +1,6 @@
 'use client'
+import { tr, trError, useLocale } from '@/lib/localization'
+
 
 import { Suspense, useMemo, useState } from 'react'
 import Link from 'next/link'
@@ -31,6 +33,8 @@ const redirectByRole = (user?: VerifyResponse['user']) => {
 }
 
 function VerifyOtpPageContent() {
+  useLocale()
+
   const searchParams = useSearchParams()
 
   const userId = useMemo(() => searchParams.get('userId') || '', [searchParams])
@@ -135,44 +139,39 @@ function VerifyOtpPageContent() {
         <div className='bg-white rounded-2xl shadow-xl p-8'>
           <div className='flex items-center justify-center gap-2 mb-8'>
             <div className='w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg' />
-            <span className='text-xl font-bold text-gray-900'>InstaHire</span>
+            <span className='text-xl font-bold text-gray-900'>{tr("InstaHire")}</span>
           </div>
 
-          <h1 className='text-2xl font-bold text-gray-900 text-center mb-2'>
-            Verify your account
-          </h1>
+          <h1 className='text-2xl font-bold text-gray-900 text-center mb-2'>{tr("Verify your account")}</h1>
 
-          <p className='text-gray-500 text-center mb-8 text-sm'>
-            Enter the 6-digit OTP sent to{' '}
+          <p className='text-gray-500 text-center mb-8 text-sm'>{tr("Enter the 6-digit OTP sent to")}{tr(' ')}
             <span className='font-medium text-gray-700 break-all'>
-              {email || 'your email'}
+              {tr(email || 'your email')}
             </span>
           </p>
 
           {error && (
             <div className='bg-red-50 text-red-600 px-4 py-3 rounded-xl mb-4 text-sm'>
-              {error}
+              {trError(error)}
             </div>
           )}
 
           {success && (
             <div className='bg-green-50 text-green-700 px-4 py-3 rounded-xl mb-4 text-sm'>
-              {success}
+              {tr(success)}
             </div>
           )}
 
           <form onSubmit={handleVerify} className='space-y-5'>
             <div>
-              <label className='block text-sm font-medium text-gray-700 mb-2'>
-                OTP Code
-              </label>
+              <label className='block text-sm font-medium text-gray-700 mb-2'>{tr("OTP Code")}</label>
               <input
                 type='text'
                 inputMode='numeric'
                 maxLength={6}
                 value={otp}
                 onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                placeholder='Enter 6-digit OTP'
+                placeholder={tr("Enter 6-digit OTP")}
                 required
                 className='w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all text-center tracking-[0.4em] text-lg'
               />
@@ -183,7 +182,7 @@ function VerifyOtpPageContent() {
               disabled={loading}
               className='w-full py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50'
             >
-              {loading ? 'Verifying...' : 'Verify OTP'}
+              {tr(loading ? 'Verifying...' : 'Verify OTP')}
             </button>
           </form>
 
@@ -194,15 +193,12 @@ function VerifyOtpPageContent() {
               disabled={resendLoading}
               className='w-full py-3 border border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-50'
             >
-              {resendLoading ? 'Resending...' : 'Resend OTP'}
+              {tr(resendLoading ? 'Resending...' : 'Resend OTP')}
             </button>
           </div>
 
-          <p className='text-center text-gray-500 text-sm mt-6'>
-            Back to{' '}
-            <Link href='/login' className='text-blue-600 font-medium hover:underline'>
-              Login
-            </Link>
+          <p className='text-center text-gray-500 text-sm mt-6'>{tr("Back to")}{tr(' ')}
+            <Link href='/login' className='text-blue-600 font-medium hover:underline'>{tr("Login")}</Link>
           </p>
         </div>
       </div>
@@ -211,5 +207,7 @@ function VerifyOtpPageContent() {
 }
 
 export default function VerifyOtpPage() {
-  return <Suspense fallback={<main className="pt-24 text-center">Loading...</main>}><VerifyOtpPageContent /></Suspense>
+  useLocale()
+
+  return <Suspense fallback={<main className="pt-24 text-center">{tr("Loading...")}</main>}><VerifyOtpPageContent /></Suspense>
 }

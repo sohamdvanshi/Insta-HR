@@ -1,4 +1,6 @@
 'use client';
+import { tr, trError, useLocale, locale } from '@/lib/localization'
+
 
 import { useEffect, useState } from 'react';
 
@@ -38,6 +40,8 @@ type DeploymentOption = {
 };
 
 export default function EmployerAttendancePage() {
+  useLocale()
+
   const [token, setToken] = useState('');
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [deployments, setDeployments] = useState<DeploymentOption[]>([]);
@@ -153,7 +157,7 @@ export default function EmployerAttendancePage() {
 
   const formatDisplayDateTime = (value?: string | null) => {
     if (!value) return '—';
-    return new Date(value).toLocaleString();
+    return new Date(value).toLocaleString(locale());
   };
 
   const getDeploymentLabel = (deployment: DeploymentOption) => {
@@ -266,46 +270,38 @@ export default function EmployerAttendancePage() {
     <div className="min-h-screen bg-gray-50 px-4 py-8 md:px-8">
       <div className="mx-auto max-w-7xl">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Attendance Tracking</h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Mark daily attendance for deployed candidates and maintain payroll-ready records.
-          </p>
+          <h1 className="text-3xl font-bold text-gray-900">{tr("Attendance Tracking")}</h1>
+          <p className="mt-2 text-sm text-gray-600">{tr("Mark daily attendance for deployed candidates and maintain payroll-ready records.")}</p>
         </div>
 
         {!token && (
-          <div className="mb-6 rounded-xl border border-yellow-300 bg-yellow-50 p-4 text-sm text-yellow-800">
-            JWT token not found in localStorage. Please login again as employer.
-          </div>
+          <div className="mb-6 rounded-xl border border-yellow-300 bg-yellow-50 p-4 text-sm text-yellow-800">{tr("JWT token not found in localStorage. Please login again as employer.")}</div>
         )}
 
         {error && (
           <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            {error}
+            {trError(error)}
           </div>
         )}
 
         {success && (
           <div className="mb-6 rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-700">
-            {success}
+            {tr(success)}
           </div>
         )}
 
         <div className="grid gap-8 lg:grid-cols-5">
           <div className="lg:col-span-2">
             <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">Mark Attendance</h2>
-              <p className="mt-1 text-sm text-gray-500">
-                Create a daily attendance record for a deployed candidate.
-              </p>
+              <h2 className="text-xl font-semibold text-gray-900">{tr("Mark Attendance")}</h2>
+              <p className="mt-1 text-sm text-gray-500">{tr("Create a daily attendance record for a deployed candidate.")}</p>
 
               <form onSubmit={handleSubmit} className="mt-6 space-y-4">
                 <div>
                   <label
                     htmlFor="deploymentId"
                     className="mb-2 block text-sm font-medium text-gray-700"
-                  >
-                    Deployment
-                  </label>
+                  >{tr("Deployment")}</label>
                   <select
                     id="deploymentId"
                     name="deploymentId"
@@ -313,10 +309,10 @@ export default function EmployerAttendancePage() {
                     onChange={handleChange}
                     className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
                   >
-                    <option value="">Select Deployment</option>
+                    <option value="">{tr("Select Deployment")}</option>
                     {deployments.map(deployment => (
                       <option key={deployment.id} value={deployment.id}>
-                        {getDeploymentLabel(deployment)}
+                        {tr(getDeploymentLabel(deployment))}
                       </option>
                     ))}
                   </select>
@@ -326,9 +322,7 @@ export default function EmployerAttendancePage() {
                   <label
                     htmlFor="attendanceDate"
                     className="mb-2 block text-sm font-medium text-gray-700"
-                  >
-                    Attendance Date
-                  </label>
+                  >{tr("Attendance Date")}</label>
                   <input
                     id="attendanceDate"
                     name="attendanceDate"
@@ -343,9 +337,7 @@ export default function EmployerAttendancePage() {
                   <label
                     htmlFor="checkInTime"
                     className="mb-2 block text-sm font-medium text-gray-700"
-                  >
-                    Check-In Time
-                  </label>
+                  >{tr("Check-In Time")}</label>
                   <input
                     id="checkInTime"
                     name="checkInTime"
@@ -360,9 +352,7 @@ export default function EmployerAttendancePage() {
                   <label
                     htmlFor="checkOutTime"
                     className="mb-2 block text-sm font-medium text-gray-700"
-                  >
-                    Check-Out Time
-                  </label>
+                  >{tr("Check-Out Time")}</label>
                   <input
                     id="checkOutTime"
                     name="checkOutTime"
@@ -377,9 +367,7 @@ export default function EmployerAttendancePage() {
                   <label
                     htmlFor="status"
                     className="mb-2 block text-sm font-medium text-gray-700"
-                  >
-                    Attendance Status
-                  </label>
+                  >{tr("Attendance Status")}</label>
                   <select
                     id="status"
                     name="status"
@@ -387,11 +375,11 @@ export default function EmployerAttendancePage() {
                     onChange={handleChange}
                     className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
                   >
-                    <option value="present">Present</option>
-                    <option value="absent">Absent</option>
-                    <option value="half_day">Half Day</option>
-                    <option value="leave">Leave</option>
-                    <option value="late">Late</option>
+                    <option value="present">{tr("Present")}</option>
+                    <option value="absent">{tr("Absent")}</option>
+                    <option value="half_day">{tr("Half Day")}</option>
+                    <option value="leave">{tr("Leave")}</option>
+                    <option value="late">{tr("Late")}</option>
                   </select>
                 </div>
 
@@ -399,16 +387,14 @@ export default function EmployerAttendancePage() {
                   <label
                     htmlFor="remarks"
                     className="mb-2 block text-sm font-medium text-gray-700"
-                  >
-                    Remarks
-                  </label>
+                  >{tr("Remarks")}</label>
                   <textarea
                     id="remarks"
                     name="remarks"
                     value={form.remarks}
                     onChange={handleChange}
                     rows={4}
-                    placeholder="Optional notes"
+                    placeholder={tr("Optional notes")}
                     className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
                   />
                 </div>
@@ -418,7 +404,7 @@ export default function EmployerAttendancePage() {
                   disabled={submitting || !token}
                   className="w-full rounded-xl bg-black px-4 py-3 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-400"
                 >
-                  {submitting ? 'Submitting...' : 'Mark Attendance'}
+                  {tr(submitting ? 'Submitting...' : 'Mark Attendance')}
                 </button>
               </form>
             </div>
@@ -428,47 +414,39 @@ export default function EmployerAttendancePage() {
             <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-900">Attendance History</h2>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Review and update attendance records for deployed staff.
-                  </p>
+                  <h2 className="text-xl font-semibold text-gray-900">{tr("Attendance History")}</h2>
+                  <p className="mt-1 text-sm text-gray-500">{tr("Review and update attendance records for deployed staff.")}</p>
                 </div>
 
                 <button
                   onClick={fetchAttendance}
                   className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  Refresh
-                </button>
+                >{tr("Refresh")}</button>
               </div>
 
               <div className="mt-6 overflow-x-auto">
                 <table className="min-w-full border-separate border-spacing-y-3">
                   <thead>
                     <tr className="text-left text-xs uppercase tracking-wide text-gray-500">
-                      <th className="px-3 py-2">Candidate</th>
-                      <th className="px-3 py-2">Deployment</th>
-                      <th className="px-3 py-2">Date</th>
-                      <th className="px-3 py-2">Check-In</th>
-                      <th className="px-3 py-2">Check-Out</th>
-                      <th className="px-3 py-2">Status</th>
-                      <th className="px-3 py-2">Remarks</th>
-                      <th className="px-3 py-2">Action</th>
+                      <th className="px-3 py-2">{tr("Candidate")}</th>
+                      <th className="px-3 py-2">{tr("Deployment")}</th>
+                      <th className="px-3 py-2">{tr("Date")}</th>
+                      <th className="px-3 py-2">{tr("Check-In")}</th>
+                      <th className="px-3 py-2">{tr("Check-Out")}</th>
+                      <th className="px-3 py-2">{tr("Status")}</th>
+                      <th className="px-3 py-2">{tr("Remarks")}</th>
+                      <th className="px-3 py-2">{tr("Action")}</th>
                     </tr>
                   </thead>
 
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan={8} className="px-3 py-8 text-center text-sm text-gray-500">
-                          Loading attendance...
-                        </td>
+                        <td colSpan={8} className="px-3 py-8 text-center text-sm text-gray-500">{tr("Loading attendance...")}</td>
                       </tr>
                     ) : attendance.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="px-3 py-8 text-center text-sm text-gray-500">
-                          No attendance records found.
-                        </td>
+                        <td colSpan={8} className="px-3 py-8 text-center text-sm text-gray-500">{tr("No attendance records found.")}</td>
                       </tr>
                     ) : (
                       attendance.map(record => {
@@ -477,12 +455,12 @@ export default function EmployerAttendancePage() {
                         return (
                           <tr key={record.id} className="rounded-2xl bg-gray-50 text-sm text-gray-800">
                             <td className="rounded-l-2xl px-3 py-4 font-medium">
-                              {record.candidate?.email || record.deployment?.candidate?.email || '—'}
+                              {tr(record.candidate?.email || record.deployment?.candidate?.email || '—')}
                             </td>
                             <td className="px-3 py-4">
-                              {record.deployment?.siteName || '—'}
+                              {tr(record.deployment?.siteName || '—')}
                             </td>
-                            <td className="px-3 py-4">{record.attendanceDate}</td>
+                            <td className="px-3 py-4">{tr(record.attendanceDate)}</td>
 
                             <td className="px-3 py-4">
                               {isEditing ? (
@@ -493,9 +471,9 @@ export default function EmployerAttendancePage() {
                                   onChange={handleEditChange}
                                   className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs outline-none focus:border-black"
                                 />
-                              ) : (
+                              ) : tr((
                                 formatDisplayDateTime(record.checkInTime)
-                              )}
+                              ))}
                             </td>
 
                             <td className="px-3 py-4">
@@ -507,9 +485,9 @@ export default function EmployerAttendancePage() {
                                   onChange={handleEditChange}
                                   className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs outline-none focus:border-black"
                                 />
-                              ) : (
+                              ) : tr((
                                 formatDisplayDateTime(record.checkOutTime)
-                              )}
+                              ))}
                             </td>
 
                             <td className="px-3 py-4">
@@ -520,15 +498,15 @@ export default function EmployerAttendancePage() {
                                   onChange={handleEditChange}
                                   className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-medium outline-none focus:border-black"
                                 >
-                                  <option value="present">Present</option>
-                                  <option value="absent">Absent</option>
-                                  <option value="half_day">Half Day</option>
-                                  <option value="leave">Leave</option>
-                                  <option value="late">Late</option>
+                                  <option value="present">{tr("Present")}</option>
+                                  <option value="absent">{tr("Absent")}</option>
+                                  <option value="half_day">{tr("Half Day")}</option>
+                                  <option value="leave">{tr("Leave")}</option>
+                                  <option value="late">{tr("Late")}</option>
                                 </select>
                               ) : (
                                 <span className="font-medium capitalize">
-                                  {record.status.replace('_', ' ')}
+                                  {tr(record.status.replace('_', ' '))}
                                 </span>
                               )}
                             </td>
@@ -542,9 +520,9 @@ export default function EmployerAttendancePage() {
                                   rows={2}
                                   className="w-40 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs outline-none focus:border-black"
                                 />
-                              ) : (
+                              ) : tr((
                                 record.remarks || '—'
-                              )}
+                              ))}
                             </td>
 
                             <td className="rounded-r-2xl px-3 py-4">
@@ -553,23 +531,17 @@ export default function EmployerAttendancePage() {
                                   <button
                                     onClick={() => handleUpdateAttendance(record)}
                                     className="rounded-lg bg-black px-3 py-2 text-xs font-semibold text-white hover:bg-gray-800"
-                                  >
-                                    Save
-                                  </button>
+                                  >{tr("Save")}</button>
                                   <button
                                     onClick={cancelEdit}
                                     className="rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-white"
-                                  >
-                                    Cancel
-                                  </button>
+                                  >{tr("Cancel")}</button>
                                 </div>
                               ) : (
                                 <button
                                   onClick={() => startEdit(record)}
                                   className="rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-white"
-                                >
-                                  Edit
-                                </button>
+                                >{tr("Edit")}</button>
                               )}
                             </td>
                           </tr>

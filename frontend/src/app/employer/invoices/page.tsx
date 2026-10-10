@@ -1,4 +1,6 @@
 'use client';
+import { tr, trError, useLocale } from '@/lib/localization'
+
 
 import { useEffect, useState } from 'react';
 
@@ -55,6 +57,8 @@ type DeploymentOption = {
 };
 
 export default function EmployerInvoicesPage() {
+  useLocale()
+
   const [token, setToken] = useState('');
   const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
   const [deployments, setDeployments] = useState<DeploymentOption[]>([]);
@@ -265,46 +269,38 @@ export default function EmployerInvoicesPage() {
     <div className="min-h-screen bg-gray-50 px-4 py-8 md:px-8">
       <div className="mx-auto max-w-7xl">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Invoice & Billing</h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Generate deployment-linked invoices and track billing lifecycle status.
-          </p>
+          <h1 className="text-3xl font-bold text-gray-900">{tr("Invoice & Billing")}</h1>
+          <p className="mt-2 text-sm text-gray-600">{tr("Generate deployment-linked invoices and track billing lifecycle status.")}</p>
         </div>
 
         {!token && (
-          <div className="mb-6 rounded-xl border border-yellow-300 bg-yellow-50 p-4 text-sm text-yellow-800">
-            JWT token not found in localStorage. Please login again as employer.
-          </div>
+          <div className="mb-6 rounded-xl border border-yellow-300 bg-yellow-50 p-4 text-sm text-yellow-800">{tr("JWT token not found in localStorage. Please login again as employer.")}</div>
         )}
 
         {error && (
           <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            {error}
+            {trError(error)}
           </div>
         )}
 
         {success && (
           <div className="mb-6 rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-700">
-            {success}
+            {tr(success)}
           </div>
         )}
 
         <div className="grid gap-8 lg:grid-cols-5">
           <div className="lg:col-span-2">
             <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">Create Invoice</h2>
-              <p className="mt-1 text-sm text-gray-500">
-                Create a billing record for a deployment and billing period.
-              </p>
+              <h2 className="text-xl font-semibold text-gray-900">{tr("Create Invoice")}</h2>
+              <p className="mt-1 text-sm text-gray-500">{tr("Create a billing record for a deployment and billing period.")}</p>
 
               <form onSubmit={handleSubmit} className="mt-6 space-y-4">
                 <div>
                   <label
                     htmlFor="deploymentId"
                     className="mb-2 block text-sm font-medium text-gray-700"
-                  >
-                    Deployment
-                  </label>
+                  >{tr("Deployment")}</label>
                   <select
                     id="deploymentId"
                     name="deploymentId"
@@ -312,10 +308,10 @@ export default function EmployerInvoicesPage() {
                     onChange={handleChange}
                     className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
                   >
-                    <option value="">Select Deployment</option>
+                    <option value="">{tr("Select Deployment")}</option>
                     {deployments.map(deployment => (
                       <option key={deployment.id} value={deployment.id}>
-                        {getDeploymentLabel(deployment)}
+                        {tr(getDeploymentLabel(deployment))}
                       </option>
                     ))}
                   </select>
@@ -325,9 +321,7 @@ export default function EmployerInvoicesPage() {
                   <label
                     htmlFor="payrollId"
                     className="mb-2 block text-sm font-medium text-gray-700"
-                  >
-                    Linked Payroll
-                  </label>
+                  >{tr("Linked Payroll")}</label>
                   <select
                     id="payrollId"
                     name="payrollId"
@@ -335,10 +329,10 @@ export default function EmployerInvoicesPage() {
                     onChange={handleChange}
                     className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
                   >
-                    <option value="">Select Payroll (Optional)</option>
+                    <option value="">{tr("Select Payroll (Optional)")}</option>
                     {filteredPayrolls.map(payroll => (
                       <option key={payroll.id} value={payroll.id}>
-                        {payroll.payPeriodMonth} - {formatCurrency(payroll.netSalary)}
+                        {tr(payroll.payPeriodMonth)} - {tr(formatCurrency(payroll.netSalary))}
                       </option>
                     ))}
                   </select>
@@ -348,9 +342,7 @@ export default function EmployerInvoicesPage() {
                   <label
                     htmlFor="billingPeriodMonth"
                     className="mb-2 block text-sm font-medium text-gray-700"
-                  >
-                    Billing Month
-                  </label>
+                  >{tr("Billing Month")}</label>
                   <input
                     id="billingPeriodMonth"
                     name="billingPeriodMonth"
@@ -365,9 +357,7 @@ export default function EmployerInvoicesPage() {
                   <label
                     htmlFor="invoiceDate"
                     className="mb-2 block text-sm font-medium text-gray-700"
-                  >
-                    Invoice Date
-                  </label>
+                  >{tr("Invoice Date")}</label>
                   <input
                     id="invoiceDate"
                     name="invoiceDate"
@@ -382,9 +372,7 @@ export default function EmployerInvoicesPage() {
                   <label
                     htmlFor="dueDate"
                     className="mb-2 block text-sm font-medium text-gray-700"
-                  >
-                    Due Date
-                  </label>
+                  >{tr("Due Date")}</label>
                   <input
                     id="dueDate"
                     name="dueDate"
@@ -399,9 +387,7 @@ export default function EmployerInvoicesPage() {
                   <label
                     htmlFor="subtotal"
                     className="mb-2 block text-sm font-medium text-gray-700"
-                  >
-                    Subtotal
-                  </label>
+                  >{tr("Subtotal")}</label>
                   <input
                     id="subtotal"
                     name="subtotal"
@@ -409,7 +395,7 @@ export default function EmployerInvoicesPage() {
                     step="0.01"
                     value={form.subtotal}
                     onChange={handleChange}
-                    placeholder="Enter subtotal"
+                    placeholder={tr("Enter subtotal")}
                     className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
                   />
                 </div>
@@ -418,9 +404,7 @@ export default function EmployerInvoicesPage() {
                   <label
                     htmlFor="taxAmount"
                     className="mb-2 block text-sm font-medium text-gray-700"
-                  >
-                    Tax Amount
-                  </label>
+                  >{tr("Tax Amount")}</label>
                   <input
                     id="taxAmount"
                     name="taxAmount"
@@ -428,7 +412,7 @@ export default function EmployerInvoicesPage() {
                     step="0.01"
                     value={form.taxAmount}
                     onChange={handleChange}
-                    placeholder="Enter tax amount"
+                    placeholder={tr("Enter tax amount")}
                     className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
                   />
                 </div>
@@ -437,9 +421,7 @@ export default function EmployerInvoicesPage() {
                   <label
                     htmlFor="paymentTerms"
                     className="mb-2 block text-sm font-medium text-gray-700"
-                  >
-                    Payment Terms
-                  </label>
+                  >{tr("Payment Terms")}</label>
                   <select
                     id="paymentTerms"
                     name="paymentTerms"
@@ -447,19 +429,17 @@ export default function EmployerInvoicesPage() {
                     onChange={handleChange}
                     className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
                   >
-                    <option value="Net 7">Net 7</option>
-                    <option value="Net 15">Net 15</option>
-                    <option value="Net 30">Net 30</option>
-                    <option value="Net 45">Net 45</option>
+                    <option value="Net 7">{tr("Net 7")}</option>
+                    <option value="Net 15">{tr("Net 15")}</option>
+                    <option value="Net 30">{tr("Net 30")}</option>
+                    <option value="Net 45">{tr("Net 45")}</option>
                   </select>
                 </div>
 
                 <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
-                  <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                    Total Preview
-                  </p>
+                  <p className="text-xs font-medium uppercase tracking-wide text-gray-500">{tr("Total Preview")}</p>
                   <p className="mt-1 text-lg font-semibold text-gray-900">
-                    {formatCurrency(totalPreview)}
+                    {tr(formatCurrency(totalPreview))}
                   </p>
                 </div>
 
@@ -467,16 +447,14 @@ export default function EmployerInvoicesPage() {
                   <label
                     htmlFor="remarks"
                     className="mb-2 block text-sm font-medium text-gray-700"
-                  >
-                    Remarks
-                  </label>
+                  >{tr("Remarks")}</label>
                   <textarea
                     id="remarks"
                     name="remarks"
                     value={form.remarks}
                     onChange={handleChange}
                     rows={4}
-                    placeholder="Optional invoice notes"
+                    placeholder={tr("Optional invoice notes")}
                     className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
                   />
                 </div>
@@ -486,7 +464,7 @@ export default function EmployerInvoicesPage() {
                   disabled={submitting || !token}
                   className="w-full rounded-xl bg-black px-4 py-3 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-400"
                 >
-                  {submitting ? 'Submitting...' : 'Create Invoice'}
+                  {tr(submitting ? 'Submitting...' : 'Create Invoice')}
                 </button>
               </form>
             </div>
@@ -496,67 +474,59 @@ export default function EmployerInvoicesPage() {
             <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-900">Invoice History</h2>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Track invoice values, dates, linked payroll, and payment status.
-                  </p>
+                  <h2 className="text-xl font-semibold text-gray-900">{tr("Invoice History")}</h2>
+                  <p className="mt-1 text-sm text-gray-500">{tr("Track invoice values, dates, linked payroll, and payment status.")}</p>
                 </div>
 
                 <button
                   onClick={fetchInvoices}
                   className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  Refresh
-                </button>
+                >{tr("Refresh")}</button>
               </div>
 
               <div className="mt-6 overflow-x-auto">
                 <table className="min-w-full border-separate border-spacing-y-3">
                   <thead>
                     <tr className="text-left text-xs uppercase tracking-wide text-gray-500">
-                      <th className="px-3 py-2">Invoice No.</th>
-                      <th className="px-3 py-2">Candidate</th>
-                      <th className="px-3 py-2">Deployment</th>
-                      <th className="px-3 py-2">Billing Month</th>
-                      <th className="px-3 py-2">Invoice Date</th>
-                      <th className="px-3 py-2">Due Date</th>
-                      <th className="px-3 py-2">Total</th>
-                      <th className="px-3 py-2">Payroll</th>
-                      <th className="px-3 py-2">Status</th>
+                      <th className="px-3 py-2">{tr("Invoice No.")}</th>
+                      <th className="px-3 py-2">{tr("Candidate")}</th>
+                      <th className="px-3 py-2">{tr("Deployment")}</th>
+                      <th className="px-3 py-2">{tr("Billing Month")}</th>
+                      <th className="px-3 py-2">{tr("Invoice Date")}</th>
+                      <th className="px-3 py-2">{tr("Due Date")}</th>
+                      <th className="px-3 py-2">{tr("Total")}</th>
+                      <th className="px-3 py-2">{tr("Payroll")}</th>
+                      <th className="px-3 py-2">{tr("Status")}</th>
                     </tr>
                   </thead>
 
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan={9} className="px-3 py-8 text-center text-sm text-gray-500">
-                          Loading invoices...
-                        </td>
+                        <td colSpan={9} className="px-3 py-8 text-center text-sm text-gray-500">{tr("Loading invoices...")}</td>
                       </tr>
                     ) : invoices.length === 0 ? (
                       <tr>
-                        <td colSpan={9} className="px-3 py-8 text-center text-sm text-gray-500">
-                          No invoices found.
-                        </td>
+                        <td colSpan={9} className="px-3 py-8 text-center text-sm text-gray-500">{tr("No invoices found.")}</td>
                       </tr>
                     ) : (
                       invoices.map(item => (
                         <tr key={item.id} className="rounded-2xl bg-gray-50 text-sm text-gray-800">
-                          <td className="rounded-l-2xl px-3 py-4 font-medium">{item.invoiceNumber}</td>
+                          <td className="rounded-l-2xl px-3 py-4 font-medium">{tr(item.invoiceNumber)}</td>
                           <td className="px-3 py-4">
-                            {item.candidate?.email || item.deployment?.candidate?.email || '—'}
+                            {tr(item.candidate?.email || item.deployment?.candidate?.email || '—')}
                           </td>
-                          <td className="px-3 py-4">{item.deployment?.siteName || '—'}</td>
-                          <td className="px-3 py-4">{item.billingPeriodMonth}</td>
-                          <td className="px-3 py-4">{item.invoiceDate}</td>
-                          <td className="px-3 py-4">{item.dueDate}</td>
+                          <td className="px-3 py-4">{tr(item.deployment?.siteName || '—')}</td>
+                          <td className="px-3 py-4">{tr(item.billingPeriodMonth)}</td>
+                          <td className="px-3 py-4">{tr(item.invoiceDate)}</td>
+                          <td className="px-3 py-4">{tr(item.dueDate)}</td>
                           <td className="px-3 py-4 font-semibold">
-                            {formatCurrency(item.totalAmount)}
+                            {tr(formatCurrency(item.totalAmount))}
                           </td>
                           <td className="px-3 py-4">
-                            {item.payroll
+                            {tr(item.payroll
                               ? `${item.payroll.payPeriodMonth} - ${formatCurrency(item.payroll.netSalary)}`
-                              : '—'}
+                              : '—')}
                           </td>
                           <td className="rounded-r-2xl px-3 py-4">
                             <select
@@ -564,11 +534,11 @@ export default function EmployerInvoicesPage() {
                               onChange={e => handleStatusChange(item.id, e.target.value)}
                               className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-medium outline-none focus:border-black"
                             >
-                              <option value="draft">Draft</option>
-                              <option value="sent">Sent</option>
-                              <option value="paid">Paid</option>
-                              <option value="overdue">Overdue</option>
-                              <option value="cancelled">Cancelled</option>
+                              <option value="draft">{tr("Draft")}</option>
+                              <option value="sent">{tr("Sent")}</option>
+                              <option value="paid">{tr("Paid")}</option>
+                              <option value="overdue">{tr("Overdue")}</option>
+                              <option value="cancelled">{tr("Cancelled")}</option>
                             </select>
                           </td>
                         </tr>

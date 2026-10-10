@@ -1,4 +1,6 @@
 'use client'
+import { tr, trError, useLocale, locale } from '@/lib/localization'
+
 
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -49,7 +51,7 @@ const formatDate = (value?: string | null) => {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return 'Not available'
 
-  return date.toLocaleDateString('en-IN', {
+  return date.toLocaleDateString(locale(), {
     day: '2-digit',
     month: 'short',
     year: 'numeric'
@@ -88,6 +90,8 @@ const statusClass = (status: string) => {
 }
 
 export default function EmployerReferralsPage() {
+  useLocale()
+
   const [records, setRecords] = useState<ReferralRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -174,15 +178,9 @@ export default function EmployerReferralsPage() {
             <Link
               href="/employer"
               className="text-sm font-medium text-blue-600 hover:underline"
-            >
-              ← Back to Dashboard
-            </Link>
-            <h1 className="mt-3 text-3xl font-bold text-gray-900">
-              Referral Tracking
-            </h1>
-            <p className="mt-2 text-gray-600">
-              Track referred candidates who applied to your job postings.
-            </p>
+            >{tr("← Back to Dashboard")}</Link>
+            <h1 className="mt-3 text-3xl font-bold text-gray-900">{tr("Referral Tracking")}</h1>
+            <p className="mt-2 text-gray-600">{tr("Track referred candidates who applied to your job postings.")}</p>
           </div>
 
           <button
@@ -191,13 +189,13 @@ export default function EmployerReferralsPage() {
             disabled={loading}
             className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
           >
-            {loading ? 'Refreshing...' : 'Refresh'}
+            {tr(loading ? 'Refreshing...' : 'Refresh')}
           </button>
         </div>
 
         {error && (
           <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-4 text-sm text-red-700">
-            {error}
+            {trError(error)}
           </div>
         )}
 
@@ -211,38 +209,28 @@ export default function EmployerReferralsPage() {
 
         <section className="mt-8 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
           <div className="border-b border-gray-100 px-6 py-5">
-            <h2 className="text-xl font-semibold text-gray-900">
-              Referred applications
-            </h2>
-            <p className="mt-1 text-sm text-gray-500">
-              Referrals connected to your jobs are shown here.
-            </p>
+            <h2 className="text-xl font-semibold text-gray-900">{tr("Referred applications")}</h2>
+            <p className="mt-1 text-sm text-gray-500">{tr("Referrals connected to your jobs are shown here.")}</p>
           </div>
 
           {loading ? (
-            <div className="px-6 py-12 text-center text-gray-500">
-              Loading referral tracking...
-            </div>
+            <div className="px-6 py-12 text-center text-gray-500">{tr("Loading referral tracking...")}</div>
           ) : records.length === 0 ? (
             <div className="px-6 py-12 text-center">
-              <p className="font-medium text-gray-700">
-                No referred applications found.
-              </p>
-              <p className="mt-2 text-sm text-gray-500">
-                Referred candidates will appear here after they apply to your jobs.
-              </p>
+              <p className="font-medium text-gray-700">{tr("No referred applications found.")}</p>
+              <p className="mt-2 text-sm text-gray-500">{tr("Referred candidates will appear here after they apply to your jobs.")}</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-100 text-left">
                 <thead className="bg-gray-50">
                   <tr>
-                    <TableHeading>Candidate</TableHeading>
-                    <TableHeading>Referrer</TableHeading>
-                    <TableHeading>Job</TableHeading>
-                    <TableHeading>Application</TableHeading>
-                    <TableHeading>Reward</TableHeading>
-                    <TableHeading>Applied</TableHeading>
+                    <TableHeading>{tr("Candidate")}</TableHeading>
+                    <TableHeading>{tr("Referrer")}</TableHeading>
+                    <TableHeading>{tr("Job")}</TableHeading>
+                    <TableHeading>{tr("Application")}</TableHeading>
+                    <TableHeading>{tr("Reward")}</TableHeading>
+                    <TableHeading>{tr("Applied")}</TableHeading>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 bg-white">
@@ -254,7 +242,7 @@ export default function EmployerReferralsPage() {
                       <tr key={item.id} className="hover:bg-gray-50">
                         <td className="whitespace-nowrap px-6 py-5">
                           <p className="font-medium text-gray-900">
-                            {item.candidate?.name || item.candidate?.email || 'Unknown candidate'}
+                            {tr(item.candidate?.name || item.candidate?.email || 'Unknown candidate')}
                           </p>
                           {item.candidate?.name && item.candidate?.email && (
                             <p className="mt-1 text-xs text-gray-500">
@@ -265,39 +253,38 @@ export default function EmployerReferralsPage() {
 
                         <td className="whitespace-nowrap px-6 py-5">
                           <p className="text-sm text-gray-800">
-                            {item.referrer?.name || item.referrer?.email || 'Unknown referrer'}
+                            {tr(item.referrer?.name || item.referrer?.email || 'Unknown referrer')}
                           </p>
                           <p className="mt-1 text-xs text-gray-500">
-                            {item.referralCode || item.referrer?.referralCode || 'No code'}
+                            {tr(item.referralCode || item.referrer?.referralCode || 'No code')}
                           </p>
                         </td>
 
                         <td className="px-6 py-5 text-sm text-gray-700">
-                          {item.job?.title || 'Unknown job'}
+                          {item.job?.title || tr('Unknown job')}
                         </td>
 
                         <td className="whitespace-nowrap px-6 py-5">
                           <span className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${statusClass(applicationStatus)}`}>
-                            {applicationStatus}
+                            {tr(applicationStatus)}
                           </span>
                         </td>
 
                         <td className="whitespace-nowrap px-6 py-5">
                           <p className="font-semibold text-gray-900">
-                            {Number(item.rewardPoints || 0)} points
-                          </p>
+                            {Number(item.rewardPoints || 0)}{tr(" points")}</p>
                           <span className={`mt-2 inline-block rounded-full px-3 py-1 text-xs font-semibold ${statusClass(rewardStatus)}`}>
-                            {rewardStatus}
+                            {tr(rewardStatus)}
                           </span>
                           {item.rewardedAt && (
                             <p className="mt-1 text-xs text-gray-500">
-                              {formatDate(item.rewardedAt)}
+                              {tr(formatDate(item.rewardedAt))}
                             </p>
                           )}
                         </td>
 
                         <td className="whitespace-nowrap px-6 py-5 text-sm text-gray-600">
-                          {formatDate(item.createdAt)}
+                          {tr(formatDate(item.createdAt))}
                         </td>
                       </tr>
                     )
@@ -313,15 +300,19 @@ export default function EmployerReferralsPage() {
 }
 
 function SummaryCard({ label, value }: { label: string; value: number }) {
+  useLocale()
+
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-      <p className="text-sm text-gray-500">{label}</p>
+      <p className="text-sm text-gray-500">{tr(label)}</p>
       <p className="mt-2 text-3xl font-bold text-blue-600">{value}</p>
     </div>
   )
 }
 
 function TableHeading({ children }: { children: React.ReactNode }) {
+  useLocale()
+
   return (
     <th className="whitespace-nowrap px-6 py-4 text-xs font-semibold uppercase tracking-wide text-gray-500">
       {children}

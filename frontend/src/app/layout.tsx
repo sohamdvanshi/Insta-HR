@@ -1,11 +1,9 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
 import './globals.css'
 import Navbar from '@/components/Navbar'
 import Providers from './providers'
 import I18nProvider from '@/components/i18n-provider'
 
-const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'InstaHire - AI Powered Job Portal',
@@ -19,7 +17,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body>
         <I18nProvider>
           <Providers>
             <Navbar />

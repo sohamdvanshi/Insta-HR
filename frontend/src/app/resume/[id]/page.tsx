@@ -1,4 +1,6 @@
 'use client'
+import { tr, trError, useLocale } from '@/lib/localization'
+
 
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -62,6 +64,8 @@ const emptyResume = {
 }
 
 export default function ResumeEditorPage() {
+  useLocale()
+
   const params = useParams()
   const router = useRouter()
   const resumeId = params?.id as string
@@ -742,7 +746,7 @@ export default function ResumeEditorPage() {
   if (loading) {
     return (
       <main className="min-h-screen bg-gray-100 pt-24 flex items-center justify-center">
-        <p className="text-gray-400">Loading resume editor...</p>
+        <p className="text-gray-400">{tr("Loading resume editor...")}</p>
       </main>
     )
   }
@@ -752,13 +756,9 @@ export default function ResumeEditorPage() {
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-8">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
           <div>
-            <Link href="/resume" className="text-sm text-blue-600 hover:underline">
-              ← Back to My Resumes
-            </Link>
-            <h1 className="text-2xl font-bold text-gray-900 mt-2">Resume Builder</h1>
-            <p className="text-gray-500">
-              Build, tailor, optimize, and download an ATS-friendly resume PDF
-            </p>
+            <Link href="/resume" className="text-sm text-blue-600 hover:underline">{tr("← Back to My Resumes")}</Link>
+            <h1 className="text-2xl font-bold text-gray-900 mt-2">{tr("Resume Builder")}</h1>
+            <p className="text-gray-500">{tr("Build, tailor, optimize, and download an ATS-friendly resume PDF")}</p>
           </div>
 
           <div className="flex flex-wrap gap-3">
@@ -767,7 +767,7 @@ export default function ResumeEditorPage() {
               disabled={generatingSummary}
               className="px-5 py-3 bg-violet-600 text-white font-semibold rounded-xl hover:bg-violet-700 disabled:opacity-50"
             >
-              {generatingSummary ? 'Generating...' : 'AI Summary + Save'}
+              {tr(generatingSummary ? 'Generating...' : 'AI Summary + Save')}
             </button>
 
             <button
@@ -775,56 +775,52 @@ export default function ResumeEditorPage() {
               disabled={saving}
               className="px-5 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 disabled:opacity-50"
             >
-              {saving ? 'Saving...' : 'Save Resume'}
+              {tr(saving ? 'Saving...' : 'Save Resume')}
             </button>
             
             <button
               onClick={handleCopyShareLink}
               disabled={!resumeId || resume.visibility !== 'link'}
               className="px-5 py-3 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 disabled:opacity-50"
-            >
-              Copy Share Link
-            </button>
+            >{tr("Copy Share Link")}</button>
 
             <button
               onClick={handleDownloadPdf}
               disabled={downloading}
               className="px-5 py-3 bg-gray-900 text-white font-semibold rounded-xl hover:bg-black disabled:opacity-50"
             >
-              {downloading ? 'Downloading...' : 'Download PDF'}
+              {tr(downloading ? 'Downloading...' : 'Download PDF')}
             </button>
           </div>
         </div>
 
         {message ? (
           <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl mb-6">
-            {message}
+            {tr(message)}
           </div>
         ) : null}
 
         {error ? (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6">
-            {error}
+            {trError(error)}
           </div>
         ) : null}
 
         <div className="grid grid-cols-1 xl:grid-cols-[430px_minmax(0,1fr)] gap-6 items-start">
           <div className="space-y-6 no-pdf">
             <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-              <h2 className="text-lg font-bold text-gray-900 mb-4">Resume Settings</h2>
+              <h2 className="text-lg font-bold text-gray-900 mb-4">{tr("Resume Settings")}</h2>
 
               <div className="space-y-4">
                 <input
                   value={resume.title}
                   onChange={(e) => setResume({ ...resume, title: e.target.value })}
-                  placeholder="Resume title"
+                  placeholder={tr("Resume title")}
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500"
                 />
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Template
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{tr("Template")}</label>
 
                   <div className="grid grid-cols-2 gap-3">
                     <button
@@ -836,9 +832,7 @@ export default function ResumeEditorPage() {
                           ? 'border-blue-600 bg-blue-50 text-blue-700'
                           : 'border-gray-200 text-gray-700')
                       }
-                    >
-                      Classic
-                    </button>
+                    >{tr("Classic")}</button>
 
                     <button
                       type="button"
@@ -849,49 +843,40 @@ export default function ResumeEditorPage() {
                           ? 'border-blue-600 bg-blue-50 text-blue-700'
                           : 'border-gray-200 text-gray-700')
                       }
-                    >
-                      Modern
-                    </button>
+                    >{tr("Modern")}</button>
                   </div>
 
-                  <p className="text-xs text-amber-600 mt-2">
-                    Classic is recommended for ATS and job applications. Modern is better
-                    for visual sharing or portfolio-style use.
-                  </p>
+                  <p className="text-xs text-amber-600 mt-2">{tr("Classic is recommended for ATS and job applications. Modern is better for visual sharing or portfolio-style use.")}</p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Sector
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{tr("Sector")}</label>
                   <select
                     value={resume.sector || 'general'}
                     onChange={(e) => setResume({ ...resume, sector: e.target.value })}
                     className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500 bg-white"
                   >
-                    <option value="general">General</option>
-                    <option value="information_technology">Information Technology</option>
-                    <option value="sales_marketing">Sales & Marketing</option>
-                    <option value="finance">Finance</option>
-                    <option value="healthcare">Healthcare</option>
-                    <option value="manufacturing">Manufacturing</option>
-                    <option value="retail">Retail</option>
-                    <option value="hospitality">Hospitality</option>
-                    <option value="logistics">Logistics</option>
+                    <option value="general">{tr("General")}</option>
+                    <option value="information_technology">{tr("Information Technology")}</option>
+                    <option value="sales_marketing">{tr("Sales & Marketing")}</option>
+                    <option value="finance">{tr("Finance")}</option>
+                    <option value="healthcare">{tr("Healthcare")}</option>
+                    <option value="manufacturing">{tr("Manufacturing")}</option>
+                    <option value="retail">{tr("Retail")}</option>
+                    <option value="hospitality">{tr("Hospitality")}</option>
+                    <option value="logistics">{tr("Logistics")}</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Visibility
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{tr("Visibility")}</label>
                   <select
                     value={resume.visibility || 'private'}
                     onChange={(e) => setResume({ ...resume, visibility: e.target.value })}
                     className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500 bg-white"
                   >
-                    <option value="private">Private</option>
-                    <option value="link">Anyone with the link</option>
+                    <option value="private">{tr("Private")}</option>
+                    <option value="link">{tr("Anyone with the link")}</option>
                   </select>
                 </div>
 
@@ -903,10 +888,8 @@ export default function ResumeEditorPage() {
                     className="mt-1 h-4 w-4"
                   />
                   <div>
-                    <p className="text-sm font-medium text-gray-800">Use as default resume</p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      This resume will be used as your primary default resume in the system.
-                    </p>
+                    <p className="text-sm font-medium text-gray-800">{tr("Use as default resume")}</p>
+                    <p className="text-xs text-gray-500 mt-1">{tr("This resume will be used as your primary default resume in the system.")}</p>
                   </div>
                 </label>
               </div>
@@ -914,7 +897,7 @@ export default function ResumeEditorPage() {
 
             <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
               <div className="flex items-center justify-between mb-4 gap-3">
-                <h2 className="text-lg font-bold text-gray-900">Target Role</h2>
+                <h2 className="text-lg font-bold text-gray-900">{tr("Target Role")}</h2>
 
                 <div className="flex gap-2">
                   <button
@@ -923,7 +906,7 @@ export default function ResumeEditorPage() {
                     disabled={optimizingATS}
                     className="px-4 py-2 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-700 disabled:opacity-50"
                   >
-                    {optimizingATS ? 'Analyzing...' : 'ATS Optimize'}
+                    {tr(optimizingATS ? 'Analyzing...' : 'ATS Optimize')}
                   </button>
 
                   {hasATSData ? (
@@ -931,9 +914,7 @@ export default function ResumeEditorPage() {
                       type="button"
                       onClick={applyATSSuggestionsSmartly}
                       className="px-4 py-2 bg-violet-600 text-white text-sm font-semibold rounded-xl hover:bg-violet-700"
-                    >
-                      Apply Suggestions
-                    </button>
+                    >{tr("Apply Suggestions")}</button>
                   ) : null}
                 </div>
               </div>
@@ -942,7 +923,7 @@ export default function ResumeEditorPage() {
                 <input
                   value={resume.targetJobTitle || ''}
                   onChange={(e) => setResume({ ...resume, targetJobTitle: e.target.value })}
-                  placeholder="Target job title, e.g. Frontend Developer"
+                  placeholder={tr("Target job title, e.g. Frontend Developer")}
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500"
                 />
 
@@ -952,7 +933,7 @@ export default function ResumeEditorPage() {
                     setResume({ ...resume, targetJobDescription: e.target.value })
                   }
                   rows={7}
-                  placeholder="Paste the job description here for ATS optimization and tailored AI writing"
+                  placeholder={tr("Paste the job description here for ATS optimization and tailored AI writing")}
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500 resize-none"
                 />
               </div>
@@ -961,30 +942,28 @@ export default function ResumeEditorPage() {
             {hasATSData ? (
               <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
                 <div className="flex items-center justify-between mb-4 gap-3">
-                  <h2 className="text-lg font-bold text-gray-900">ATS Suggestions</h2>
+                  <h2 className="text-lg font-bold text-gray-900">{tr("ATS Suggestions")}</h2>
 
                   {atsData.recommendedSkills.length > 0 ? (
                     <button
                       type="button"
                       onClick={applyRecommendedSkills}
                       className="px-3 py-2 bg-blue-50 text-blue-700 text-sm font-semibold rounded-xl hover:bg-blue-100"
-                    >
-                      Add Recommended Skills
-                    </button>
+                    >{tr("Add Recommended Skills")}</button>
                   ) : null}
                 </div>
 
                 <div className="space-y-5">
                   {atsData.topKeywords.length > 0 ? (
                     <div>
-                      <h3 className="text-sm font-semibold text-gray-800 mb-2">Top Keywords</h3>
+                      <h3 className="text-sm font-semibold text-gray-800 mb-2">{tr("Top Keywords")}</h3>
                       <div className="flex flex-wrap gap-2">
                         {atsData.topKeywords.map((item: string, index: number) => (
                           <span
                             key={index}
                             className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-sm font-medium"
                           >
-                            {item}
+                            {tr(item)}
                           </span>
                         ))}
                       </div>
@@ -993,9 +972,7 @@ export default function ResumeEditorPage() {
 
                   {atsData.missingKeywords.length > 0 ? (
                     <div>
-                      <h3 className="text-sm font-semibold text-gray-800 mb-2">
-                        Missing Keywords
-                      </h3>
+                      <h3 className="text-sm font-semibold text-gray-800 mb-2">{tr("Missing Keywords")}</h3>
                       <div className="flex flex-wrap gap-2">
                         {atsData.missingKeywords.map((item: string, index: number) => (
                           <button
@@ -1004,7 +981,7 @@ export default function ResumeEditorPage() {
                             onClick={() => addSkillIfMissing(item)}
                             className="px-3 py-1.5 bg-amber-50 text-amber-700 rounded-full text-sm font-medium hover:bg-amber-100"
                           >
-                            + {item}
+                            + {tr(item)}
                           </button>
                         ))}
                       </div>
@@ -1013,9 +990,7 @@ export default function ResumeEditorPage() {
 
                   {atsData.recommendedSkills.length > 0 ? (
                     <div>
-                      <h3 className="text-sm font-semibold text-gray-800 mb-2">
-                        Recommended Skills
-                      </h3>
+                      <h3 className="text-sm font-semibold text-gray-800 mb-2">{tr("Recommended Skills")}</h3>
                       <div className="flex flex-wrap gap-2">
                         {atsData.recommendedSkills.map((item: string, index: number) => (
                           <button
@@ -1024,7 +999,7 @@ export default function ResumeEditorPage() {
                             onClick={() => addSkillIfMissing(item)}
                             className="px-3 py-1.5 bg-green-50 text-green-700 rounded-full text-sm font-medium hover:bg-green-100"
                           >
-                            + {item}
+                            + {tr(item)}
                           </button>
                         ))}
                       </div>
@@ -1033,31 +1008,25 @@ export default function ResumeEditorPage() {
 
                   {atsData.summarySuggestions.length > 0 ? (
                     <div>
-                      <h3 className="text-sm font-semibold text-gray-800 mb-2">
-                        Summary Suggestions
-                      </h3>
+                      <h3 className="text-sm font-semibold text-gray-800 mb-2">{tr("Summary Suggestions")}</h3>
 
                       <div className="space-y-3">
                         {atsData.summarySuggestions.map((item: string, index: number) => (
                           <div key={index} className="border border-gray-200 rounded-xl p-3">
-                            <p className="text-sm text-gray-700">{item}</p>
+                            <p className="text-sm text-gray-700">{tr(item)}</p>
 
                             <div className="flex gap-2 mt-3">
                               <button
                                 type="button"
                                 onClick={() => applySummarySuggestion(item)}
                                 className="px-3 py-2 bg-violet-600 text-white text-sm font-semibold rounded-lg hover:bg-violet-700"
-                              >
-                                Replace Summary
-                              </button>
+                              >{tr("Replace Summary")}</button>
 
                               <button
                                 type="button"
                                 onClick={() => appendSummarySuggestion(item)}
                                 className="px-3 py-2 bg-violet-50 text-violet-700 text-sm font-semibold rounded-lg hover:bg-violet-100"
-                              >
-                                Append to Summary
-                              </button>
+                              >{tr("Append to Summary")}</button>
                             </div>
                           </div>
                         ))}
@@ -1067,23 +1036,19 @@ export default function ResumeEditorPage() {
 
                   {atsData.bulletSuggestions.length > 0 ? (
                     <div>
-                      <h3 className="text-sm font-semibold text-gray-800 mb-2">
-                        Bullet Suggestions
-                      </h3>
+                      <h3 className="text-sm font-semibold text-gray-800 mb-2">{tr("Bullet Suggestions")}</h3>
 
                       <div className="space-y-3">
                         {atsData.bulletSuggestions.map((item: string, index: number) => (
                           <div key={index} className="border border-gray-200 rounded-xl p-3">
-                            <p className="text-sm text-gray-700">{item}</p>
+                            <p className="text-sm text-gray-700">{tr(item)}</p>
 
                             <div className="flex flex-wrap gap-2 mt-3">
                               <button
                                 type="button"
                                 onClick={() => applyBulletSuggestionToExperience(item)}
                                 className="px-3 py-2 bg-indigo-50 text-indigo-700 text-sm font-semibold rounded-lg hover:bg-indigo-100"
-                              >
-                                Add to Achievements
-                              </button>
+                              >{tr("Add to Achievements")}</button>
 
                               {resume.experience.map((exp: any, expIndex: number) => (
                                 <button
@@ -1093,9 +1058,8 @@ export default function ResumeEditorPage() {
                                     applyBulletSuggestionToExperience(item, expIndex)
                                   }
                                   className="px-3 py-2 bg-gray-50 text-gray-700 text-xs font-medium rounded-lg hover:bg-gray-100"
-                                >
-                                  Add to Exp {expIndex + 1}
-                                  {exp.jobTitle ? `: ${exp.jobTitle}` : ''}
+                                >{tr("Add to Exp ")}{expIndex + 1}
+                                  {tr(exp.jobTitle ? `: ${exp.jobTitle}` : '')}
                                 </button>
                               ))}
                             </div>
@@ -1109,20 +1073,20 @@ export default function ResumeEditorPage() {
             ) : null}
 
             <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-              <h2 className="text-lg font-bold text-gray-900 mb-4">Basic Details</h2>
+              <h2 className="text-lg font-bold text-gray-900 mb-4">{tr("Basic Details")}</h2>
 
               <div className="space-y-4">
                 <input
                   value={resume.personalInfo.fullName}
                   onChange={(e) => updatePersonalInfo('fullName', e.target.value)}
-                  placeholder="Full name"
+                  placeholder={tr("Full name")}
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500"
                 />
 
                 <input
                   value={resume.personalInfo.jobTitle}
                   onChange={(e) => updatePersonalInfo('jobTitle', e.target.value)}
-                  placeholder="Job title"
+                  placeholder={tr("Job title")}
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500"
                 />
 
@@ -1130,14 +1094,14 @@ export default function ResumeEditorPage() {
                   <input
                     value={resume.personalInfo.email}
                     onChange={(e) => updatePersonalInfo('email', e.target.value)}
-                    placeholder="Email"
+                    placeholder={tr("Email")}
                     className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500"
                   />
 
                   <input
                     value={resume.personalInfo.phone}
                     onChange={(e) => updatePersonalInfo('phone', e.target.value)}
-                    placeholder="Phone"
+                    placeholder={tr("Phone")}
                     className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500"
                   />
                 </div>
@@ -1145,7 +1109,7 @@ export default function ResumeEditorPage() {
                 <input
                   value={resume.personalInfo.location}
                   onChange={(e) => updatePersonalInfo('location', e.target.value)}
-                  placeholder="Location"
+                  placeholder={tr("Location")}
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500"
                 />
 
@@ -1153,30 +1117,28 @@ export default function ResumeEditorPage() {
                   <input
                     value={resume.personalInfo.linkedin}
                     onChange={(e) => updatePersonalInfo('linkedin', e.target.value)}
-                    placeholder="LinkedIn URL"
+                    placeholder={tr("LinkedIn URL")}
                     className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500"
                   />
 
                   <input
                     value={resume.personalInfo.github}
                     onChange={(e) => updatePersonalInfo('github', e.target.value)}
-                    placeholder="GitHub URL"
+                    placeholder={tr("GitHub URL")}
                     className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500"
                   />
 
                   <input
                     value={resume.personalInfo.website}
                     onChange={(e) => updatePersonalInfo('website', e.target.value)}
-                    placeholder="Portfolio / Website"
+                    placeholder={tr("Portfolio / Website")}
                     className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500"
                   />
                 </div>
 
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm font-medium text-gray-700">
-                      Professional Summary
-                    </label>
+                    <label className="text-sm font-medium text-gray-700">{tr("Professional Summary")}</label>
 
                     <button
                       type="button"
@@ -1184,7 +1146,7 @@ export default function ResumeEditorPage() {
                       disabled={generatingSummary}
                       className="text-sm text-violet-600 font-semibold hover:underline disabled:opacity-50"
                     >
-                      {generatingSummary ? 'Generating...' : 'Generate with AI'}
+                      {tr(generatingSummary ? 'Generating...' : 'Generate with AI')}
                     </button>
                   </div>
 
@@ -1192,7 +1154,7 @@ export default function ResumeEditorPage() {
                     value={resume.summary}
                     onChange={(e) => setResume({ ...resume, summary: e.target.value })}
                     rows={5}
-                    placeholder="Write a short professional summary"
+                    placeholder={tr("Write a short professional summary")}
                     className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500 resize-none"
                   />
                 </div>
@@ -1201,7 +1163,7 @@ export default function ResumeEditorPage() {
 
             <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-gray-900">Experience</h2>
+                <h2 className="text-lg font-bold text-gray-900">{tr("Experience")}</h2>
 
                 <button
                   type="button"
@@ -1218,16 +1180,14 @@ export default function ResumeEditorPage() {
                     })
                   }
                   className="px-4 py-2 bg-blue-50 text-blue-600 text-sm font-medium rounded-xl hover:bg-blue-100"
-                >
-                  + Add
-                </button>
+                >{tr("+ Add")}</button>
               </div>
 
               <div className="space-y-5">
                 {resume.experience.map((item: any, index: number) => (
                   <div key={index} className="border border-gray-200 rounded-2xl p-4 space-y-3">
                     <div className="flex justify-between items-center gap-3">
-                      <p className="font-medium text-gray-800">Experience {index + 1}</p>
+                      <p className="font-medium text-gray-800">{tr("Experience ")}{index + 1}</p>
 
                       <div className="flex gap-3">
                         <button
@@ -1236,7 +1196,7 @@ export default function ResumeEditorPage() {
                           disabled={generatingBulletsIndex === index}
                           className="text-sm text-violet-600 font-semibold hover:underline disabled:opacity-50"
                         >
-                          {generatingBulletsIndex === index ? 'Generating...' : 'Generate with AI'}
+                          {tr(generatingBulletsIndex === index ? 'Generating...' : 'Generate with AI')}
                         </button>
 
                         {resume.experience.length > 1 ? (
@@ -1244,9 +1204,7 @@ export default function ResumeEditorPage() {
                             type="button"
                             onClick={() => removeArrayItem('experience', index)}
                             className="text-sm text-red-600 hover:underline"
-                          >
-                            Remove
-                          </button>
+                          >{tr("Remove")}</button>
                         ) : null}
                       </div>
                     </div>
@@ -1256,7 +1214,7 @@ export default function ResumeEditorPage() {
                       onChange={(e) =>
                         updateArrayItem('experience', index, 'jobTitle', e.target.value)
                       }
-                      placeholder="Job title"
+                      placeholder={tr("Job title")}
                       className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500"
                     />
 
@@ -1265,7 +1223,7 @@ export default function ResumeEditorPage() {
                       onChange={(e) =>
                         updateArrayItem('experience', index, 'company', e.target.value)
                       }
-                      placeholder="Company"
+                      placeholder={tr("Company")}
                       className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500"
                     />
 
@@ -1274,7 +1232,7 @@ export default function ResumeEditorPage() {
                       onChange={(e) =>
                         updateArrayItem('experience', index, 'location', e.target.value)
                       }
-                      placeholder="Location"
+                      placeholder={tr("Location")}
                       className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500"
                     />
 
@@ -1284,7 +1242,7 @@ export default function ResumeEditorPage() {
                         onChange={(e) =>
                           updateArrayItem('experience', index, 'startDate', e.target.value)
                         }
-                        placeholder="Start date"
+                        placeholder={tr("Start date")}
                         className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500"
                       />
 
@@ -1293,7 +1251,7 @@ export default function ResumeEditorPage() {
                         onChange={(e) =>
                           updateArrayItem('experience', index, 'endDate', e.target.value)
                         }
-                        placeholder="End date"
+                        placeholder={tr("End date")}
                         className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500"
                       />
                     </div>
@@ -1304,22 +1262,18 @@ export default function ResumeEditorPage() {
                         updateArrayItem('experience', index, 'description', e.target.value)
                       }
                       rows={3}
-                      placeholder="Describe the role, work, tools, outcomes, or responsibilities"
+                      placeholder={tr("Describe the role, work, tools, outcomes, or responsibilities")}
                       className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500 resize-none"
                     />
 
                     <div className="flex items-center justify-between pt-1">
-                      <label className="text-sm font-medium text-gray-700">
-                        Achievement Bullets
-                      </label>
+                      <label className="text-sm font-medium text-gray-700">{tr("Achievement Bullets")}</label>
 
                       <button
                         type="button"
                         onClick={() => addBullet(index)}
                         className="px-4 py-2 bg-blue-50 text-blue-600 text-sm font-medium rounded-xl hover:bg-blue-100"
-                      >
-                        + Add Bullet
-                      </button>
+                      >{tr("+ Add Bullet")}</button>
                     </div>
 
                     <div className="space-y-3">
@@ -1329,7 +1283,7 @@ export default function ResumeEditorPage() {
                             value={bullet}
                             onChange={(e) => updateBullet(index, bulletIndex, e.target.value)}
                             rows={2}
-                            placeholder="Achievement bullet"
+                            placeholder={tr("Achievement bullet")}
                             className="flex-1 px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500 resize-none"
                           />
 
@@ -1337,9 +1291,7 @@ export default function ResumeEditorPage() {
                             type="button"
                             onClick={() => removeBullet(index, bulletIndex)}
                             className="px-4 py-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-100"
-                          >
-                            Remove
-                          </button>
+                          >{tr("Remove")}</button>
                         </div>
                       ))}
                     </div>
@@ -1350,7 +1302,7 @@ export default function ResumeEditorPage() {
 
             <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-gray-900">Education</h2>
+                <h2 className="text-lg font-bold text-gray-900">{tr("Education")}</h2>
 
                 <button
                   type="button"
@@ -1365,25 +1317,21 @@ export default function ResumeEditorPage() {
                     })
                   }
                   className="px-4 py-2 bg-blue-50 text-blue-600 text-sm font-medium rounded-xl hover:bg-blue-100"
-                >
-                  + Add
-                </button>
+                >{tr("+ Add")}</button>
               </div>
 
               <div className="space-y-5">
                 {resume.education.map((item: any, index: number) => (
                   <div key={index} className="border border-gray-200 rounded-2xl p-4 space-y-3">
                     <div className="flex justify-between items-center">
-                      <p className="font-medium text-gray-800">Education {index + 1}</p>
+                      <p className="font-medium text-gray-800">{tr("Education ")}{index + 1}</p>
 
                       {resume.education.length > 1 ? (
                         <button
                           type="button"
                           onClick={() => removeArrayItem('education', index)}
                           className="text-sm text-red-600 hover:underline"
-                        >
-                          Remove
-                        </button>
+                        >{tr("Remove")}</button>
                       ) : null}
                     </div>
 
@@ -1392,7 +1340,7 @@ export default function ResumeEditorPage() {
                       onChange={(e) =>
                         updateArrayItem('education', index, 'institution', e.target.value)
                       }
-                      placeholder="Institution"
+                      placeholder={tr("Institution")}
                       className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500"
                     />
 
@@ -1401,7 +1349,7 @@ export default function ResumeEditorPage() {
                       onChange={(e) =>
                         updateArrayItem('education', index, 'degree', e.target.value)
                       }
-                      placeholder="Degree"
+                      placeholder={tr("Degree")}
                       className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500"
                     />
 
@@ -1410,7 +1358,7 @@ export default function ResumeEditorPage() {
                       onChange={(e) =>
                         updateArrayItem('education', index, 'fieldOfStudy', e.target.value)
                       }
-                      placeholder="Field of study"
+                      placeholder={tr("Field of study")}
                       className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500"
                     />
 
@@ -1420,7 +1368,7 @@ export default function ResumeEditorPage() {
                         onChange={(e) =>
                           updateArrayItem('education', index, 'startDate', e.target.value)
                         }
-                        placeholder="Start date"
+                        placeholder={tr("Start date")}
                         className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500"
                       />
 
@@ -1429,7 +1377,7 @@ export default function ResumeEditorPage() {
                         onChange={(e) =>
                           updateArrayItem('education', index, 'endDate', e.target.value)
                         }
-                        placeholder="End date"
+                        placeholder={tr("End date")}
                         className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500"
                       />
                     </div>
@@ -1440,7 +1388,7 @@ export default function ResumeEditorPage() {
                         updateArrayItem('education', index, 'description', e.target.value)
                       }
                       rows={3}
-                      placeholder="Additional details"
+                      placeholder={tr("Additional details")}
                       className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500 resize-none"
                     />
                   </div>
@@ -1450,7 +1398,7 @@ export default function ResumeEditorPage() {
 
             <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-gray-900">Projects</h2>
+                <h2 className="text-lg font-bold text-gray-900">{tr("Projects")}</h2>
 
                 <button
                   type="button"
@@ -1462,39 +1410,35 @@ export default function ResumeEditorPage() {
                     })
                   }
                   className="px-4 py-2 bg-blue-50 text-blue-600 text-sm font-medium rounded-xl hover:bg-blue-100"
-                >
-                  + Add
-                </button>
+                >{tr("+ Add")}</button>
               </div>
 
               <div className="space-y-5">
                 {resume.projects.map((item: any, index: number) => (
                   <div key={index} className="border border-gray-200 rounded-2xl p-4 space-y-3">
                     <div className="flex justify-between items-center">
-                      <p className="font-medium text-gray-800">Project {index + 1}</p>
+                      <p className="font-medium text-gray-800">{tr("Project ")}{index + 1}</p>
 
                       {resume.projects.length > 1 ? (
                         <button
                           type="button"
                           onClick={() => removeArrayItem('projects', index)}
                           className="text-sm text-red-600 hover:underline"
-                        >
-                          Remove
-                        </button>
+                        >{tr("Remove")}</button>
                       ) : null}
                     </div>
 
                     <input
                       value={item.name}
                       onChange={(e) => updateArrayItem('projects', index, 'name', e.target.value)}
-                      placeholder="Project name"
+                      placeholder={tr("Project name")}
                       className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500"
                     />
 
                     <input
                       value={item.link}
                       onChange={(e) => updateArrayItem('projects', index, 'link', e.target.value)}
-                      placeholder="Project link"
+                      placeholder={tr("Project link")}
                       className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500"
                     />
 
@@ -1504,7 +1448,7 @@ export default function ResumeEditorPage() {
                         updateArrayItem('projects', index, 'description', e.target.value)
                       }
                       rows={3}
-                      placeholder="Project description"
+                      placeholder={tr("Project description")}
                       className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500 resize-none"
                     />
                   </div>
@@ -1513,7 +1457,7 @@ export default function ResumeEditorPage() {
             </section>
 
             <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-              <h2 className="text-lg font-bold text-gray-900 mb-4">Skills</h2>
+              <h2 className="text-lg font-bold text-gray-900 mb-4">{tr("Skills")}</h2>
 
               <div className="space-y-3">
                 {resume.skills.map((skill: string, index: number) => (
@@ -1521,7 +1465,7 @@ export default function ResumeEditorPage() {
                     <input
                       value={skill}
                       onChange={(e) => updateSimpleList('skills', index, e.target.value)}
-                      placeholder="e.g. React"
+                      placeholder={tr("e.g. React")}
                       className="flex-1 px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500"
                     />
 
@@ -1530,9 +1474,7 @@ export default function ResumeEditorPage() {
                         type="button"
                         onClick={() => removeSimpleListItem('skills', index)}
                         className="px-4 py-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-100"
-                      >
-                        Remove
-                      </button>
+                      >{tr("Remove")}</button>
                     ) : null}
                   </div>
                 ))}
@@ -1541,14 +1483,12 @@ export default function ResumeEditorPage() {
                   type="button"
                   onClick={() => addSimpleListItem('skills')}
                   className="px-4 py-2 bg-blue-50 text-blue-600 text-sm font-medium rounded-xl hover:bg-blue-100"
-                >
-                  + Add Skill
-                </button>
+                >{tr("+ Add Skill")}</button>
               </div>
             </section>
 
             <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-              <h2 className="text-lg font-bold text-gray-900 mb-4">Certifications</h2>
+              <h2 className="text-lg font-bold text-gray-900 mb-4">{tr("Certifications")}</h2>
 
               <div className="space-y-3">
                 {resume.certifications.map((item: string, index: number) => (
@@ -1558,7 +1498,7 @@ export default function ResumeEditorPage() {
                       onChange={(e) =>
                         updateSimpleList('certifications', index, e.target.value)
                       }
-                      placeholder="Certification name"
+                      placeholder={tr("Certification name")}
                       className="flex-1 px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500"
                     />
 
@@ -1567,9 +1507,7 @@ export default function ResumeEditorPage() {
                         type="button"
                         onClick={() => removeSimpleListItem('certifications', index)}
                         className="px-4 py-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-100"
-                      >
-                        Remove
-                      </button>
+                      >{tr("Remove")}</button>
                     ) : null}
                   </div>
                 ))}
@@ -1578,14 +1516,12 @@ export default function ResumeEditorPage() {
                   type="button"
                   onClick={() => addSimpleListItem('certifications')}
                   className="px-4 py-2 bg-blue-50 text-blue-600 text-sm font-medium rounded-xl hover:bg-blue-100"
-                >
-                  + Add Certification
-                </button>
+                >{tr("+ Add Certification")}</button>
               </div>
             </section>
 
             <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-              <h2 className="text-lg font-bold text-gray-900 mb-4">Languages</h2>
+              <h2 className="text-lg font-bold text-gray-900 mb-4">{tr("Languages")}</h2>
 
               <div className="space-y-3">
                 {resume.languages.map((item: string, index: number) => (
@@ -1593,7 +1529,7 @@ export default function ResumeEditorPage() {
                     <input
                       value={item}
                       onChange={(e) => updateSimpleList('languages', index, e.target.value)}
-                      placeholder="Language"
+                      placeholder={tr("Language")}
                       className="flex-1 px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500"
                     />
 
@@ -1602,9 +1538,7 @@ export default function ResumeEditorPage() {
                         type="button"
                         onClick={() => removeSimpleListItem('languages', index)}
                         className="px-4 py-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-100"
-                      >
-                        Remove
-                      </button>
+                      >{tr("Remove")}</button>
                     ) : null}
                   </div>
                 ))}
@@ -1613,9 +1547,7 @@ export default function ResumeEditorPage() {
                   type="button"
                   onClick={() => addSimpleListItem('languages')}
                   className="px-4 py-2 bg-blue-50 text-blue-600 text-sm font-medium rounded-xl hover:bg-blue-100"
-                >
-                  + Add Language
-                </button>
+                >{tr("+ Add Language")}</button>
               </div>
             </section>
           </div>
@@ -1639,7 +1571,7 @@ export default function ResumeEditorPage() {
                     </div>
 
                     <div className="resume-section avoid-break">
-                      <h2 className="section-title sidebar-title">Contact</h2>
+                      <h2 className="section-title sidebar-title">{tr("Contact")}</h2>
                       <div className="space-y-2 text-sm">
                         {resume.personalInfo.email ? <p>{resume.personalInfo.email}</p> : null}
                         {resume.personalInfo.phone ? <p>{resume.personalInfo.phone}</p> : null}
@@ -1652,11 +1584,11 @@ export default function ResumeEditorPage() {
 
                     {cleanSkills.length > 0 ? (
                       <div className="resume-section avoid-break">
-                        <h2 className="section-title sidebar-title">Skills</h2>
+                        <h2 className="section-title sidebar-title">{tr("Skills")}</h2>
                         <div className="flex flex-wrap gap-2">
                           {cleanSkills.map((item: string, index: number) => (
                             <span key={index} className="modern-pill">
-                              {item}
+                              {tr(item)}
                             </span>
                           ))}
                         </div>
@@ -1665,12 +1597,12 @@ export default function ResumeEditorPage() {
 
                     {resume.languages.some((item: string) => item.trim()) ? (
                       <div className="resume-section avoid-break">
-                        <h2 className="section-title sidebar-title">Languages</h2>
+                        <h2 className="section-title sidebar-title">{tr("Languages")}</h2>
                         <div className="space-y-1 text-sm">
                           {resume.languages
                             .filter((item: string) => item.trim())
                             .map((item: string, index: number) => (
-                              <p key={index}>{item}</p>
+                              <p key={index}>{tr(item)}</p>
                             ))}
                         </div>
                       </div>
@@ -1678,12 +1610,12 @@ export default function ResumeEditorPage() {
 
                     {resume.certifications.some((item: string) => item.trim()) ? (
                       <div className="resume-section avoid-break">
-                        <h2 className="section-title sidebar-title">Certifications</h2>
+                        <h2 className="section-title sidebar-title">{tr("Certifications")}</h2>
                         <div className="space-y-1 text-sm">
                           {resume.certifications
                             .filter((item: string) => item.trim())
                             .map((item: string, index: number) => (
-                              <p key={index}>{item}</p>
+                              <p key={index}>{tr(item)}</p>
                             ))}
                         </div>
                       </div>
@@ -1693,14 +1625,14 @@ export default function ResumeEditorPage() {
                   <section className="modern-main">
                     {resume.summary ? (
                       <div className="resume-section avoid-break">
-                        <h2 className="section-title">Professional Summary</h2>
+                        <h2 className="section-title">{tr("Professional Summary")}</h2>
                         <p className="resume-paragraph">{resume.summary}</p>
                       </div>
                     ) : null}
 
                     {resume.experience.some((item: any) => item.jobTitle || item.company) ? (
                       <div className="resume-section">
-                        <h2 className="section-title">Experience</h2>
+                        <h2 className="section-title">{tr("Experience")}</h2>
                         <div className="space-y-5">
                           {resume.experience.map((item: any, index: number) => {
                             if (!item.jobTitle && !item.company) return null
@@ -1718,13 +1650,13 @@ export default function ResumeEditorPage() {
                                     </h3>
                                     <p className="resume-subtitle">
                                       {item.company}
-                                      {item.location ? ` • ${item.location}` : ''}
+                                      {tr(item.location ? ` • ${item.location}` : '')}
                                     </p>
                                   </div>
 
                                   <p className="resume-date">
                                     {item.startDate}
-                                    {item.startDate || item.endDate ? ' - ' : ''}
+                                    {tr(item.startDate || item.endDate ? ' - ' : '')}
                                     {item.endDate || 'Present'}
                                   </p>
                                 </div>
@@ -1747,7 +1679,7 @@ export default function ResumeEditorPage() {
 
                     {resume.projects.some((item: any) => item.name) ? (
                       <div className="resume-section">
-                        <h2 className="section-title">Projects</h2>
+                        <h2 className="section-title">{tr("Projects")}</h2>
                         <div className="space-y-4">
                           {resume.projects.map((item: any, index: number) => {
                             if (!item.name) return null
@@ -1768,7 +1700,7 @@ export default function ResumeEditorPage() {
 
                     {resume.education.some((item: any) => item.institution || item.degree) ? (
                       <div className="resume-section">
-                        <h2 className="section-title">Education</h2>
+                        <h2 className="section-title">{tr("Education")}</h2>
                         <div className="space-y-4">
                           {resume.education.map((item: any, index: number) => {
                             if (!item.institution && !item.degree) return null
@@ -1779,14 +1711,14 @@ export default function ResumeEditorPage() {
                                   <div>
                                     <h3 className="resume-item-title">
                                       {item.degree || 'Degree'}
-                                      {item.fieldOfStudy ? ` - ${item.fieldOfStudy}` : ''}
+                                      {tr(item.fieldOfStudy ? ` - ${item.fieldOfStudy}` : '')}
                                     </h3>
                                     <p className="resume-subtitle">{item.institution}</p>
                                   </div>
 
                                   <p className="resume-date">
                                     {item.startDate}
-                                    {item.startDate || item.endDate ? ' - ' : ''}
+                                    {tr(item.startDate || item.endDate ? ' - ' : '')}
                                     {item.endDate}
                                   </p>
                                 </div>
@@ -1830,14 +1762,14 @@ export default function ResumeEditorPage() {
 
                   {resume.summary ? (
                     <section className="resume-section avoid-break">
-                      <h2 className="section-title">Professional Summary</h2>
+                      <h2 className="section-title">{tr("Professional Summary")}</h2>
                       <p className="resume-paragraph">{resume.summary}</p>
                     </section>
                   ) : null}
 
                   {resume.experience.some((item: any) => item.jobTitle || item.company) ? (
                     <section className="resume-section">
-                      <h2 className="section-title">Experience</h2>
+                      <h2 className="section-title">{tr("Experience")}</h2>
                       <div className="space-y-5">
                         {resume.experience.map((item: any, index: number) => {
                           if (!item.jobTitle && !item.company) return null
@@ -1855,13 +1787,13 @@ export default function ResumeEditorPage() {
                                   </h3>
                                   <p className="resume-subtitle">
                                     {item.company}
-                                    {item.location ? ` • ${item.location}` : ''}
+                                    {tr(item.location ? ` • ${item.location}` : '')}
                                   </p>
                                 </div>
 
                                 <p className="resume-date">
                                   {item.startDate}
-                                  {item.startDate || item.endDate ? ' - ' : ''}
+                                  {tr(item.startDate || item.endDate ? ' - ' : '')}
                                   {item.endDate || 'Present'}
                                 </p>
                               </div>
@@ -1884,7 +1816,7 @@ export default function ResumeEditorPage() {
 
                   {resume.projects.some((item: any) => item.name) ? (
                     <section className="resume-section">
-                      <h2 className="section-title">Projects</h2>
+                      <h2 className="section-title">{tr("Projects")}</h2>
                       <div className="space-y-4">
                         {resume.projects.map((item: any, index: number) => {
                           if (!item.name) return null
@@ -1905,7 +1837,7 @@ export default function ResumeEditorPage() {
 
                   {resume.education.some((item: any) => item.institution || item.degree) ? (
                     <section className="resume-section">
-                      <h2 className="section-title">Education</h2>
+                      <h2 className="section-title">{tr("Education")}</h2>
                       <div className="space-y-4">
                         {resume.education.map((item: any, index: number) => {
                           if (!item.institution && !item.degree) return null
@@ -1916,14 +1848,14 @@ export default function ResumeEditorPage() {
                                 <div>
                                   <h3 className="resume-item-title">
                                     {item.degree || 'Degree'}
-                                    {item.fieldOfStudy ? ` - ${item.fieldOfStudy}` : ''}
+                                    {tr(item.fieldOfStudy ? ` - ${item.fieldOfStudy}` : '')}
                                   </h3>
                                   <p className="resume-subtitle">{item.institution}</p>
                                 </div>
 
                                 <p className="resume-date">
                                   {item.startDate}
-                                  {item.startDate || item.endDate ? ' - ' : ''}
+                                  {tr(item.startDate || item.endDate ? ' - ' : '')}
                                   {item.endDate}
                                 </p>
                               </div>
@@ -1940,11 +1872,11 @@ export default function ResumeEditorPage() {
 
                   {cleanSkills.length > 0 ? (
                     <section className="resume-section avoid-break">
-                      <h2 className="section-title">Skills</h2>
+                      <h2 className="section-title">{tr("Skills")}</h2>
                       <div className="classic-skills">
                         {cleanSkills.map((item: string, index: number) => (
                           <span key={index} className="classic-skill">
-                            {item}
+                            {tr(item)}
                           </span>
                         ))}
                       </div>
@@ -1953,12 +1885,12 @@ export default function ResumeEditorPage() {
 
                   {resume.certifications.some((item: string) => item.trim()) ? (
                     <section className="resume-section avoid-break">
-                      <h2 className="section-title">Certifications</h2>
+                      <h2 className="section-title">{tr("Certifications")}</h2>
                       <ul className="classic-list">
                         {resume.certifications
                           .filter((item: string) => item.trim())
                           .map((item: string, index: number) => (
-                            <li key={index}>{item}</li>
+                            <li key={index}>{tr(item)}</li>
                           ))}
                       </ul>
                     </section>
@@ -1966,12 +1898,12 @@ export default function ResumeEditorPage() {
 
                   {resume.languages.some((item: string) => item.trim()) ? (
                     <section className="resume-section avoid-break">
-                      <h2 className="section-title">Languages</h2>
+                      <h2 className="section-title">{tr("Languages")}</h2>
                       <div className="classic-contact">
                         {resume.languages
                           .filter((item: string) => item.trim())
                           .map((item: string, index: number) => (
-                            <span key={index}>{item}</span>
+                            <span key={index}>{tr(item)}</span>
                           ))}
                       </div>
                     </section>

@@ -1,4 +1,6 @@
 'use client';
+import { tr, trError, useLocale } from '@/lib/localization'
+
 
 import { useEffect, useState } from 'react';
 
@@ -24,6 +26,8 @@ type ManpowerRequest = {
 };
 
 export default function EmployerManpowerRequestsPage() {
+  useLocale()
+
   const [token, setToken] = useState('');
   const [requests, setRequests] = useState<ManpowerRequest[]>([]);
   const [loading, setLoading] = useState(false);
@@ -173,79 +177,73 @@ export default function EmployerManpowerRequestsPage() {
     <div className="min-h-screen bg-gray-50 px-4 py-8 md:px-8">
       <div className="mx-auto max-w-7xl">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Client Manpower Requests</h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Create and manage outsourcing manpower requirements for your company.
-          </p>
+          <h1 className="text-3xl font-bold text-gray-900">{tr("Client Manpower Requests")}</h1>
+          <p className="mt-2 text-sm text-gray-600">{tr("Create and manage outsourcing manpower requirements for your company.")}</p>
         </div>
 
         {!token && (
-          <div className="mb-6 rounded-xl border border-yellow-300 bg-yellow-50 p-4 text-sm text-yellow-800">
-            JWT token not found in localStorage. Please login again as employer.
-          </div>
+          <div className="mb-6 rounded-xl border border-yellow-300 bg-yellow-50 p-4 text-sm text-yellow-800">{tr("JWT token not found in localStorage. Please login again as employer.")}</div>
         )}
 
         {error && (
           <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            {error}
+            {trError(error)}
           </div>
         )}
 
         {success && (
           <div className="mb-6 rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-700">
-            {success}
+            {tr(success)}
           </div>
         )}
 
         <div className="grid gap-8 lg:grid-cols-5">
           <div className="lg:col-span-2">
             <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">Create Request</h2>
-              <p className="mt-1 text-sm text-gray-500">
-                Submit your manpower requirement with role, headcount, timing, and budget details.
-              </p>
+              <h2 className="text-xl font-semibold text-gray-900">{tr("Create Request")}</h2>
+              <p className="mt-1 text-sm text-gray-500">{tr("Submit your manpower requirement with role, headcount, timing, and budget details.")}</p>
 
               <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-                <input name="jobTitle" value={form.jobTitle} onChange={handleChange} placeholder="Job Title" className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black" />
-                <input name="department" value={form.department} onChange={handleChange} placeholder="Department" className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black" />
-                <input name="headcountRequired" type="number" min="1" value={form.headcountRequired} onChange={handleChange} placeholder="Headcount Required" className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black" />
-                <input name="location" value={form.location} onChange={handleChange} placeholder="Location" className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black" />
+                <input name="jobTitle" value={form.jobTitle} onChange={handleChange} placeholder={tr("Job Title")} className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black" />
+                <input name="department" value={form.department} onChange={handleChange} placeholder={tr("Department")} className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black" />
+                <input name="headcountRequired" type="number" min="1" value={form.headcountRequired} onChange={handleChange} placeholder={tr("Headcount Required")} className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black" />
+                <input name="location" value={form.location} onChange={handleChange} placeholder={tr("Location")} className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black" />
 
                 <select name="shiftType" value={form.shiftType} onChange={handleChange} className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black">
-                  <option value="general">General</option>
-                  <option value="day">Day</option>
-                  <option value="night">Night</option>
-                  <option value="rotational">Rotational</option>
+                  <option value="general">{tr("General")}</option>
+                  <option value="day">{tr("Day")}</option>
+                  <option value="night">{tr("Night")}</option>
+                  <option value="rotational">{tr("Rotational")}</option>
                 </select>
 
                 <select name="employmentType" value={form.employmentType} onChange={handleChange} className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black">
-                  <option value="contract">Contract</option>
-                  <option value="temporary">Temporary</option>
-                  <option value="permanent">Permanent</option>
-                  <option value="project">Project</option>
+                  <option value="contract">{tr("Contract")}</option>
+                  <option value="temporary">{tr("Temporary")}</option>
+                  <option value="permanent">{tr("Permanent")}</option>
+                  <option value="project">{tr("Project")}</option>
                 </select>
 
-                <input name="contractDuration" value={form.contractDuration} onChange={handleChange} placeholder="Contract Duration (e.g. 6 months)" className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black" />
-                <input name="salaryBudget" value={form.salaryBudget} onChange={handleChange} placeholder="Salary Budget" className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black" />
+                <input name="contractDuration" value={form.contractDuration} onChange={handleChange} placeholder={tr("Contract Duration (e.g. 6 months)")} className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black" />
+                <input name="salaryBudget" value={form.salaryBudget} onChange={handleChange} placeholder={tr("Salary Budget")} className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black" />
 
                 <select name="billingType" value={form.billingType} onChange={handleChange} className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black">
-                  <option value="monthly">Monthly</option>
-                  <option value="daily">Daily</option>
-                  <option value="hourly">Hourly</option>
+                  <option value="monthly">{tr("Monthly")}</option>
+                  <option value="daily">{tr("Daily")}</option>
+                  <option value="hourly">{tr("Hourly")}</option>
                 </select>
 
                 <input name="startDate" type="date" value={form.startDate} onChange={handleChange} className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black" />
-                <input name="experienceRequired" value={form.experienceRequired} onChange={handleChange} placeholder="Experience Required (e.g. 2-4 years)" className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black" />
+                <input name="experienceRequired" value={form.experienceRequired} onChange={handleChange} placeholder={tr("Experience Required (e.g. 2-4 years)")} className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black" />
 
-                <textarea name="skillsRequired" value={form.skillsRequired} onChange={handleChange} rows={3} placeholder="Skills Required" className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black" />
-                <textarea name="notes" value={form.notes} onChange={handleChange} rows={4} placeholder="Additional Notes / Justification" className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black" />
+                <textarea name="skillsRequired" value={form.skillsRequired} onChange={handleChange} rows={3} placeholder={tr("Skills Required")} className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black" />
+                <textarea name="notes" value={form.notes} onChange={handleChange} rows={4} placeholder={tr("Additional Notes / Justification")} className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black" />
 
                 <button
                   type="submit"
                   disabled={submitting || !token}
                   className="w-full rounded-xl bg-black px-4 py-3 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-400"
                 >
-                  {submitting ? 'Submitting...' : 'Create Manpower Request'}
+                  {tr(submitting ? 'Submitting...' : 'Create Manpower Request')}
                 </button>
               </form>
             </div>
@@ -255,63 +253,55 @@ export default function EmployerManpowerRequestsPage() {
             <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-900">Request History</h2>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Track all manpower requests and update their statuses.
-                  </p>
+                  <h2 className="text-xl font-semibold text-gray-900">{tr("Request History")}</h2>
+                  <p className="mt-1 text-sm text-gray-500">{tr("Track all manpower requests and update their statuses.")}</p>
                 </div>
                 <button
                   onClick={fetchRequests}
                   className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  Refresh
-                </button>
+                >{tr("Refresh")}</button>
               </div>
 
               <div className="mt-6 overflow-x-auto">
                 <table className="min-w-full border-separate border-spacing-y-3">
                   <thead>
                     <tr className="text-left text-xs uppercase tracking-wide text-gray-500">
-                      <th className="px-3 py-2">Role</th>
-                      <th className="px-3 py-2">Headcount</th>
-                      <th className="px-3 py-2">Location</th>
-                      <th className="px-3 py-2">Type</th>
-                      <th className="px-3 py-2">Start Date</th>
-                      <th className="px-3 py-2">Status</th>
+                      <th className="px-3 py-2">{tr("Role")}</th>
+                      <th className="px-3 py-2">{tr("Headcount")}</th>
+                      <th className="px-3 py-2">{tr("Location")}</th>
+                      <th className="px-3 py-2">{tr("Type")}</th>
+                      <th className="px-3 py-2">{tr("Start Date")}</th>
+                      <th className="px-3 py-2">{tr("Status")}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan={6} className="px-3 py-8 text-center text-sm text-gray-500">
-                          Loading requests...
-                        </td>
+                        <td colSpan={6} className="px-3 py-8 text-center text-sm text-gray-500">{tr("Loading requests...")}</td>
                       </tr>
                     ) : requests.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-3 py-8 text-center text-sm text-gray-500">
-                          No manpower requests created yet.
-                        </td>
+                        <td colSpan={6} className="px-3 py-8 text-center text-sm text-gray-500">{tr("No manpower requests created yet.")}</td>
                       </tr>
                     ) : (
                       requests.map(request => (
                         <tr key={request.id} className="rounded-2xl bg-gray-50 text-sm text-gray-800">
-                          <td className="rounded-l-2xl px-3 py-4 font-medium">{request.jobTitle}</td>
+                          <td className="rounded-l-2xl px-3 py-4 font-medium">{tr(request.jobTitle)}</td>
                           <td className="px-3 py-4">{request.headcountRequired}</td>
                           <td className="px-3 py-4">{request.location}</td>
-                          <td className="px-3 py-4">{request.employmentType}</td>
-                          <td className="px-3 py-4">{request.startDate || '—'}</td>
+                          <td className="px-3 py-4">{tr(request.employmentType)}</td>
+                          <td className="px-3 py-4">{tr(request.startDate || '—')}</td>
                           <td className="rounded-r-2xl px-3 py-4">
                             <select
                               value={request.status}
                               onChange={e => handleStatusChange(request.id, e.target.value)}
                               className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-medium outline-none focus:border-black"
                             >
-                              <option value="open">Open</option>
-                              <option value="in_progress">In Progress</option>
-                              <option value="fulfilled">Fulfilled</option>
-                              <option value="closed">Closed</option>
-                              <option value="cancelled">Cancelled</option>
+                              <option value="open">{tr("Open")}</option>
+                              <option value="in_progress">{tr("In Progress")}</option>
+                              <option value="fulfilled">{tr("Fulfilled")}</option>
+                              <option value="closed">{tr("Closed")}</option>
+                              <option value="cancelled">{tr("Cancelled")}</option>
                             </select>
                           </td>
                         </tr>

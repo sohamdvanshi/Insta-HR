@@ -1,1 +1,8 @@
 @import "tailwindcss";
+
+/* Local fonts cover Latin and Devanagari without an external font request. */
+body { font-family: Arial, "Nirmala UI", "Mangal", "Noto Sans Devanagari", sans-serif; }
+button, input, select, textarea { font: inherit; }
+button, a, label, p, th, td { overflow-wrap: break-word; }
+:focus-visible { outline: 2px solid #2563eb; outline-offset: 3px; }
+@media print { nav, [aria-label="Admin tools"] { display: none; } }

@@ -1,4 +1,6 @@
 'use client'
+import { tr, useLocale } from '@/lib/localization'
+
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
@@ -6,6 +8,8 @@ import { useRouter } from 'next/navigation'
 const API_BASE = 'http://localhost:5000/api/v1'
 
 export default function NewResumePage() {
+  useLocale()
+
   const router = useRouter()
 
   useEffect(() => {
@@ -69,7 +73,7 @@ export default function NewResumePage() {
     <main className="min-h-screen bg-gray-50 pt-24 flex items-center justify-center">
       <div className="text-center">
         <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-        <p className="text-gray-500">Creating your resume...</p>
+        <p className="text-gray-500">{tr("Creating your resume...")}</p>
       </div>
     </main>
   )

@@ -1,4 +1,6 @@
 'use client'
+import { tr, trError, useLocale, locale } from '@/lib/localization'
+
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -7,6 +9,8 @@ import Link from 'next/link'
 const API_BASE = 'http://localhost:5000/api/v1'
 
 export default function ResumeListPage() {
+  useLocale()
+
   const router = useRouter()
   const [resumes, setResumes] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -126,7 +130,7 @@ export default function ResumeListPage() {
   if (loading) {
     return (
       <main className="min-h-screen bg-gray-50 pt-24 flex items-center justify-center">
-        <p className="text-gray-400">Loading resumes...</p>
+        <p className="text-gray-400">{tr("Loading resumes...")}</p>
       </main>
     )
   }
@@ -136,41 +140,33 @@ export default function ResumeListPage() {
       <div className="max-w-6xl mx-auto px-6 py-10">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
           <div>
-            <Link href="/dashboard" className="text-sm text-blue-600 hover:underline">
-              ← Back to Dashboard
-            </Link>
-            <h1 className="text-3xl font-bold text-gray-900 mt-2">My Resumes</h1>
-            <p className="text-gray-500">Create, edit, and manage your resumes</p>
+            <Link href="/dashboard" className="text-sm text-blue-600 hover:underline">{tr("← Back to Dashboard")}</Link>
+            <h1 className="text-3xl font-bold text-gray-900 mt-2">{tr("My Resumes")}</h1>
+            <p className="text-gray-500">{tr("Create, edit, and manage your resumes")}</p>
           </div>
 
           <Link
             href="/resume/new"
             className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors text-center"
-          >
-            + Create New Resume
-          </Link>
+          >{tr("+ Create New Resume")}</Link>
         </div>
 
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6">
-            {error}
+            {trError(error)}
           </div>
         )}
 
         {resumes.length === 0 ? (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
             <div className="text-6xl mb-4">📄</div>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">No resumes yet</h2>
-            <p className="text-gray-500 mb-6">
-              Create your first professional resume and start applying faster.
-            </p>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">{tr("No resumes yet")}</h2>
+            <p className="text-gray-500 mb-6">{tr("Create your first professional resume and start applying faster.")}</p>
 
             <Link
               href="/resume/new"
               className="inline-block px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors"
-            >
-              Create First Resume
-            </Link>
+            >{tr("Create First Resume")}</Link>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -187,14 +183,11 @@ export default function ResumeListPage() {
                       </h2>
 
                       {resume.isDefault ? (
-                        <span className="px-2.5 py-1 rounded-full bg-violet-50 text-violet-700 border border-violet-200 text-xs font-semibold">
-                          Default
-                        </span>
+                        <span className="px-2.5 py-1 rounded-full bg-violet-50 text-violet-700 border border-violet-200 text-xs font-semibold">{tr("Default")}</span>
                       ) : null}
                     </div>
 
-                    <p className="text-sm text-gray-500 capitalize">
-                      Template: {resume.template || 'classic'}
+                    <p className="text-sm text-gray-500 capitalize">{tr("Template: ")}{resume.template || 'classic'}
                     </p>
                   </div>
 
@@ -209,8 +202,7 @@ export default function ResumeListPage() {
                 </div>
 
                 <div className="flex flex-wrap gap-2 mb-4">
-                  <span className="px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-xs font-medium">
-                    Sector: {formatLabel(resume.sector || 'general')}
+                  <span className="px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-xs font-medium">{tr("Sector: ")}{tr(formatLabel(resume.sector || 'general'))}
                   </span>
 
                   <span
@@ -218,19 +210,17 @@ export default function ResumeListPage() {
                       'px-2.5 py-1 rounded-full text-xs font-medium ' +
                       getVisibilityBadgeClasses(resume.visibility)
                     }
-                  >
-                    Visibility: {resume.visibility === 'link' ? 'Link' : 'Private'}
+                  >{tr("Visibility: ")}{tr(resume.visibility === 'link' ? 'Link' : 'Private')}
                   </span>
                 </div>
 
                 <div className="space-y-2 text-sm text-gray-500 mb-5">
-                  <p>Name: {resume.personalInfo?.fullName || 'Not added'}</p>
-                  <p>Role: {resume.personalInfo?.jobTitle || 'Not added'}</p>
-                  <p>
-                    Updated:{' '}
-                    {resume.updatedAt
-                      ? new Date(resume.updatedAt).toLocaleDateString()
-                      : 'Not available'}
+                  <p>{tr("Name: ")}{resume.personalInfo?.fullName || 'Not added'}</p>
+                  <p>{tr("Role: ")}{resume.personalInfo?.jobTitle || 'Not added'}</p>
+                  <p>{tr("Updated:")}{tr(' ')}
+                    {tr(resume.updatedAt
+                      ? new Date(resume.updatedAt).toLocaleDateString(locale())
+                      : 'Not available')}
                   </p>
                 </div>
 
@@ -238,17 +228,13 @@ export default function ResumeListPage() {
                   <Link
                     href={'/resume/' + resume.id}
                     className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700"
-                  >
-                    Edit
-                  </Link>
+                  >{tr("Edit")}</Link>
 
                   {resume.visibility === 'link' ? (
                     <button
                       onClick={() => handleCopyShareLink(resume)}
                       className="px-4 py-2 bg-emerald-50 text-emerald-700 text-sm font-medium rounded-xl hover:bg-emerald-100"
-                    >
-                      Copy Link
-                    </button>
+                    >{tr("Copy Link")}</button>
                   ) : null}
 
                   <button
@@ -256,7 +242,7 @@ export default function ResumeListPage() {
                     disabled={deletingId === resume.id}
                     className="px-4 py-2 bg-red-50 text-red-600 text-sm font-medium rounded-xl hover:bg-red-100 disabled:opacity-50"
                   >
-                    {deletingId === resume.id ? 'Deleting...' : 'Delete'}
+                    {tr(deletingId === resume.id ? 'Deleting...' : 'Delete')}
                   </button>
                 </div>
               </div>

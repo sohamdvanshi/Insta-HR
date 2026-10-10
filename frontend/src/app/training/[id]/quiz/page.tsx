@@ -1,4 +1,6 @@
 'use client';
+import { tr, trError, useLocale } from '@/lib/localization'
+
 
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -36,6 +38,8 @@ const API_BASE =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
 
 export default function CourseQuizPage() {
+  useLocale()
+
   const params = useParams();
   const router = useRouter();
   const courseId = params?.id as string;
@@ -166,7 +170,7 @@ export default function CourseQuizPage() {
     return (
       <div className="min-h-screen bg-slate-50 px-4 py-10">
         <div className="mx-auto max-w-4xl rounded-2xl bg-white p-6 shadow-sm">
-          <p className="text-sm text-slate-500">Loading quiz...</p>
+          <p className="text-sm text-slate-500">{tr("Loading quiz...")}</p>
         </div>
       </div>
     );
@@ -176,23 +180,19 @@ export default function CourseQuizPage() {
     return (
       <div className="min-h-screen bg-slate-50 px-4 py-10">
         <div className="mx-auto max-w-4xl rounded-2xl bg-white p-6 shadow-sm">
-          <h1 className="text-2xl font-bold text-slate-900">Course Quiz</h1>
-          <p className="mt-4 text-sm text-red-600">{error}</p>
+          <h1 className="text-2xl font-bold text-slate-900">{tr("Course Quiz")}</h1>
+          <p className="mt-4 text-sm text-red-600">{trError(error)}</p>
 
           <div className="mt-6 flex gap-3">
             <button
               onClick={fetchQuiz}
               className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
-            >
-              Retry
-            </button>
+            >{tr("Retry")}</button>
 
             <button
               onClick={() => router.push(`/training/${courseId}`)}
               className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
-            >
-              Back to Course
-            </button>
+            >{tr("Back to Course")}</button>
           </div>
         </div>
       </div>
@@ -210,47 +210,45 @@ export default function CourseQuizPage() {
                 : 'bg-red-100 text-red-700'
             }`}
           >
-            {result.passed ? 'Passed' : 'Failed'}
+            {tr(result.passed ? 'Passed' : 'Failed')}
           </div>
 
-          <h1 className="text-3xl font-bold text-slate-900">
-            Quiz Result
-          </h1>
+          <h1 className="text-3xl font-bold text-slate-900">{tr("Quiz Result")}</h1>
 
           {successMessage ? (
-            <p className="mt-2 text-sm text-slate-600">{successMessage}</p>
+            <p className="mt-2 text-sm text-slate-600">{tr(successMessage)}</p>
           ) : null}
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
             <div className="rounded-2xl border border-slate-200 p-4">
-              <p className="text-sm text-slate-500">Score</p>
+              <p className="text-sm text-slate-500">{tr("Score")}</p>
               <p className="mt-1 text-2xl font-bold text-slate-900">
                 {result.score} / {result.totalMarks}
               </p>
             </div>
 
             <div className="rounded-2xl border border-slate-200 p-4">
-              <p className="text-sm text-slate-500">Percentage</p>
+              <p className="text-sm text-slate-500">{tr("Percentage")}</p>
               <p className="mt-1 text-2xl font-bold text-slate-900">
                 {result.percentage}%
               </p>
             </div>
 
             <div className="rounded-2xl border border-slate-200 p-4">
-              <p className="text-sm text-slate-500">Pass Mark</p>
+              <p className="text-sm text-slate-500">{tr("Pass Mark")}</p>
               <p className="mt-1 text-2xl font-bold text-slate-900">
                 {result.passPercentage}%
               </p>
             </div>
 
             <div className="rounded-2xl border border-slate-200 p-4">
-              <p className="text-sm text-slate-500">Status</p>
+              <p className="text-sm text-slate-500">{tr("Status")}</p>
               <p
                 className={`mt-1 text-2xl font-bold ${
                   result.passed ? 'text-green-600' : 'text-red-600'
                 }`}
               >
-                {result.passed ? 'Qualified' : 'Not Qualified'}
+                {tr(result.passed ? 'Qualified' : 'Not Qualified')}
               </p>
             </div>
           </div>
@@ -261,32 +259,24 @@ export default function CourseQuizPage() {
                 <button
                   onClick={() => router.push(`/training/${courseId}/certificate`)}
                   className="rounded-xl bg-green-600 px-5 py-3 text-sm font-semibold text-white hover:bg-green-700"
-                >
-                  View Certificate
-                </button>
+                >{tr("View Certificate")}</button>
 
                 <button
                   onClick={() => router.push(`/training/${courseId}`)}
                   className="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-                >
-                  Back to Course
-                </button>
+                >{tr("Back to Course")}</button>
               </>
             ) : (
               <>
                 <button
                   onClick={handleRetry}
                   className="rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800"
-                >
-                  Try Again
-                </button>
+                >{tr("Try Again")}</button>
 
                 <button
                   onClick={() => router.push(`/training/${courseId}`)}
                   className="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-                >
-                  Back to Course
-                </button>
+                >{tr("Back to Course")}</button>
               </>
             )}
           </div>
@@ -301,7 +291,7 @@ export default function CourseQuizPage() {
         <div className="rounded-2xl bg-white p-6 shadow-sm">
           <div className="mb-6 border-b border-slate-200 pb-4">
             <h1 className="text-3xl font-bold text-slate-900">
-              {quiz?.title || 'Course Quiz'}
+              {quiz?.title || tr('Course Quiz')}
             </h1>
 
             {quiz?.description ? (
@@ -309,21 +299,18 @@ export default function CourseQuizPage() {
             ) : null}
 
             <div className="mt-4 flex flex-wrap gap-3 text-sm text-slate-600">
-              <span className="rounded-full bg-slate-100 px-3 py-1">
-                Questions: {totalQuestions}
+              <span className="rounded-full bg-slate-100 px-3 py-1">{tr("Questions: ")}{totalQuestions}
               </span>
-              <span className="rounded-full bg-slate-100 px-3 py-1">
-                Pass Mark: {quiz?.passPercentage}%
+              <span className="rounded-full bg-slate-100 px-3 py-1">{tr("Pass Mark: ")}{quiz?.passPercentage}%
               </span>
-              <span className="rounded-full bg-slate-100 px-3 py-1">
-                Answered: {answeredCount}/{totalQuestions}
+              <span className="rounded-full bg-slate-100 px-3 py-1">{tr("Answered: ")}{answeredCount}/{totalQuestions}
               </span>
             </div>
           </div>
 
           {error ? (
             <div className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
+              {trError(error)}
             </div>
           ) : null}
 
@@ -333,8 +320,7 @@ export default function CourseQuizPage() {
                 key={question.id}
                 className="rounded-2xl border border-slate-200 p-5"
               >
-                <h2 className="text-lg font-semibold text-slate-900">
-                  Q{index + 1}. {question.question}
+                <h2 className="text-lg font-semibold text-slate-900">{tr("Q")}{index + 1}. {tr(question.question)}
                 </h2>
 
                 <div className="mt-4 space-y-3">
@@ -363,10 +349,9 @@ export default function CourseQuizPage() {
                         className="mt-1 h-4 w-4"
                       />
                       <div>
-                        <p className="text-sm font-semibold text-slate-700">
-                          Option {option.key}
+                        <p className="text-sm font-semibold text-slate-700">{tr("Option ")}{tr(option.key)}
                         </p>
-                        <p className="text-sm text-slate-600">{option.value}</p>
+                        <p className="text-sm text-slate-600">{tr(option.value)}</p>
                       </div>
                     </label>
                   ))}
@@ -381,15 +366,13 @@ export default function CourseQuizPage() {
               disabled={submitting}
               className="rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {submitting ? 'Submitting...' : 'Submit Quiz'}
+              {tr(submitting ? 'Submitting...' : 'Submit Quiz')}
             </button>
 
             <button
               onClick={() => router.push(`/training/${courseId}`)}
               className="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-            >
-              Back to Course
-            </button>
+            >{tr("Back to Course")}</button>
           </div>
         </div>
       </div>
