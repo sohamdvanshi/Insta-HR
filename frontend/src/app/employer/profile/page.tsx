@@ -1,4 +1,6 @@
 'use client'
+import { readStoredUser } from '@/lib/storage'
+import { API_BASE } from '@/lib/api'
 import { tr, useLocale } from '@/lib/localization'
 
 import { useState, useEffect, useRef } from 'react'
@@ -62,7 +64,7 @@ export default function EmployerProfilePage() {
 
   useEffect(() => {
     const token = localStorage.getItem('token')
-    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    const user = readStoredUser()
     if (!token || user.role !== 'employer') {
       router.push('/login')
       return
@@ -72,7 +74,7 @@ export default function EmployerProfilePage() {
 
   const fetchProfile = async (token: string) => {
     try {
-      const res = await fetch('http://localhost:5000/api/v1/employers/profile', {
+      const res = await fetch(`${API_BASE}/employers/profile`, {
         headers: { Authorization: 'Bearer ' + token }
       })
       const data = await res.json()
@@ -114,7 +116,7 @@ export default function EmployerProfilePage() {
     setSaving(true)
     const token = localStorage.getItem('token')
     try {
-      const res = await fetch('http://localhost:5000/api/v1/employers/profile', {
+      const res = await fetch(`${API_BASE}/employers/profile`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
         body: JSON.stringify({ ...form, foundedYear: form.foundedYear ? Number(form.foundedYear) : null })
@@ -137,7 +139,7 @@ export default function EmployerProfilePage() {
     const fd = new FormData()
     fd.append('logo', file)
     try {
-      const res = await fetch('http://localhost:5000/api/v1/employers/logo', {
+      const res = await fetch(`${API_BASE}/employers/logo`, {
         method: 'POST',
         headers: { Authorization: 'Bearer ' + token },
         body: fd
@@ -233,12 +235,12 @@ export default function EmployerProfilePage() {
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <p className="font-bold text-2xl">{tr(form.companyName || 'Your Company Name')}</p>
+                <p className="font-bold text-2xl">{form.companyName || tr('Your Company Name')}</p>
                 {profile?.isVerified && <span className="bg-green-400 text-white text-xs px-2 py-0.5 rounded-full font-medium">{tr("✓ Verified")}</span>}
               </div>
-              <p className="text-blue-100 mt-1">{tr(form.tagline || 'Add your company tagline')}</p>
+              <p className="text-blue-100 mt-1">{form.tagline || tr('Add your company tagline')}</p>
               <div className="flex gap-4 mt-2 text-sm text-blue-100">
-                {form.city && <span>📍 {tr(form.city)}{tr(form.state ? ', ' + form.state : '')}</span>}
+                {form.city && <span>📍 {form.city}{form.state ? ', ' + form.state : ''}</span>}
                 {form.industry && <span>🏭 {tr(form.industry)}</span>}
                 {form.companySize && <span>👥 {tr(form.companySize)}{tr(" employees")}</span>}
               </div>

@@ -410,5 +410,14 @@
   "Failed to fetch referral": "रेफरल लोड करण्याचा प्रयत्न अयशस्वी",
   "Failed to generate resume summary": "रेझ्युमे सारांश तयार करण्याचा प्रयत्न अयशस्वी",
   "Failed to generate experience bullets": "अनुभव मुद्दे तयार करण्याचा प्रयत्न अयशस्वी",
-  "Failed to generate ATS suggestions": "ATS सूचना तयार करण्याचा प्रयत्न अयशस्वी"
+  "Failed to generate ATS suggestions": "ATS सूचना तयार करण्याचा प्रयत्न अयशस्वी",
+  "Please enter a valid pay period month": "कृपया योग्य वेतन महिना प्रविष्ट करा",
+  "Please enter a valid date": "कृपया योग्य तारीख प्रविष्ट करा",
+  "Amounts must be valid non-negative numbers": "रकमा शून्य किंवा त्यापेक्षा मोठ्या योग्य संख्या असाव्यात",
+  "Amounts must have at most two decimal places": "रकमांमध्ये जास्तीत जास्त दोन दशांश अंक असू शकतात",
+  "End date cannot be before start date": "समाप्ती तारीख सुरुवातीच्या तारखेपूर्वी असू शकत नाही",
+  "This job is no longer accepting applications": "या नोकरीसाठी आता अर्ज स्वीकारले जात नाहीत",
+  "Authentication service unavailable. Please try again.": "लॉगिन सेवा उपलब्ध नाही. कृपया पुन्हा प्रयत्न करा.",
+  "Payment service is not configured": "देयक सेवा कॉन्फिगर केलेली नाही",
+  "Account created. OTP email could not be sent. Please resend OTP.": "खाते तयार झाले आहे. OTP ईमेल पाठवता आला नाही. कृपया OTP पुन्हा पाठवा."
 }

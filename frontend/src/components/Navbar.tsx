@@ -383,7 +383,7 @@ export default function Navbar() {
             <>
               <div className="hidden text-right lg:block">
                 <p className="text-sm font-semibold text-gray-900">
-                  {tr(user.firstName || user.name || user.email)}
+                  {user.firstName || user.name || user.email}
                 </p>
                 <p className="text-xs capitalize text-gray-500">
                   {tr(user.role)}

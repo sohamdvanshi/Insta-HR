@@ -19,7 +19,7 @@ router.get(
 router.get(
   '/my',
   protect,
-  authorize('employer', 'admin'),
+  authorize('employer', 'admin', 'super_admin'),
   cacheResponse({
     prefix: 'jobs-my',
     ttl: 120,
@@ -30,14 +30,15 @@ router.get(
 
 router.get(
   '/:id',
+  (req, res, next) => req.headers.authorization ? protect(req, res, next) : next(),
   cacheResponse({ prefix: 'job-detail', ttl: 300 }),
   jobController.getJobById
 );
 
-router.post('/', protect, authorize('employer', 'admin'), jobController.createJob);
-router.patch('/:id', protect, authorize('employer', 'admin'), jobController.updateJob);
-router.patch('/:id/close', protect, authorize('employer', 'admin'), jobController.closeJob);
-router.patch('/:id/reopen', protect, authorize('employer', 'admin'), jobController.reopenJob);
-router.delete('/:id', protect, authorize('employer', 'admin'), jobController.deleteJob);
+router.post('/', protect, authorize('employer', 'admin', 'super_admin'), jobController.createJob);
+router.patch('/:id', protect, authorize('employer', 'admin', 'super_admin'), jobController.updateJob);
+router.patch('/:id/close', protect, authorize('employer', 'admin', 'super_admin'), jobController.closeJob);
+router.patch('/:id/reopen', protect, authorize('employer', 'admin', 'super_admin'), jobController.reopenJob);
+router.delete('/:id', protect, authorize('employer', 'admin', 'super_admin'), jobController.deleteJob);
 
 module.exports = router;

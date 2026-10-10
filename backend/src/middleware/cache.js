@@ -2,7 +2,7 @@ const crypto = require('crypto');
 const { getRedisClient } = require('../config/redis');
 
 const defaultCacheKey = (prefix, req) => {
-  const rawKey = `${req.method}:${req.originalUrl || req.url}`;
+  const rawKey = `${req.method}:${req.originalUrl || req.url}:${req.user?.id || 'public'}`;
   const hash = crypto.createHash('md5').update(rawKey).digest('hex');
   return `instahr:${prefix}:${hash}`;
 };
@@ -62,13 +62,10 @@ const clearCacheByPattern = async (pattern) => {
       MATCH: pattern,
       COUNT: 100,
     })) {
-      const key =
-        typeof item === 'string' || Buffer.isBuffer(item)
-          ? item
-          : item?.key || item?.value || item?.name || null;
-
-      if (key) {
-        keys.push(key);
+      for (const entry of Array.isArray(item) ? item : [item]) {
+        const key = typeof entry === 'string' || Buffer.isBuffer(entry)
+          ? entry : entry?.key || entry?.value || entry?.name || null;
+        if (key) keys.push(key);
       }
     }
 

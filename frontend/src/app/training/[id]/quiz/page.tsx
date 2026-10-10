@@ -1,4 +1,5 @@
 'use client';
+import { API_BASE } from '@/lib/api'
 import { tr, trError, useLocale } from '@/lib/localization'
 
 
@@ -34,8 +35,6 @@ type QuizResult = {
   attemptedAt?: string;
 };
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
 
 export default function CourseQuizPage() {
   useLocale()
@@ -320,7 +319,7 @@ export default function CourseQuizPage() {
                 key={question.id}
                 className="rounded-2xl border border-slate-200 p-5"
               >
-                <h2 className="text-lg font-semibold text-slate-900">{tr("Q")}{index + 1}. {tr(question.question)}
+                <h2 className="text-lg font-semibold text-slate-900">{tr("Q")}{index + 1}. {question.question}
                 </h2>
 
                 <div className="mt-4 space-y-3">
@@ -351,7 +350,7 @@ export default function CourseQuizPage() {
                       <div>
                         <p className="text-sm font-semibold text-slate-700">{tr("Option ")}{tr(option.key)}
                         </p>
-                        <p className="text-sm text-slate-600">{tr(option.value)}</p>
+                        <p className="text-sm text-slate-600">{option.value}</p>
                       </div>
                     </label>
                   ))}

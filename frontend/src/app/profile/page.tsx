@@ -1,4 +1,5 @@
 'use client'
+import { API_BASE } from '@/lib/api'
 import { tr, useLocale } from '@/lib/localization'
 
 import { useState, useEffect, useRef } from 'react'
@@ -70,7 +71,7 @@ export default function ProfilePage() {
 
   const fetchProfile = async (token: string) => {
     try {
-      const res = await fetch('http://localhost:5000/api/v1/candidates/profile', {
+      const res = await fetch(`${API_BASE}/candidates/profile`, {
         headers: { Authorization: 'Bearer ' + token }
       })
       const data = await res.json()
@@ -105,7 +106,7 @@ export default function ProfilePage() {
     setSaving(true)
     const token = localStorage.getItem('token')
     try {
-      const res = await fetch('http://localhost:5000/api/v1/candidates/profile', {
+      const res = await fetch(`${API_BASE}/candidates/profile`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
         body: JSON.stringify({
@@ -131,7 +132,7 @@ export default function ProfilePage() {
     const token = localStorage.getItem('token')
     const fd = new FormData(); fd.append('photo', file)
     try {
-      const res = await fetch('http://localhost:5000/api/v1/candidates/photo', {
+      const res = await fetch(`${API_BASE}/candidates/photo`, {
         method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: fd
       })
       const data = await res.json()
@@ -148,7 +149,7 @@ export default function ProfilePage() {
     const token = localStorage.getItem('token')
     const fd = new FormData(); fd.append('resume', file)
     try {
-      const res = await fetch('http://localhost:5000/api/v1/candidates/resume', {
+      const res = await fetch(`${API_BASE}/candidates/resume`, {
         method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: fd
       })
       const data = await res.json()
@@ -242,7 +243,7 @@ export default function ProfilePage() {
                   <img src={profile.photoUrl} alt={tr("Profile")} className="w-full h-full object-cover" />
                 ) : (
                   <span className="text-3xl text-white font-bold">
-                    {tr(form.firstName ? form.firstName[0].toUpperCase() : '?')}
+                    {form.firstName ? form.firstName[0].toUpperCase() : '?'}
                   </span>
                 )}
               </div>
@@ -255,9 +256,9 @@ export default function ProfilePage() {
             </div>
 
             <div className="flex-1">
-              <p className="font-bold text-gray-900 text-xl">{tr(form.firstName)} {tr(form.lastName)}</p>
-              <p className="text-gray-500">{tr(form.headline || 'Add your headline')}</p>
-              <p className="text-gray-400 text-sm">{tr(form.currentLocation || 'Add location')}</p>
+              <p className="font-bold text-gray-900 text-xl">{form.firstName} {form.lastName}</p>
+              <p className="text-gray-500">{form.headline || tr('Add your headline')}</p>
+              <p className="text-gray-400 text-sm">{form.currentLocation || tr('Add location')}</p>
               <p className="text-xs text-blue-600 mt-1 cursor-pointer" onClick={() => photoRef.current?.click()}>
                 {tr(profile?.photoUrl ? 'Change photo' : '+ Upload photo')}
               </p>

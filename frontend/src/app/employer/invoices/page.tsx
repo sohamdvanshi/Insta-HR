@@ -1,10 +1,10 @@
 'use client';
+import { API_BASE } from '@/lib/api'
 import { tr, trError, useLocale } from '@/lib/localization'
 
 
 import { useEffect, useState } from 'react';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
 
 type PayrollOption = {
   id: string;
@@ -311,7 +311,7 @@ export default function EmployerInvoicesPage() {
                     <option value="">{tr("Select Deployment")}</option>
                     {deployments.map(deployment => (
                       <option key={deployment.id} value={deployment.id}>
-                        {tr(getDeploymentLabel(deployment))}
+                        {getDeploymentLabel(deployment)}
                       </option>
                     ))}
                   </select>
@@ -516,7 +516,7 @@ export default function EmployerInvoicesPage() {
                           <td className="px-3 py-4">
                             {tr(item.candidate?.email || item.deployment?.candidate?.email || '—')}
                           </td>
-                          <td className="px-3 py-4">{tr(item.deployment?.siteName || '—')}</td>
+                          <td className="px-3 py-4">{item.deployment?.siteName || '—'}</td>
                           <td className="px-3 py-4">{tr(item.billingPeriodMonth)}</td>
                           <td className="px-3 py-4">{tr(item.invoiceDate)}</td>
                           <td className="px-3 py-4">{tr(item.dueDate)}</td>

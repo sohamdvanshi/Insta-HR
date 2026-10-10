@@ -1,4 +1,6 @@
 const { elasticClient } = require('../../config/elasticsearch');
+const { Op } = require('sequelize');
+const { Job } = require('../../models');
 
 const JOBS_INDEX = process.env.ELASTICSEARCH_JOBS_INDEX || 'jobs';
 
@@ -84,7 +86,7 @@ const ensureJobsIndex = async () => {
 const indexJobDocument = async (job) => {
   const doc = job.toJSON ? job.toJSON() : job;
 
-  await elasticClient.index({
+  try { await elasticClient.index({
     index: JOBS_INDEX,
     id: doc.id,
     document: {
@@ -115,7 +117,7 @@ const indexJobDocument = async (job) => {
       applicationDeadline: doc.applicationDeadline || null
     },
     refresh: true
-  });
+  }); } catch (error) { console.error('Job search indexing failed; SQL record saved:', error.message); return false; }
 };
 
 const deleteJobDocument = async (jobId) => {
@@ -127,9 +129,21 @@ const deleteJobDocument = async (jobId) => {
     });
   } catch (error) {
     if (error.meta?.statusCode !== 404) {
-      throw error;
+      console.error('Job search deletion failed; SQL record deleted:', error.message);
+      return false;
     }
   }
+};
+
+const searchJobsSql = async ({ keyword, location, jobType, industry, experienceLevel, minSalary, sortBy, page, limit }) => {
+  const where = { status: 'active' };
+  if (keyword) where[Op.or] = ['title', 'description', 'companyName'].map(key => ({ [key]: { [Op.iLike]: `%${keyword}%` } }));
+  for (const [key, value] of Object.entries({ location, industry })) if (value) where[key] = { [Op.iLike]: `%${value}%` };
+  for (const [key, value] of Object.entries({ jobType, experienceLevel })) if (value) where[key] = value;
+  if (minSalary !== '' && minSalary != null && Number.isFinite(Number(minSalary))) where.salaryMax = { [Op.gte]: Number(minSalary) };
+  const order = sortBy === 'salaryHigh' ? [['salaryMax', 'DESC NULLS LAST'], ['createdAt', 'DESC']] : sortBy === 'salaryLow' ? [['salaryMin', 'ASC NULLS LAST'], ['createdAt', 'DESC']] : [['createdAt', 'DESC']];
+  const { rows, count } = await Job.findAndCountAll({ where, order, limit, offset: (page - 1) * limit });
+  return { total: count, currentPage: page, totalPages: Math.ceil(count / limit), data: rows.map(row => typeof row.toJSON === 'function' ? row.toJSON() : row) };
 };
 
 const searchJobsAdvanced = async (params = {}) => {
@@ -139,15 +153,16 @@ const searchJobsAdvanced = async (params = {}) => {
     jobType = '',
     industry = '',
     experienceLevel = '',
-    status = 'active',
+    status: _status,
     minSalary = '',
     sortBy = 'relevance',
     page = 1,
     limit = 10
   } = params;
 
-  const pageNumber = Math.max(Number(page) || 1, 1);
-  const limitNumber = Math.min(Math.max(Number(limit) || 10, 1), 50);
+  const status = 'active';
+  const pageNumber = Math.min(Math.max(Math.floor(Number(page)) || 1, 1), 100000);
+  const limitNumber = Math.min(Math.max(Math.floor(Number(limit)) || 10, 1), 50);
   const from = (pageNumber - 1) * limitNumber;
 
   const must = [];
@@ -284,13 +299,18 @@ const searchJobsAdvanced = async (params = {}) => {
     ];
   }
 
-  const response = await elasticClient.search({
+  let response;
+  try { response = await elasticClient.search({
     index: JOBS_INDEX,
     from,
     size: limitNumber,
     query,
-    sort
-  });
+    sort,
+    track_total_hits: true
+  }); } catch (error) {
+    console.error('Search unavailable; using SQL:', error.message);
+    return searchJobsSql({ keyword, location, jobType, industry, experienceLevel, minSalary, sortBy, page: pageNumber, limit: limitNumber });
+  }
 
   const total =
     typeof response.hits.total === 'number'

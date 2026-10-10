@@ -1,4 +1,5 @@
 'use client'
+import { readStoredUser } from '@/lib/storage'
 import { tr, trError, useLocale, locale } from '@/lib/localization'
 
 
@@ -69,7 +70,7 @@ export default function TrainingWorkspace() {
     let cancelled = false
     async function load() {
       try {
-        const user = JSON.parse(localStorage.getItem('user') || '{}')
+        const user = readStoredUser()
         if (!['trainer', 'admin', 'super_admin'].includes(user.role)) {
           window.location.assign(user.role ? '/dashboard' : '/login'); return
         }

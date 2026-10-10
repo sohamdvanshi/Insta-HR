@@ -1,10 +1,10 @@
 'use client';
+import { API_BASE } from '@/lib/api'
 import { tr, trError, useLocale } from '@/lib/localization'
 
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
 
 type AuditSummary = {
   window: string;
@@ -522,7 +522,7 @@ export default function AdminAuditPage() {
                             <td className="py-3 pr-4 text-gray-700">{tr(log.ipAddress || '-')}</td>
                             <td className="py-3 pr-0 text-xs text-gray-600">
                               <pre className="max-w-[320px] whitespace-pre-wrap break-words rounded-lg bg-gray-50 p-2">
-                                {tr(JSON.stringify(log.metadata || {}, null, 2))}
+                                {JSON.stringify(log.metadata || {}, null, 2)}
                               </pre>
                             </td>
                           </tr>
@@ -648,7 +648,7 @@ export default function AdminAuditPage() {
                               <div className="max-w-xs">{tr(alert.reason)}</div>
                               {alert.metadata ? (
                                 <pre className="mt-2 max-w-[280px] whitespace-pre-wrap break-words rounded-lg bg-gray-50 p-2 text-xs text-gray-600">
-                                  {tr(JSON.stringify(alert.metadata, null, 2))}
+                                  {JSON.stringify(alert.metadata, null, 2)}
                                 </pre>
                               ) : null}
                             </td>

@@ -1,4 +1,5 @@
 'use client'
+import { API_BASE } from '@/lib/api'
 import { tr, useLocale, locale } from '@/lib/localization'
 
 
@@ -35,7 +36,6 @@ interface MyApplication {
   }
 }
 
-const API_BASE = 'http://localhost:5000/api/v1'
 
 function JobDetailPageContent() {
   useLocale()

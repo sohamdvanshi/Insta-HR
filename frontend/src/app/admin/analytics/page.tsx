@@ -1,4 +1,5 @@
 'use client';
+import { API_BASE } from '@/lib/api'
 import { tr, trError, useLocale } from '@/lib/localization'
 
 
@@ -22,7 +23,6 @@ import {
   Legend,
 } from 'recharts';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
 
 type Summary = {
   totalUsers: number;
@@ -210,7 +210,7 @@ function RankingList({
           <div className="flex items-center justify-between gap-4">
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-gray-900">
-                #{index + 1} {tr(String(item?.[labelKey] ?? 'Unknown'))}
+                #{index + 1} {String(item?.[labelKey] ?? tr('Unknown'))}
               </p>
               <p className="text-xs text-gray-500">{tr(valueLabel)}</p>
             </div>

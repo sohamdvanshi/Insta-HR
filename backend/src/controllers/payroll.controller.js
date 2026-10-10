@@ -1,23 +1,13 @@
 const { Payroll, Attendance, Deployment, User } = require('../models');
 const { Op } = require('sequelize');
 
-const getMonthRange = (payPeriodMonth) => {
-  const [year, month] = payPeriodMonth.split('-').map(Number);
-
-  const start = new Date(year, month - 1, 1);
-  const end = new Date(year, month, 0);
-
-  const startDate = start.toISOString().split('T')[0];
-  const endDate = end.toISOString().split('T')[0];
-
-  return { startDate, endDate };
-};
+const { monthRange: getMonthRange, money } = require('../services/recordValidation');
 
 const calculateNetSalary = (grossSalary, deductions, bonus) => {
   const gross = Number(grossSalary || 0);
   const deduct = Number(deductions || 0);
   const extra = Number(bonus || 0);
-  return Math.max(gross - deduct + extra, 0);
+  return Math.max(Math.round(gross * 100) - Math.round(deduct * 100) + Math.round(extra * 100), 0) / 100;
 };
 
 const createPayroll = async (req, res) => {
@@ -38,6 +28,9 @@ const createPayroll = async (req, res) => {
         message: 'Deployment, pay period month, and gross salary are required.',
       });
     }
+
+    getMonthRange(payPeriodMonth);
+    const gross = money(grossSalary), deduct = money(deductions, true), extra = money(bonus, true);
 
     const deployment = await Deployment.findOne({
       where: { id: deploymentId, employerId },
@@ -78,7 +71,7 @@ const createPayroll = async (req, res) => {
     const totalAbsentDays = attendanceRecords.filter(a => a.status === 'absent').length;
     const totalHalfDays = attendanceRecords.filter(a => a.status === 'half_day').length;
 
-    const netSalary = calculateNetSalary(grossSalary, deductions, bonus);
+    const netSalary = calculateNetSalary(gross, deduct, extra);
 
     const payroll = await Payroll.create({
       employerId,
@@ -88,9 +81,9 @@ const createPayroll = async (req, res) => {
       totalPresentDays,
       totalAbsentDays,
       totalHalfDays,
-      grossSalary,
-      deductions: deductions || 0,
-      bonus: bonus || 0,
+      grossSalary: gross,
+      deductions: deduct,
+      bonus: extra,
       netSalary,
       status: 'draft',
       remarks: remarks || null,
@@ -102,7 +95,7 @@ const createPayroll = async (req, res) => {
       data: payroll,
     });
   } catch (error) {
-    return res.status(500).json({
+    return res.status(error.status || (error.name === 'SequelizeUniqueConstraintError' ? 409 : 500)).json({
       success: false,
       message: error.message || 'Failed to create payroll.',
     });
@@ -142,7 +135,7 @@ const getEmployerPayrolls = async (req, res) => {
       data: payrolls,
     });
   } catch (error) {
-    return res.status(500).json({
+    return res.status(error.status || (error.name === 'SequelizeUniqueConstraintError' ? 409 : 500)).json({
       success: false,
       message: error.message || 'Failed to fetch payrolls.',
     });
@@ -184,7 +177,7 @@ const updatePayrollStatus = async (req, res) => {
       data: payroll,
     });
   } catch (error) {
-    return res.status(500).json({
+    return res.status(error.status || (error.name === 'SequelizeUniqueConstraintError' ? 409 : 500)).json({
       success: false,
       message: error.message || 'Failed to update payroll status.',
     });

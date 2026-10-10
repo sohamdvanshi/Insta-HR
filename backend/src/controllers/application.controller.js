@@ -6,7 +6,8 @@ const {
   Application,
   Job,
   User,
-  CandidateProfile
+  CandidateProfile,
+  FeatureFlag
 } = require('../models')
 
 const {
@@ -134,6 +135,11 @@ exports.applyToJob = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Job not found' })
     }
 
+    if (job.status !== 'active' || (job.applicationDeadline && new Date(job.applicationDeadline) < new Date())) {
+      removeFile(uploadedPath)
+      return res.status(400).json({ success: false, message: 'This job is no longer accepting applications' })
+    }
+
     const duplicate = await Application.findOne({ where: { jobId, candidateId: req.user.id } })
     if (duplicate) {
       removeFile(uploadedPath)
@@ -167,6 +173,10 @@ exports.applyToJob = async (req, res) => {
     })
 
     try {
+      const flag = await FeatureFlag.findByPk('ai_screening')
+      if (!flag?.enabled) {
+        await application.update({ aiStatus: 'pending' })
+      } else {
       const screening = await screenResumeAgainstJob(resumeText, job)
       await application.update({
         aiScore: screening.aiScore,
@@ -177,6 +187,7 @@ exports.applyToJob = async (req, res) => {
         aiRawResponse: screening.aiRawResponse || null,
         screenedAt: new Date()
       })
+      }
     } catch (error) {
       console.error('Resume screening error:', error.message)
       await application.update({ aiStatus: 'failed', aiSummary: error.message || 'Resume screening failed' })

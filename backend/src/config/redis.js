@@ -10,6 +10,8 @@ const createRedisConnection = async () => {
 
     redisClient = createClient({
       url: process.env.REDIS_URL || 'redis://127.0.0.1:6379',
+      socket: { connectTimeout: 3000, reconnectStrategy: false },
+      disableOfflineQueue: true,
     });
 
     redisClient.on('error', (err) => {
@@ -32,6 +34,7 @@ const createRedisConnection = async () => {
     return redisClient;
   } catch (error) {
     console.error('❌ Redis connection failed:', error.message);
+    if (redisClient?.isOpen) redisClient.destroy();
     redisClient = null;
     return null;
   }

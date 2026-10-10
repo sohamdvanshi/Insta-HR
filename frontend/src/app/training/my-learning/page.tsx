@@ -1,4 +1,5 @@
 'use client'
+import { API_BASE } from '@/lib/api'
 import { tr, trError, useLocale } from '@/lib/localization'
 
 
@@ -25,7 +26,7 @@ export default function MyLearningPage() {
 
     const fetchMyCourses = async () => {
       try {
-        const res = await fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1').replace(/\/$/, '') + '/training/my/enrolled', {
+        const res = await fetch(API_BASE + '/training/my/enrolled', {
           headers: {
             Authorization: 'Bearer ' + token
           }
@@ -50,7 +51,7 @@ export default function MyLearningPage() {
 
             try {
               const progressRes = await fetch(
-                (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1').replace(/\/$/, '') + '/training/' + course.id + '/progress',
+                API_BASE + '/training/' + course.id + '/progress',
                 {
                   headers: {
                     Authorization: 'Bearer ' + token

@@ -32,7 +32,7 @@ SKILLS = [
 class MatchRequest(BaseModel):
     job_skills: List[str]
     job_description: str
-    job_experience_min: int
+    job_experience_min: float
     candidates: List[dict]
 
 class KeywordRequest(BaseModel):
@@ -42,7 +42,7 @@ def extract_skills(text: str) -> List[str]:
     text_lower = text.lower()
     found = []
     for skill in SKILLS:
-        if skill in text_lower:
+        if re.search(r'(?<![\w+#.])' + re.escape(skill) + r'(?![\w+#.])', text_lower):
             found.append(skill)
     return found
 
@@ -73,7 +73,13 @@ def calculate_match_score(job_skills, job_desc, job_exp_min, candidate):
         exp_score = 0
 
     # Text matching (30%)
-    resume_text = (candidate.get("resumeText") or "").lower()
+    experience_text = " ".join(
+        " ".join(str(item.get(key) or "") for key in ("title", "jobTitle", "company", "description"))
+        for item in (candidate.get("experience") or []) if isinstance(item, dict)
+    )
+    resume_text = " ".join(str(value or "") for value in (
+        candidate.get("resumeText"), candidate.get("summary"), candidate.get("headline"), experience_text
+    )).lower()
     job_words = set(re.findall(r'\w+', job_desc.lower()))
     resume_words = set(re.findall(r'\w+', resume_text))
     common = job_words.intersection(resume_words)
@@ -84,7 +90,7 @@ def calculate_match_score(job_skills, job_desc, job_exp_min, candidate):
 
     return {
         "candidateId": candidate.get("userId"),
-        "name": f"{candidate.get('firstName', '')} {candidate.get('lastName', '')}".strip(),
+        "name": f"{(candidate.get('firstName') or '')} {(candidate.get('lastName') or '')}".strip(),
         "matchScore": round(final_score, 1),
         "skillScore": round(skill_score, 1),
         "expScore": round(exp_score, 1),

@@ -252,6 +252,9 @@ exports.getShortlistedCandidatesForJob = async (req, res) => {
 }
 
 exports.sendCampaign = async (req, res) => {
+  let claimedCampaign = null
+  let sentCount = 0
+  let failedCount = 0
   try {
     const { id } = req.params
 
@@ -268,6 +271,10 @@ exports.sendCampaign = async (req, res) => {
         success: false,
         message: 'Unauthorized'
       })
+    }
+
+    if (campaign.status !== 'draft') {
+      return res.status(409).json({ success: false, message: 'Campaign has already been sent or started. Review its delivery results.' })
     }
 
     const job = await Job.findByPk(campaign.jobId)
@@ -308,15 +315,11 @@ exports.sendCampaign = async (req, res) => {
       })
     }
 
-    await campaign.update({
-      status: 'sending',
-      recipientCount: applications.length,
-      sentCount: 0,
-      failedCount: 0
-    })
-
-    let sentCount = 0
-    let failedCount = 0
+    const [claimed] = await BulkEmailCampaign.update({
+      status: 'sending', recipientCount: applications.length, sentCount: 0, failedCount: 0
+    }, { where: { id: campaign.id, employerId: req.user.id, status: 'draft' } })
+    if (!claimed) return res.status(409).json({ success: false, message: 'Campaign has already been sent or started. Review its delivery results.' })
+    claimedCampaign = campaign
     const batchSize = 20
 
     for (let i = 0; i < applications.length; i += batchSize) {
@@ -350,19 +353,20 @@ exports.sendCampaign = async (req, res) => {
         }
       }
 
-      await sleep(1500)
+      await campaign.update({ sentCount, failedCount })
+      if (i + batchSize < applications.length) await sleep(1500)
     }
 
     await campaign.update({
       sentCount,
       failedCount,
-      status: 'sent',
-      sentAt: new Date()
+      status: sentCount ? 'sent' : 'failed',
+      sentAt: sentCount ? new Date() : null
     })
 
     return res.json({
       success: true,
-      message: 'Campaign sent successfully',
+      message: failedCount ? `Emails sent: ${sentCount}. Failed: ${failedCount}.` : 'Campaign sent successfully',
       data: {
         recipientStatus: targetStatus,
         recipientCount: applications.length,
@@ -371,6 +375,9 @@ exports.sendCampaign = async (req, res) => {
       }
     })
   } catch (error) {
+    if (claimedCampaign) {
+      try { await claimedCampaign.update({ sentCount, failedCount, status: 'failed' }) } catch (saveError) { console.error('Unable to persist campaign failure:', saveError.message) }
+    }
     console.error('sendCampaign error:', error)
     return res.status(500).json({
       success: false,

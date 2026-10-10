@@ -10,7 +10,7 @@ const {
   getAuditDashboardSummary,
 } = require('../controllers/adminAudit.controller');
 
-router.use(protect, authorize('admin'));
+router.use(protect, authorize('admin', 'super_admin'));
 
 router.get('/summary', getAuditDashboardSummary);
 router.get('/logs', getAuditLogs);

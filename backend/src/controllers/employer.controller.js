@@ -3,6 +3,7 @@ const { cloudinary } = require('../config/cloudinary');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
 const { Op } = require('sequelize');
+const { employerFields } = require('../services/profileFields');
 
 // Cloudinary storage for logos
 const logoStorage = new CloudinaryStorage({
@@ -132,9 +133,9 @@ exports.upsertProfile = async (req, res) => {
   try {
     let profile = await EmployerProfile.findOne({ where: { userId: req.user.id } });
     if (!profile) {
-      profile = await EmployerProfile.create({ ...req.body, userId: req.user.id });
+      profile = await EmployerProfile.create({ ...employerFields(req.body), userId: req.user.id });
     } else {
-      await profile.update(req.body);
+      await profile.update(employerFields(req.body));
     }
     res.json({ success: true, data: profile });
   } catch (err) {

@@ -5959,6 +5959,306 @@
     "ns": "payroll",
     "key": "Example: ₹30,000 / month"
   },
+  "Upload attendance and calculate wage registers": {
+    "ns": "payroll",
+    "key": "Upload attendance and calculate wage registers"
+  },
+  "Wage registers": {
+    "ns": "payroll",
+    "key": "Wage registers"
+  },
+  "Sign in to access wage registers.": {
+    "ns": "payroll",
+    "key": "Sign in to access wage registers."
+  },
+  "Payroll month / list filter": {
+    "ns": "payroll",
+    "key": "Payroll month / list filter"
+  },
+  "Import monthly attendance": {
+    "ns": "payroll",
+    "key": "Import monthly attendance"
+  },
+  "Use the supplied attendance .xlsx template with employee IDs and date headers. Excel summary formulas are ignored. Imported employees need no portal account.": {
+    "ns": "payroll",
+    "key": "Use the supplied attendance .xlsx template with employee IDs and date headers. Excel summary formulas are ignored. Imported employees need no portal account."
+  },
+  "Site / establishment": {
+    "ns": "payroll",
+    "key": "Site / establishment"
+  },
+  "Attendance workbook": {
+    "ns": "payroll",
+    "key": "Attendance workbook"
+  },
+  "Preview attendance": {
+    "ns": "payroll",
+    "key": "Preview attendance"
+  },
+  "Confirm import and create draft": {
+    "ns": "payroll",
+    "key": "Confirm import and create draft"
+  },
+  "Replace attendance in open draft": {
+    "ns": "payroll",
+    "key": "Replace attendance in open draft"
+  },
+  "Replacing a draft keeps wage settings for matching employee IDs, removes employees absent from the new file and adds new employees with zero rates. Review before approval.": {
+    "ns": "payroll",
+    "key": "Replacing a draft keeps wage settings for matching employee IDs, removes employees absent from the new file and adds new employees with zero rates. Review before approval."
+  },
+  "Saved registers": {
+    "ns": "payroll",
+    "key": "Saved registers"
+  },
+  "No registers found.": {
+    "ns": "payroll",
+    "key": "No registers found."
+  },
+  "Page {{value0}} / {{value1}}": {
+    "ns": "payroll",
+    "key": "Page {{value0}} / {{value1}}"
+  },
+  "Source: {{value0}}.": {
+    "ns": "payroll",
+    "key": "Source: {{value0}}."
+  },
+  "Unsaved changes — save before export, approval or opening another register.": {
+    "ns": "payroll",
+    "key": "Unsaved changes — save before export, approval or opening another register."
+  },
+  "Save wages": {
+    "ns": "payroll",
+    "key": "Save wages"
+  },
+  "Approve and lock": {
+    "ns": "payroll",
+    "key": "Approve and lock"
+  },
+  "Discard unsaved edits": {
+    "ns": "payroll",
+    "key": "Discard unsaved edits"
+  },
+  "Export Excel with formulas": {
+    "ns": "payroll",
+    "key": "Export Excel with formulas"
+  },
+  "Approval locks this register. Verify wages, attendance and deductions first. This does not transfer money or mark an employee paid.": {
+    "ns": "payroll",
+    "key": "Approval locks this register. Verify wages, attendance and deductions first. This does not transfer money or mark an employee paid."
+  },
+  "Filter wage group": {
+    "ns": "payroll",
+    "key": "Filter wage group"
+  },
+  "All employees": {
+    "ns": "payroll",
+    "key": "All employees"
+  },
+  "Apply values to selected employees ({{value0}})": {
+    "ns": "payroll",
+    "key": "Apply values to selected employees ({{value0}})"
+  },
+  "Blank fields keep each employee’s value. Enter 0 to clear an amount. Attendance and payable days remain individual.": {
+    "ns": "payroll",
+    "key": "Blank fields keep each employee’s value. Enter 0 to clear an amount. Attendance and payable days remain individual."
+  },
+  "Group name": {
+    "ns": "payroll",
+    "key": "Group name"
+  },
+  "Apply to selected": {
+    "ns": "payroll",
+    "key": "Apply to selected"
+  },
+  "Select visible employees": {
+    "ns": "payroll",
+    "key": "Select visible employees"
+  },
+  "Select {{value0}}": {
+    "ns": "payroll",
+    "key": "Select {{value0}}"
+  },
+  "View / edit": {
+    "ns": "payroll",
+    "key": "View / edit"
+  },
+  "All employees: Earnings {{value0}} · Deductions {{value1}} · Net {{value2}}": {
+    "ns": "payroll",
+    "key": "All employees: Earnings {{value0}} · Deductions {{value1}} · Net {{value2}}"
+  },
+  "Present {{value0}} + public holidays {{value1}} = {{value2}} payable days; weekly offs {{value3}} excluded.": {
+    "ns": "payroll",
+    "key": "Present {{value0}} + public holidays {{value1}} = {{value2}} payable days; weekly offs {{value3}} excluded."
+  },
+  "Daily attendance": {
+    "ns": "payroll",
+    "key": "Daily attendance"
+  },
+  "Daily wage rate": {
+    "ns": "payroll",
+    "key": "Daily wage rate"
+  },
+  "Overtime hours": {
+    "ns": "payroll",
+    "key": "Overtime hours"
+  },
+  "Special Basic": {
+    "ns": "payroll",
+    "key": "Special Basic"
+  },
+  "DA": {
+    "ns": "payroll",
+    "key": "DA"
+  },
+  "HRA": {
+    "ns": "payroll",
+    "key": "HRA"
+  },
+  "Other earnings": {
+    "ns": "payroll",
+    "key": "Other earnings"
+  },
+  "Society": {
+    "ns": "payroll",
+    "key": "Society"
+  },
+  "Income Tax": {
+    "ns": "payroll",
+    "key": "Income Tax"
+  },
+  "Insurance": {
+    "ns": "payroll",
+    "key": "Insurance"
+  },
+  "Other deductions": {
+    "ns": "payroll",
+    "key": "Other deductions"
+  },
+  "Recoveries": {
+    "ns": "payroll",
+    "key": "Recoveries"
+  },
+  "Employer PF / welfare contribution": {
+    "ns": "payroll",
+    "key": "Employer PF / welfare contribution"
+  },
+  "Employee ID": {
+    "ns": "payroll",
+    "key": "Employee ID"
+  },
+  "Public holidays": {
+    "ns": "payroll",
+    "key": "Public holidays"
+  },
+  "Weekly offs": {
+    "ns": "payroll",
+    "key": "Weekly offs"
+  },
+  "Payable": {
+    "ns": "payroll",
+    "key": "Payable"
+  },
+  "Blank days": {
+    "ns": "payroll",
+    "key": "Blank days"
+  },
+  "Employee": {
+    "ns": "payroll",
+    "key": "Employee"
+  },
+  "Group": {
+    "ns": "payroll",
+    "key": "Group"
+  },
+  "Payable days": {
+    "ns": "payroll",
+    "key": "Payable days"
+  },
+  "Rate": {
+    "ns": "payroll",
+    "key": "Rate"
+  },
+  "Basic": {
+    "ns": "payroll",
+    "key": "Basic"
+  },
+  "OT": {
+    "ns": "payroll",
+    "key": "OT"
+  },
+  "Total earnings": {
+    "ns": "payroll",
+    "key": "Total earnings"
+  },
+  "PF": {
+    "ns": "payroll",
+    "key": "PF"
+  },
+  "ESIC": {
+    "ns": "payroll",
+    "key": "ESIC"
+  },
+  "UAN (12 digits)": {
+    "ns": "payroll",
+    "key": "UAN (12 digits)"
+  },
+  "Wage group": {
+    "ns": "payroll",
+    "key": "Wage group"
+  },
+  "Bank transaction / receipt ID": {
+    "ns": "payroll",
+    "key": "Bank transaction / receipt ID"
+  },
+  "Payment date": {
+    "ns": "payroll",
+    "key": "Payment date"
+  },
+  "Choose an attendance .xlsx file": {
+    "ns": "payroll",
+    "key": "Choose an attendance .xlsx file"
+  },
+  "Select at least one employee": {
+    "ns": "payroll",
+    "key": "Select at least one employee"
+  },
+  "Enter a value or group name to apply": {
+    "ns": "payroll",
+    "key": "Enter a value or group name to apply"
+  },
+  "Updated {{value0}} selected employees. Save to persist changes.": {
+    "ns": "payroll",
+    "key": "Updated {{value0}} selected employees. Save to persist changes."
+  },
+  "Export failed": {
+    "ns": "payroll",
+    "key": "Export failed"
+  },
+  "Draft imported. Enter wages before approval.": {
+    "ns": "payroll",
+    "key": "Draft imported. Enter wages before approval."
+  },
+  "Attendance replaced. Wage settings retained for matching employee IDs; review all totals.": {
+    "ns": "payroll",
+    "key": "Attendance replaced. Wage settings retained for matching employee IDs; review all totals."
+  },
+  "Wages saved.": {
+    "ns": "payroll",
+    "key": "Wages saved."
+  },
+  "Register approved and locked.": {
+    "ns": "payroll",
+    "key": "Register approved and locked."
+  },
+  "Unsaved edits discarded.": {
+    "ns": "payroll",
+    "key": "Unsaved edits discarded."
+  },
+  "Workbook policy: payable days = P + PH (H is mapped to PH). Weekly offs and leave codes are excluded. Basic = daily rate × payable days; overtime = daily rate ÷ 4 × hours. PF = 12% of Basic capped at ₹15,000; ESIC = 0.75% of total earnings rounded to a rupee. Employer contributions are separate.": {
+    "ns": "payroll",
+    "key": "Workbook policy: payable days = P + PH (H is mapped to PH). Weekly offs and leave codes are excluded. Basic = daily rate × payable days; overtime = daily rate ÷ 4 × hours. PF = 12% of Basic capped at ₹15,000; ESIC = 0.75% of total earnings rounded to a rupee. Employer contributions are separate."
+  },
   "failed": {
     "ns": "training",
     "key": "failed"
@@ -7550,10 +7850,6 @@
   "AI Screening": {
     "ns": "subscription",
     "key": "AI Screening"
-  },
-  "Basic": {
-    "ns": "subscription",
-    "key": "Basic"
   },
   "Advanced": {
     "ns": "subscription",
@@ -10790,6 +11086,42 @@
   "Failed to generate ATS suggestions": {
     "ns": "errors",
     "key": "Failed to generate ATS suggestions"
+  },
+  "Please enter a valid pay period month": {
+    "ns": "errors",
+    "key": "Please enter a valid pay period month"
+  },
+  "Please enter a valid date": {
+    "ns": "errors",
+    "key": "Please enter a valid date"
+  },
+  "Amounts must be valid non-negative numbers": {
+    "ns": "errors",
+    "key": "Amounts must be valid non-negative numbers"
+  },
+  "Amounts must have at most two decimal places": {
+    "ns": "errors",
+    "key": "Amounts must have at most two decimal places"
+  },
+  "End date cannot be before start date": {
+    "ns": "errors",
+    "key": "End date cannot be before start date"
+  },
+  "This job is no longer accepting applications": {
+    "ns": "errors",
+    "key": "This job is no longer accepting applications"
+  },
+  "Authentication service unavailable. Please try again.": {
+    "ns": "errors",
+    "key": "Authentication service unavailable. Please try again."
+  },
+  "Payment service is not configured": {
+    "ns": "errors",
+    "key": "Payment service is not configured"
+  },
+  "Account created. OTP email could not be sent. Please resend OTP.": {
+    "ns": "errors",
+    "key": "Account created. OTP email could not be sent. Please resend OTP."
   },
   "CANDIDATE": {
     "ns": "common",
@@ -16035,6 +16367,306 @@
     "ns": "payroll",
     "key": "Example: ₹30,000 / month"
   },
+  "upload attendance and calculate wage registers": {
+    "ns": "payroll",
+    "key": "Upload attendance and calculate wage registers"
+  },
+  "wage registers": {
+    "ns": "payroll",
+    "key": "Wage registers"
+  },
+  "sign in to access wage registers.": {
+    "ns": "payroll",
+    "key": "Sign in to access wage registers."
+  },
+  "payroll month / list filter": {
+    "ns": "payroll",
+    "key": "Payroll month / list filter"
+  },
+  "import monthly attendance": {
+    "ns": "payroll",
+    "key": "Import monthly attendance"
+  },
+  "use the supplied attendance .xlsx template with employee ids and date headers. excel summary formulas are ignored. imported employees need no portal account.": {
+    "ns": "payroll",
+    "key": "Use the supplied attendance .xlsx template with employee IDs and date headers. Excel summary formulas are ignored. Imported employees need no portal account."
+  },
+  "site / establishment": {
+    "ns": "payroll",
+    "key": "Site / establishment"
+  },
+  "attendance workbook": {
+    "ns": "payroll",
+    "key": "Attendance workbook"
+  },
+  "preview attendance": {
+    "ns": "payroll",
+    "key": "Preview attendance"
+  },
+  "confirm import and create draft": {
+    "ns": "payroll",
+    "key": "Confirm import and create draft"
+  },
+  "replace attendance in open draft": {
+    "ns": "payroll",
+    "key": "Replace attendance in open draft"
+  },
+  "replacing a draft keeps wage settings for matching employee ids, removes employees absent from the new file and adds new employees with zero rates. review before approval.": {
+    "ns": "payroll",
+    "key": "Replacing a draft keeps wage settings for matching employee IDs, removes employees absent from the new file and adds new employees with zero rates. Review before approval."
+  },
+  "saved registers": {
+    "ns": "payroll",
+    "key": "Saved registers"
+  },
+  "no registers found.": {
+    "ns": "payroll",
+    "key": "No registers found."
+  },
+  "page {{value0}} / {{value1}}": {
+    "ns": "payroll",
+    "key": "Page {{value0}} / {{value1}}"
+  },
+  "source: {{value0}}.": {
+    "ns": "payroll",
+    "key": "Source: {{value0}}."
+  },
+  "unsaved changes — save before export, approval or opening another register.": {
+    "ns": "payroll",
+    "key": "Unsaved changes — save before export, approval or opening another register."
+  },
+  "save wages": {
+    "ns": "payroll",
+    "key": "Save wages"
+  },
+  "approve and lock": {
+    "ns": "payroll",
+    "key": "Approve and lock"
+  },
+  "discard unsaved edits": {
+    "ns": "payroll",
+    "key": "Discard unsaved edits"
+  },
+  "export excel with formulas": {
+    "ns": "payroll",
+    "key": "Export Excel with formulas"
+  },
+  "approval locks this register. verify wages, attendance and deductions first. this does not transfer money or mark an employee paid.": {
+    "ns": "payroll",
+    "key": "Approval locks this register. Verify wages, attendance and deductions first. This does not transfer money or mark an employee paid."
+  },
+  "filter wage group": {
+    "ns": "payroll",
+    "key": "Filter wage group"
+  },
+  "all employees": {
+    "ns": "payroll",
+    "key": "All employees"
+  },
+  "apply values to selected employees ({{value0}})": {
+    "ns": "payroll",
+    "key": "Apply values to selected employees ({{value0}})"
+  },
+  "blank fields keep each employee’s value. enter 0 to clear an amount. attendance and payable days remain individual.": {
+    "ns": "payroll",
+    "key": "Blank fields keep each employee’s value. Enter 0 to clear an amount. Attendance and payable days remain individual."
+  },
+  "group name": {
+    "ns": "payroll",
+    "key": "Group name"
+  },
+  "apply to selected": {
+    "ns": "payroll",
+    "key": "Apply to selected"
+  },
+  "select visible employees": {
+    "ns": "payroll",
+    "key": "Select visible employees"
+  },
+  "select {{value0}}": {
+    "ns": "payroll",
+    "key": "Select {{value0}}"
+  },
+  "view / edit": {
+    "ns": "payroll",
+    "key": "View / edit"
+  },
+  "all employees: earnings {{value0}} · deductions {{value1}} · net {{value2}}": {
+    "ns": "payroll",
+    "key": "All employees: Earnings {{value0}} · Deductions {{value1}} · Net {{value2}}"
+  },
+  "present {{value0}} + public holidays {{value1}} = {{value2}} payable days; weekly offs {{value3}} excluded.": {
+    "ns": "payroll",
+    "key": "Present {{value0}} + public holidays {{value1}} = {{value2}} payable days; weekly offs {{value3}} excluded."
+  },
+  "daily attendance": {
+    "ns": "payroll",
+    "key": "Daily attendance"
+  },
+  "daily wage rate": {
+    "ns": "payroll",
+    "key": "Daily wage rate"
+  },
+  "overtime hours": {
+    "ns": "payroll",
+    "key": "Overtime hours"
+  },
+  "special basic": {
+    "ns": "payroll",
+    "key": "Special Basic"
+  },
+  "da": {
+    "ns": "payroll",
+    "key": "DA"
+  },
+  "hra": {
+    "ns": "payroll",
+    "key": "HRA"
+  },
+  "other earnings": {
+    "ns": "payroll",
+    "key": "Other earnings"
+  },
+  "society": {
+    "ns": "payroll",
+    "key": "Society"
+  },
+  "income tax": {
+    "ns": "payroll",
+    "key": "Income Tax"
+  },
+  "insurance": {
+    "ns": "payroll",
+    "key": "Insurance"
+  },
+  "other deductions": {
+    "ns": "payroll",
+    "key": "Other deductions"
+  },
+  "recoveries": {
+    "ns": "payroll",
+    "key": "Recoveries"
+  },
+  "employer pf / welfare contribution": {
+    "ns": "payroll",
+    "key": "Employer PF / welfare contribution"
+  },
+  "employee id": {
+    "ns": "payroll",
+    "key": "Employee ID"
+  },
+  "public holidays": {
+    "ns": "payroll",
+    "key": "Public holidays"
+  },
+  "weekly offs": {
+    "ns": "payroll",
+    "key": "Weekly offs"
+  },
+  "payable": {
+    "ns": "payroll",
+    "key": "Payable"
+  },
+  "blank days": {
+    "ns": "payroll",
+    "key": "Blank days"
+  },
+  "employee": {
+    "ns": "payroll",
+    "key": "Employee"
+  },
+  "group": {
+    "ns": "payroll",
+    "key": "Group"
+  },
+  "payable days": {
+    "ns": "payroll",
+    "key": "Payable days"
+  },
+  "rate": {
+    "ns": "payroll",
+    "key": "Rate"
+  },
+  "basic": {
+    "ns": "payroll",
+    "key": "Basic"
+  },
+  "ot": {
+    "ns": "payroll",
+    "key": "OT"
+  },
+  "total earnings": {
+    "ns": "payroll",
+    "key": "Total earnings"
+  },
+  "pf": {
+    "ns": "payroll",
+    "key": "PF"
+  },
+  "esic": {
+    "ns": "payroll",
+    "key": "ESIC"
+  },
+  "uan (12 digits)": {
+    "ns": "payroll",
+    "key": "UAN (12 digits)"
+  },
+  "wage group": {
+    "ns": "payroll",
+    "key": "Wage group"
+  },
+  "bank transaction / receipt id": {
+    "ns": "payroll",
+    "key": "Bank transaction / receipt ID"
+  },
+  "payment date": {
+    "ns": "payroll",
+    "key": "Payment date"
+  },
+  "choose an attendance .xlsx file": {
+    "ns": "payroll",
+    "key": "Choose an attendance .xlsx file"
+  },
+  "select at least one employee": {
+    "ns": "payroll",
+    "key": "Select at least one employee"
+  },
+  "enter a value or group name to apply": {
+    "ns": "payroll",
+    "key": "Enter a value or group name to apply"
+  },
+  "updated {{value0}} selected employees. save to persist changes.": {
+    "ns": "payroll",
+    "key": "Updated {{value0}} selected employees. Save to persist changes."
+  },
+  "export failed": {
+    "ns": "payroll",
+    "key": "Export failed"
+  },
+  "draft imported. enter wages before approval.": {
+    "ns": "payroll",
+    "key": "Draft imported. Enter wages before approval."
+  },
+  "attendance replaced. wage settings retained for matching employee ids; review all totals.": {
+    "ns": "payroll",
+    "key": "Attendance replaced. Wage settings retained for matching employee IDs; review all totals."
+  },
+  "wages saved.": {
+    "ns": "payroll",
+    "key": "Wages saved."
+  },
+  "register approved and locked.": {
+    "ns": "payroll",
+    "key": "Register approved and locked."
+  },
+  "unsaved edits discarded.": {
+    "ns": "payroll",
+    "key": "Unsaved edits discarded."
+  },
+  "workbook policy: payable days = p + ph (h is mapped to ph). weekly offs and leave codes are excluded. basic = daily rate × payable days; overtime = daily rate ÷ 4 × hours. pf = 12% of basic capped at ₹15,000; esic = 0.75% of total earnings rounded to a rupee. employer contributions are separate.": {
+    "ns": "payroll",
+    "key": "Workbook policy: payable days = P + PH (H is mapped to PH). Weekly offs and leave codes are excluded. Basic = daily rate × payable days; overtime = daily rate ÷ 4 × hours. PF = 12% of Basic capped at ₹15,000; ESIC = 0.75% of total earnings rounded to a rupee. Employer contributions are separate."
+  },
   "failed to enroll": {
     "ns": "training",
     "key": "Failed to enroll"
@@ -17478,10 +18110,6 @@
   "ai screening": {
     "ns": "subscription",
     "key": "AI Screening"
-  },
-  "basic": {
-    "ns": "subscription",
-    "key": "Basic"
   },
   "advanced": {
     "ns": "subscription",
@@ -20518,6 +21146,42 @@
   "failed to generate ats suggestions": {
     "ns": "errors",
     "key": "Failed to generate ATS suggestions"
+  },
+  "please enter a valid pay period month": {
+    "ns": "errors",
+    "key": "Please enter a valid pay period month"
+  },
+  "please enter a valid date": {
+    "ns": "errors",
+    "key": "Please enter a valid date"
+  },
+  "amounts must be valid non-negative numbers": {
+    "ns": "errors",
+    "key": "Amounts must be valid non-negative numbers"
+  },
+  "amounts must have at most two decimal places": {
+    "ns": "errors",
+    "key": "Amounts must have at most two decimal places"
+  },
+  "end date cannot be before start date": {
+    "ns": "errors",
+    "key": "End date cannot be before start date"
+  },
+  "this job is no longer accepting applications": {
+    "ns": "errors",
+    "key": "This job is no longer accepting applications"
+  },
+  "authentication service unavailable. please try again.": {
+    "ns": "errors",
+    "key": "Authentication service unavailable. Please try again."
+  },
+  "payment service is not configured": {
+    "ns": "errors",
+    "key": "Payment service is not configured"
+  },
+  "account created. otp email could not be sent. please resend otp.": {
+    "ns": "errors",
+    "key": "Account created. OTP email could not be sent. Please resend OTP."
   },
   "Job results": {
     "ns": "jobs",

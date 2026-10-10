@@ -1,11 +1,11 @@
 'use client'
+import { API_BASE } from '@/lib/api'
 import { tr, trError, useLocale } from '@/lib/localization'
 
 
 import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'
 
 type RecipientStatus = 'applied' | 'shortlisted' | 'hired' | 'rejected'
 

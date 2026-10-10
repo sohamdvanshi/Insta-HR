@@ -1,4 +1,6 @@
 'use client'
+import { readStoredUser } from '@/lib/storage'
+import { API_BASE } from '@/lib/api'
 import { tr, useLocale } from '@/lib/localization'
 
 import { useEffect, useState } from 'react'
@@ -27,7 +29,7 @@ export default function PostJobPage() {
   })
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    const user = readStoredUser()
     setUserPlan(user.subscriptionPlan || user.plan || '')
 
     const fetchSubscription = async () => {
@@ -35,7 +37,7 @@ export default function PostJobPage() {
       if (!token) return
 
       try {
-        const res = await fetch('http://localhost:5000/api/v1/payments/subscription', {
+        const res = await fetch(`${API_BASE}/payments/subscription`, {
           headers: { Authorization: 'Bearer ' + token }
         })
         const data = await res.json()
@@ -79,7 +81,7 @@ export default function PostJobPage() {
     }
 
     try {
-      const res = await fetch('http://localhost:5000/api/v1/jobs', {
+      const res = await fetch(`${API_BASE}/jobs`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -11,7 +11,7 @@ export const locale = () => ({ en: 'en-IN', hi: 'hi-IN', mr: 'mr-IN' }[i18n.reso
 
 /** Lookup app-authored presentation copy. Unknown text and user content remain intact. */
 export function tr(value: unknown, variables?: Record<string, unknown>): string {
-  if (value === null || value === undefined) return ''
+  if (value === null || value === undefined || typeof value === 'boolean') return ''
   const raw = String(value), normalized = raw.trim().replace(/\s+/g, ' ')
   const entry = Object.prototype.hasOwnProperty.call(sourceIndex, normalized) ? sourceIndex[normalized] : Object.prototype.hasOwnProperty.call(sourceIndex, normalized.toLowerCase()) ? sourceIndex[normalized.toLowerCase()] : undefined
   if (entry) return raw.replace(raw.trim(), String(i18n.t(entry.key, { ns: entry.ns, ...variables })))

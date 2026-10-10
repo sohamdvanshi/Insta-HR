@@ -2,7 +2,7 @@ const { CandidateProfile, Job } = require('../models/index');
 const { cloudinary } = require('../config/cloudinary');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
-const axios = require('axios');
+const { candidateFields } = require('../services/profileFields');
 
 // Cloudinary storage for photos
 const photoStorage = new CloudinaryStorage({
@@ -35,7 +35,7 @@ exports.createProfile = async (req, res) => {
   try {
     const existing = await CandidateProfile.findOne({ where: { userId: req.user.id } });
     if (existing) return res.status(400).json({ success: false, message: 'Profile already exists' });
-    const profile = await CandidateProfile.create({ ...req.body, userId: req.user.id });
+    const profile = await CandidateProfile.create({ ...candidateFields(req.body), userId: req.user.id });
     res.status(201).json({ success: true, data: profile });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -47,9 +47,9 @@ exports.updateProfile = async (req, res) => {
   try {
     let profile = await CandidateProfile.findOne({ where: { userId: req.user.id } });
     if (!profile) {
-      profile = await CandidateProfile.create({ ...req.body, userId: req.user.id });
+      profile = await CandidateProfile.create({ ...candidateFields(req.body), userId: req.user.id });
     } else {
-      await profile.update(req.body);
+      await profile.update(candidateFields(req.body));
     }
     res.json({ success: true, data: profile });
   } catch (error) {
@@ -95,6 +95,10 @@ exports.getAIMatches = async (req, res) => {
     const job = await Job.findByPk(req.params.jobId);
     if (!job) return res.status(404).json({ success: false, message: 'Job not found' });
 
+    if (req.user.role === 'employer' && String(job.employerId) !== String(req.user.id)) {
+      return res.status(403).json({ success: false, message: 'Not authorized to screen this job' });
+    }
+
     // FIX #11: Limit candidates fetched to avoid full table scan (max 500)
     const candidates = await CandidateProfile.findAll({ limit: 500 });
     if (candidates.length === 0) return res.json({ success: true, data: [], message: 'No candidates found' });
@@ -102,15 +106,21 @@ exports.getAIMatches = async (req, res) => {
     // FIX #5: Use AI_SERVICE_URL env var instead of hardcoded localhost:8000
     const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
 
-    const response = await axios.post(`${aiServiceUrl}/match-candidates`, {
+    const response = await fetch(`${aiServiceUrl.replace(/\/+$/, '')}/match-candidates`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(15000),
+      body: JSON.stringify({
       job_skills: job.requiredSkills || [],
       job_description: job.description,
       job_experience_min: job.minExperienceYears || 0,
       candidates: candidates.map(c => c.toJSON())
+      })
     });
-    res.json({ success: true, data: response.data });
+    if (!response.ok) return res.status(503).json({ success: false, message: 'AI service unavailable' });
+    const result = await response.json();
+    if (!result.success || !Array.isArray(result.data)) throw new Error('Invalid AI service response');
+    res.json({ success: true, data: result.data });
   } catch (error) {
-    if (error.code === 'ECONNREFUSED') return res.status(503).json({ success: false, message: 'AI service unavailable' });
+    if (error.cause?.code === 'ECONNREFUSED' || ['TimeoutError', 'AbortError'].includes(error.name)) return res.status(503).json({ success: false, message: 'AI service unavailable' });
     res.status(500).json({ success: false, message: error.message });
   }
 };

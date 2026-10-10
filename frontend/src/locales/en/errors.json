@@ -410,5 +410,14 @@
   "Failed to fetch referral": "Failed to fetch referral",
   "Failed to generate resume summary": "Failed to generate resume summary",
   "Failed to generate experience bullets": "Failed to generate experience bullets",
-  "Failed to generate ATS suggestions": "Failed to generate ATS suggestions"
+  "Failed to generate ATS suggestions": "Failed to generate ATS suggestions",
+  "Please enter a valid pay period month": "Please enter a valid pay period month",
+  "Please enter a valid date": "Please enter a valid date",
+  "Amounts must be valid non-negative numbers": "Amounts must be valid non-negative numbers",
+  "Amounts must have at most two decimal places": "Amounts must have at most two decimal places",
+  "End date cannot be before start date": "End date cannot be before start date",
+  "This job is no longer accepting applications": "This job is no longer accepting applications",
+  "Authentication service unavailable. Please try again.": "Authentication service unavailable. Please try again.",
+  "Payment service is not configured": "Payment service is not configured",
+  "Account created. OTP email could not be sent. Please resend OTP.": "Account created. OTP email could not be sent. Please resend OTP."
 }

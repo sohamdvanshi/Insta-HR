@@ -139,6 +139,10 @@ const CandidateProfile = sequelize.define(
       }
     },
 
+    photoUrl: { type: DataTypes.STRING(2048), allowNull: true },
+    photoPublicId: { type: DataTypes.STRING(255), allowNull: true },
+    resumePublicId: { type: DataTypes.STRING(255), allowNull: true },
+
     isResumePublic: {
       type: DataTypes.BOOLEAN,
       allowNull: true,

@@ -65,14 +65,14 @@ router.get(
 router.get(
   '/employer/tracking',
   protect,
-  authorize('employer', 'admin'),
+  authorize('employer', 'admin', 'super_admin'),
   referralController.getEmployerReferrals
 )
 
 router.get(
   '/employer',
   protect,
-  authorize('employer', 'admin'),
+  authorize('employer', 'admin', 'super_admin'),
   referralController.getEmployerReferrals
 )
 
@@ -85,7 +85,7 @@ router.get(
 router.get(
   '/admin',
   protect,
-  authorize('admin'),
+  authorize('admin', 'super_admin'),
   referralController.getAdminReferrals
 )
 
@@ -102,7 +102,7 @@ router.get(
 router.post(
   '/applications/:applicationId/award',
   protect,
-  authorize('admin'),
+  authorize('admin', 'super_admin'),
   referralController.awardReferralPoints
 )
 
@@ -110,7 +110,7 @@ router.post(
 router.post(
   '/:applicationId/award-points',
   protect,
-  authorize('admin'),
+  authorize('admin', 'super_admin'),
   referralController.awardReferralPoints
 )
 
@@ -127,7 +127,7 @@ router.post(
 router.post(
   '/',
   protect,
-  authorize('candidate', 'employer', 'admin'),
+  authorize('candidate', 'employer', 'admin', 'super_admin'),
   referralController.createReferral
 )
 
@@ -144,7 +144,7 @@ router.post(
 router.get(
   '/:id',
   protect,
-  authorize('candidate', 'employer', 'admin'),
+  authorize('candidate', 'employer', 'admin', 'super_admin'),
   referralController.getReferralById
 )
 

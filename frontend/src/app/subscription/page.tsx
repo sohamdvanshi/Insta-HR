@@ -1,4 +1,6 @@
 'use client'
+import { readStoredUser } from '@/lib/storage'
+import { API_BASE } from '@/lib/api'
 import { tr, trError, useLocale, locale } from '@/lib/localization'
 
 import { useState, useEffect } from 'react'
@@ -10,7 +12,6 @@ declare global {
   }
 }
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1').replace(/\/$/, '')
 type Plan = { id: string; name: string; price: number; durationDays: number; priceLabel: string; period: string; color: string; badge: string; features: string[]; missing: string[]; cta: string; disabled: boolean }
 
 export default function SubscriptionPage() {
@@ -30,7 +31,7 @@ export default function SubscriptionPage() {
 
   useEffect(() => {
     const userData = localStorage.getItem('user')
-    if (userData) setUser(JSON.parse(userData))
+    if (userData) setUser(readStoredUser())
     loadRazorpay()
     fetch(`${API_BASE}/payments/plans`).then(async response => {
       const result = await response.json()

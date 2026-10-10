@@ -27,7 +27,7 @@ const {
 router.get(
   '/screen/:jobId',
   protect,
-  authorize('employer', 'admin'),
+  authorize('employer', 'admin', 'super_admin'),
   screenCandidates
 )
 
@@ -44,7 +44,7 @@ router.get(
 router.patch(
   '/application/:applicationId/status',
   protect,
-  authorize('employer', 'admin'),
+  authorize('employer', 'admin', 'super_admin'),
   updateApplicationStatus
 )
 

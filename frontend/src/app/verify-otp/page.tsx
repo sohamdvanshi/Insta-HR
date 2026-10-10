@@ -1,4 +1,5 @@
 'use client'
+import { API_BASE } from '@/lib/api'
 import { tr, trError, useLocale } from '@/lib/localization'
 
 
@@ -7,7 +8,6 @@ import Link from 'next/link'
 import { loginDestination } from '@/lib/trainingApi'
 import { useSearchParams } from 'next/navigation'
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1').replace(/\/$/, '')
 
 type VerifyResponse = {
   success: boolean

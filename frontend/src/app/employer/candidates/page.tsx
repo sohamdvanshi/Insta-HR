@@ -1,4 +1,5 @@
 "use client"
+import { API_BASE } from '@/lib/api'
 import { tr, trError, useLocale } from '@/lib/localization'
 
 
@@ -73,7 +74,7 @@ export default function EmployerCandidatesPage() {
       if (customFilters.skills.trim()) params.append("skills", customFilters.skills.trim())
 
       const query = params.toString()
-      const url = `http://localhost:5000/api/v1/employer/candidates${query ? `?${query}` : ""}`
+      const url = `${API_BASE}/employer/candidates${query ? `?${query}` : ""}`
 
       const res = await fetch(url, {
         headers: {
@@ -245,7 +246,7 @@ export default function EmployerCandidatesPage() {
                   <div className="flex items-start justify-between gap-4 mb-3">
                     <div>
                       <h2 className="text-lg font-bold text-gray-900">
-                        {tr(getCandidateName(candidate))}
+                        {getCandidateName(candidate)}
                       </h2>
                       <p className="text-gray-500 text-sm">
                         {candidate.email || tr("No email available")}
@@ -265,7 +266,7 @@ export default function EmployerCandidatesPage() {
                   {(experienceValue !== null || hasLocation || hasIndustry || hasPhone) && (
                     <div className="flex flex-wrap gap-3 mb-3 text-xs text-gray-500">
                       {experienceValue !== null && <span>{tr("Exp: ")}{experienceValue}{tr(" yrs")}</span>}
-                      {hasLocation && <span>{tr("Location: ")}{tr(candidate.currentLocation)}</span>}
+                      {hasLocation && <span>{tr("Location: ")}{candidate.currentLocation}</span>}
                       {hasIndustry && <span>{tr("Industry: ")}{tr(candidate.industry)}</span>}
                       {hasPhone && <span>{tr("Phone: ")}{candidate.phone}</span>}
                     </div>

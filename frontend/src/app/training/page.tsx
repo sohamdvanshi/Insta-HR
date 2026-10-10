@@ -1,4 +1,5 @@
 'use client'
+import { readStoredUser } from '@/lib/storage'
 import { tr, trError, useLocale, locale } from '@/lib/localization'
 
 
@@ -16,7 +17,7 @@ export default function TrainingPage() {
   const [error, setError] = useState('')
   const [category, setCategory] = useState('All')
   useEffect(() => {
-    setTrainer(JSON.parse(localStorage.getItem('user') || '{}').role === 'trainer')
+    setTrainer(readStoredUser().role === 'trainer')
     let cancelled = false
     fetch(TRAINING_API).then(async response => {
       const data = await response.json()
@@ -32,7 +33,7 @@ export default function TrainingPage() {
     <nav className="my-5 flex flex-wrap gap-5">{trainer ? <Link className="text-blue-700 underline" href="/trainer">{tr("Training workspace")}</Link> : <><Link className="text-blue-700 underline" href="/training/my-learning">{tr("My learning")}</Link><Link className="text-blue-700 underline" href="/training/classes">{tr("My classes")}</Link></>}</nav>
     <label htmlFor="training-category">{tr("Category")}</label><select id="training-category" className="ml-3 rounded-lg border bg-white p-2" value={category} onChange={event => setCategory(event.target.value)}>{categories.map(item => <option key={item} value={item}>{tr(item)}</option>)}</select>
     {error && <p role="alert" className="my-5 text-red-700">{trError(error)}</p>}
-    {loading ? <p className="my-6">{tr("Loading courses...")}</p> : <div className="my-6 grid gap-5 md:grid-cols-2 lg:grid-cols-3">{courses.filter(item => category === 'All' || item.category === category).map(course => <article key={course.id} className="rounded-2xl border bg-white p-6"><div className="text-4xl">{tr(course.emoji || '📚')}</div><h2 className="my-3 text-xl font-semibold">{course.title}</h2><p className="line-clamp-3 text-gray-600">{course.description}</p><p className="my-3 text-sm">{tr(course.category)} · {tr(course.duration || 'Flexible duration')}</p><p className="font-medium">{tr(course.isFree ? 'Free' : `₹${Number(course.price).toLocaleString(locale())} · Contact training team to enroll`)}</p><Link className="mt-4 inline-block font-semibold text-blue-700" href={`/training/${course.id}`}>{tr("View course →")}</Link></article>)}</div>}
+    {loading ? <p className="my-6">{tr("Loading courses...")}</p> : <div className="my-6 grid gap-5 md:grid-cols-2 lg:grid-cols-3">{courses.filter(item => category === 'All' || item.category === category).map(course => <article key={course.id} className="rounded-2xl border bg-white p-6"><div className="text-4xl">{tr(course.emoji || '📚')}</div><h2 className="my-3 text-xl font-semibold">{course.title}</h2><p className="line-clamp-3 text-gray-600">{course.description}</p><p className="my-3 text-sm">{tr(course.category)} · {course.duration || tr('Flexible duration')}</p><p className="font-medium">{tr(course.isFree ? 'Free' : `₹${Number(course.price).toLocaleString(locale())} · Contact training team to enroll`)}</p><Link className="mt-4 inline-block font-semibold text-blue-700" href={`/training/${course.id}`}>{tr("View course →")}</Link></article>)}</div>}
     {!loading && !error && !courses.length && <p className="my-6 text-gray-500">{tr("No courses available yet.")}</p>}
   </div></main>
 }

@@ -1,4 +1,9 @@
 const { Attendance, Deployment, User } = require('../models');
+const { dateOnly, invalid } = require('../services/recordValidation');
+const checkTimes = (start, end) => {
+  for (const value of [start, end]) if (value && !Number.isFinite(Date.parse(value))) invalid('Please enter a valid date');
+  if (start && end && new Date(end) < new Date(start)) invalid('End date cannot be before start date');
+};
 
 const createAttendance = async (req, res) => {
   try {
@@ -28,6 +33,9 @@ const createAttendance = async (req, res) => {
         message: 'Invalid attendance status.',
       });
     }
+
+    dateOnly(attendanceDate);
+    checkTimes(checkInTime, checkOutTime);
 
     const deployment = await Deployment.findOne({
       where: { id: deploymentId, employerId },
@@ -72,7 +80,7 @@ const createAttendance = async (req, res) => {
       data: attendance,
     });
   } catch (error) {
-    return res.status(500).json({
+    return res.status(error.status || (error.name === 'SequelizeUniqueConstraintError' ? 409 : 500)).json({
       success: false,
       message: error.message || 'Failed to mark attendance.',
     });
@@ -112,7 +120,7 @@ const getEmployerAttendance = async (req, res) => {
       data: attendance,
     });
   } catch (error) {
-    return res.status(500).json({
+    return res.status(error.status || (error.name === 'SequelizeUniqueConstraintError' ? 409 : 500)).json({
       success: false,
       message: error.message || 'Failed to fetch attendance.',
     });
@@ -145,6 +153,7 @@ const updateAttendance = async (req, res) => {
       });
     }
 
+    checkTimes(checkInTime === undefined ? attendance.checkInTime : checkInTime, checkOutTime === undefined ? attendance.checkOutTime : checkOutTime);
     if (status) attendance.status = status;
     if (typeof checkInTime !== 'undefined') attendance.checkInTime = checkInTime || null;
     if (typeof checkOutTime !== 'undefined') attendance.checkOutTime = checkOutTime || null;
@@ -158,7 +167,7 @@ const updateAttendance = async (req, res) => {
       data: attendance,
     });
   } catch (error) {
-    return res.status(500).json({
+    return res.status(error.status || (error.name === 'SequelizeUniqueConstraintError' ? 409 : 500)).json({
       success: false,
       message: error.message || 'Failed to update attendance.',
     });

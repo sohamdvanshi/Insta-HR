@@ -1,5 +1,6 @@
 
 'use client'
+import { API_BASE } from '@/lib/api'
 import { tr, trError, useLocale, locale } from '@/lib/localization'
 
 
@@ -32,7 +33,7 @@ export default function MyCertificatesPage() {
 
     const fetchCertificates = async () => {
       try {
-        const enrolledRes = await fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1').replace(/\/$/, '') + '/training/my/enrolled', {
+        const enrolledRes = await fetch(API_BASE + '/training/my/enrolled', {
           headers: {
             Authorization: 'Bearer ' + token
           }
@@ -61,7 +62,7 @@ export default function MyCertificatesPage() {
           enrolledCourses.map(async (course: any) => {
             try {
               const progressRes = await fetch(
-                (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1').replace(/\/$/, '') + '/training/' + course.id + '/progress',
+                API_BASE + '/training/' + course.id + '/progress',
                 {
                   headers: {
                     Authorization: 'Bearer ' + token
@@ -79,7 +80,7 @@ export default function MyCertificatesPage() {
 
                 if (progressData.data?.completed) {
                   const certRes = await fetch(
-                    (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1').replace(/\/$/, '') + '/training/' + course.id + '/certificate',
+                    API_BASE + '/training/' + course.id + '/certificate',
                     {
                       headers: {
                         Authorization: 'Bearer ' + token

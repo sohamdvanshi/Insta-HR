@@ -1,11 +1,11 @@
 'use client';
+import { API_BASE } from '@/lib/api'
 import { tr, trError, useLocale } from '@/lib/localization'
 
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
 
 type PayrollRecord = {
   id: string;
@@ -261,7 +261,7 @@ export default function EmployerPayrollsPage() {
                     <option value="">{tr("Select Deployment")}</option>
                     {deployments.map(deployment => (
                       <option key={deployment.id} value={deployment.id}>
-                        {tr(getDeploymentLabel(deployment))}
+                        {getDeploymentLabel(deployment)}
                       </option>
                     ))}
                   </select>
@@ -405,7 +405,7 @@ export default function EmployerPayrollsPage() {
                           <td className="rounded-l-2xl px-3 py-4 font-medium">
                             {tr(item.candidate?.email || item.deployment?.candidate?.email || '—')}
                           </td>
-                          <td className="px-3 py-4">{tr(item.deployment?.siteName || '—')}</td>
+                          <td className="px-3 py-4">{item.deployment?.siteName || '—'}</td>
                           <td className="px-3 py-4">{tr(item.payPeriodMonth)}</td>
                           <td className="px-3 py-4">{tr("P: ")}{item.totalPresentDays}{tr(", A: ")}{item.totalAbsentDays}{tr(", H: ")}{item.totalHalfDays}
                           </td>

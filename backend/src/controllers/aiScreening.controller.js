@@ -240,7 +240,7 @@ exports.screenCandidates = async (req, res) => {
 
     const ownerId = getJobOwnerId(job)
     if (
-      req.user.role !== 'admin' &&
+      !['admin', 'super_admin'].includes(req.user.role) &&
       String(ownerId) !== String(req.user.id)
     ) {
       return res.status(403).json({
@@ -475,7 +475,7 @@ exports.updateApplicationStatus = async (req, res) => {
 
     const ownerId = getJobOwnerId(job)
     if (
-      req.user.role !== 'admin' &&
+      !['admin', 'super_admin'].includes(req.user.role) &&
       String(ownerId) !== String(req.user.id)
     ) {
       await transaction.rollback()

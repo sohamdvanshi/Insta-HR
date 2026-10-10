@@ -1,4 +1,5 @@
 const { Deployment, User, ManpowerRequest } = require('../models');
+const { dateRange, money } = require('../services/recordValidation');
 
 const createDeployment = async (req, res) => {
   try {
@@ -24,6 +25,10 @@ const createDeployment = async (req, res) => {
         message: 'Candidate, site name, location, and start date are required.',
       });
     }
+
+    dateRange(startDate, endDate);
+    money(billingRate, true);
+    money(salaryOffered, true);
 
     const candidate = await User.findOne({
       where: {
@@ -81,7 +86,7 @@ const createDeployment = async (req, res) => {
       data: deployment,
     });
   } catch (error) {
-    return res.status(500).json({
+    return res.status(error.status || 500).json({
       success: false,
       message: error.message || 'Failed to create deployment.',
     });
@@ -115,7 +120,7 @@ const getEmployerDeployments = async (req, res) => {
       data: deployments,
     });
   } catch (error) {
-    return res.status(500).json({
+    return res.status(error.status || 500).json({
       success: false,
       message: error.message || 'Failed to fetch deployments.',
     });
@@ -157,7 +162,7 @@ const updateDeploymentStatus = async (req, res) => {
       data: deployment,
     });
   } catch (error) {
-    return res.status(500).json({
+    return res.status(error.status || 500).json({
       success: false,
       message: error.message || 'Failed to update deployment status.',
     });

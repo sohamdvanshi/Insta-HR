@@ -13,13 +13,13 @@ router.post(
 );
 
 router.get('/my', protect, authorize('candidate'), applicationController.getMyApplications);
-router.get('/job/:jobId', protect, authorize('employer', 'admin'), applicationController.getApplicationsForJob);
+router.get('/job/:jobId', protect, authorize('employer', 'admin', 'super_admin'), applicationController.getApplicationsForJob);
 router.get('/:id', protect, applicationController.getApplicationById);
 
-router.patch('/:id/status', protect, authorize('employer', 'admin'), applicationController.updateApplicationStatus);
-router.patch('/:id/manual-review', protect, authorize('employer', 'admin'), applicationController.updateManualReview);
-router.patch('/:id/schedule-interview', protect, authorize('employer', 'admin'), applicationController.scheduleInterview);
-router.post('/:id/rescreen', protect, authorize('employer', 'admin'), applicationController.rescreenApplication);
+router.patch('/:id/status', protect, authorize('employer', 'admin', 'super_admin'), applicationController.updateApplicationStatus);
+router.patch('/:id/manual-review', protect, authorize('employer', 'admin', 'super_admin'), applicationController.updateManualReview);
+router.patch('/:id/schedule-interview', protect, authorize('employer', 'admin', 'super_admin'), applicationController.scheduleInterview);
+router.post('/:id/rescreen', protect, authorize('employer', 'admin', 'super_admin'), require('../services/featureControl').requireFeature('ai_screening'), applicationController.rescreenApplication);
 
 router.delete('/:id', protect, applicationController.deleteApplication);
 

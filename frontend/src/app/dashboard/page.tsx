@@ -1,4 +1,5 @@
 'use client'
+import { API_BASE } from '@/lib/api'
 import { tr, useLocale } from '@/lib/localization'
 
 
@@ -27,7 +28,6 @@ interface EmployerStats {
   hired: number
 }
 
-const API_BASE = 'http://localhost:5000/api/v1'
 
 export default function DashboardPage() {
   useLocale()

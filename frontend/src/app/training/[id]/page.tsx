@@ -1,4 +1,6 @@
 'use client'
+import { readStoredUser } from '@/lib/storage'
+import { API_BASE } from '@/lib/api'
 import { tr, trError, useLocale, locale } from '@/lib/localization'
 
 
@@ -8,7 +10,6 @@ import Link from 'next/link'
 import CandidateClasses from '@/components/training/CandidateClasses'
 import { trainingRequest } from '@/lib/trainingApi'
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1').replace(/\/$/, '')
 
 export default function CourseDetailPage() {
   useLocale()
@@ -51,7 +52,7 @@ export default function CourseDetailPage() {
   useEffect(() => {
     const token = localStorage.getItem('token')
     if (!token || !params.id || !course?.id) return
-    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    const user = readStoredUser()
     if (['trainer', 'admin', 'super_admin', 'employer'].includes(user.role)) {
       trainingRequest(`/${params.id}/content`).then(data => { setCanPreview(true); setCourse((current: any) => current ? { ...current, ...data.data } : current) }).catch(err => setError(err.message))
       return

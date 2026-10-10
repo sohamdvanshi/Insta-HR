@@ -75,6 +75,7 @@ const invalidateJobRelatedCaches = async (
   try {
     await Promise.all([
       clearCacheByPattern('instahr:jobs-*'),
+      clearCacheByPattern('instahr:job-detail:*'),
       clearCacheByPattern('instahr:admin-analytics-*'),
       clearCacheByPattern('instahr:employer-analytics-*'),
       clearCacheByPattern('instahr:applications-*'),
@@ -264,9 +265,9 @@ exports.getAllJobs = async (req, res) => {
       limit = 10
     } = req.query
 
-    const safePage = Math.max(Number(page) || 1, 1)
-    const safeLimit = Math.min(Math.max(Number(limit) || 10, 1), 100)
-    const where = { status: status || 'active' }
+    const safePage = Math.min(Math.max(Math.floor(Number(page)) || 1, 1), 100000)
+    const safeLimit = Math.min(Math.max(Math.floor(Number(limit)) || 10, 1), 100)
+    const where = { status: 'active' }
 
     if (keyword) {
       where[Op.or] = [
@@ -348,6 +349,9 @@ exports.getJobById = async (req, res) => {
       })
     }
 
+    if (job.status === 'draft' && !(['admin', 'super_admin'].includes(req.user?.role) || (req.user?.role === 'employer' && String(job.employerId) === String(req.user.id)))) {
+      return res.status(404).json({ success: false, message: 'Job not found' })
+    }
     return res.json({ success: true, data: formatJob(job) })
   } catch (error) {
     console.error('getJobById error:', error)

@@ -27,8 +27,8 @@ router.get('/jobs/:jobId/applications', protect, authorize('employer'), employer
 router.get('/public/:userId', employerController.getPublicProfile);
 
 // Admin routes
-router.get('/all', protect, authorize('admin'), employerController.getAllProfiles);
-router.put('/verify/:userId', protect, authorize('admin'), employerController.verifyEmployer);
+router.get('/all', protect, authorize('admin', 'super_admin'), employerController.getAllProfiles);
+router.put('/verify/:userId', protect, authorize('admin', 'super_admin'), employerController.verifyEmployer);
 
 router.get('/candidates', protect, authorize('employer'), employerController.getCandidateDatabank);
 

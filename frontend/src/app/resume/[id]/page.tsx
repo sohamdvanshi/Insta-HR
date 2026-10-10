@@ -1,4 +1,5 @@
 'use client'
+import { API_BASE } from '@/lib/api'
 import { tr, trError, useLocale } from '@/lib/localization'
 
 
@@ -7,7 +8,6 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import html2pdf from 'html2pdf.js'
 
-const API_BASE = 'http://localhost:5000/api/v1'
 
 const emptyResume = {
   title: 'My Resume',
@@ -963,7 +963,7 @@ export default function ResumeEditorPage() {
                             key={index}
                             className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-sm font-medium"
                           >
-                            {tr(item)}
+                            {item}
                           </span>
                         ))}
                       </div>
@@ -981,7 +981,7 @@ export default function ResumeEditorPage() {
                             onClick={() => addSkillIfMissing(item)}
                             className="px-3 py-1.5 bg-amber-50 text-amber-700 rounded-full text-sm font-medium hover:bg-amber-100"
                           >
-                            + {tr(item)}
+                            + {item}
                           </button>
                         ))}
                       </div>
@@ -999,7 +999,7 @@ export default function ResumeEditorPage() {
                             onClick={() => addSkillIfMissing(item)}
                             className="px-3 py-1.5 bg-green-50 text-green-700 rounded-full text-sm font-medium hover:bg-green-100"
                           >
-                            + {tr(item)}
+                            + {item}
                           </button>
                         ))}
                       </div>
@@ -1013,7 +1013,7 @@ export default function ResumeEditorPage() {
                       <div className="space-y-3">
                         {atsData.summarySuggestions.map((item: string, index: number) => (
                           <div key={index} className="border border-gray-200 rounded-xl p-3">
-                            <p className="text-sm text-gray-700">{tr(item)}</p>
+                            <p className="text-sm text-gray-700">{item}</p>
 
                             <div className="flex gap-2 mt-3">
                               <button
@@ -1041,7 +1041,7 @@ export default function ResumeEditorPage() {
                       <div className="space-y-3">
                         {atsData.bulletSuggestions.map((item: string, index: number) => (
                           <div key={index} className="border border-gray-200 rounded-xl p-3">
-                            <p className="text-sm text-gray-700">{tr(item)}</p>
+                            <p className="text-sm text-gray-700">{item}</p>
 
                             <div className="flex flex-wrap gap-2 mt-3">
                               <button
@@ -1059,7 +1059,7 @@ export default function ResumeEditorPage() {
                                   }
                                   className="px-3 py-2 bg-gray-50 text-gray-700 text-xs font-medium rounded-lg hover:bg-gray-100"
                                 >{tr("Add to Exp ")}{expIndex + 1}
-                                  {tr(exp.jobTitle ? `: ${exp.jobTitle}` : '')}
+                                  {exp.jobTitle ? `: ${exp.jobTitle}` : ''}
                                 </button>
                               ))}
                             </div>
@@ -1588,7 +1588,7 @@ export default function ResumeEditorPage() {
                         <div className="flex flex-wrap gap-2">
                           {cleanSkills.map((item: string, index: number) => (
                             <span key={index} className="modern-pill">
-                              {tr(item)}
+                              {item}
                             </span>
                           ))}
                         </div>
@@ -1602,7 +1602,7 @@ export default function ResumeEditorPage() {
                           {resume.languages
                             .filter((item: string) => item.trim())
                             .map((item: string, index: number) => (
-                              <p key={index}>{tr(item)}</p>
+                              <p key={index}>{item}</p>
                             ))}
                         </div>
                       </div>
@@ -1615,7 +1615,7 @@ export default function ResumeEditorPage() {
                           {resume.certifications
                             .filter((item: string) => item.trim())
                             .map((item: string, index: number) => (
-                              <p key={index}>{tr(item)}</p>
+                              <p key={index}>{item}</p>
                             ))}
                         </div>
                       </div>
@@ -1650,7 +1650,7 @@ export default function ResumeEditorPage() {
                                     </h3>
                                     <p className="resume-subtitle">
                                       {item.company}
-                                      {tr(item.location ? ` • ${item.location}` : '')}
+                                      {item.location ? ` • ${item.location}` : ''}
                                     </p>
                                   </div>
 
@@ -1711,7 +1711,7 @@ export default function ResumeEditorPage() {
                                   <div>
                                     <h3 className="resume-item-title">
                                       {item.degree || 'Degree'}
-                                      {tr(item.fieldOfStudy ? ` - ${item.fieldOfStudy}` : '')}
+                                      {item.fieldOfStudy ? ` - ${item.fieldOfStudy}` : ''}
                                     </h3>
                                     <p className="resume-subtitle">{item.institution}</p>
                                   </div>
@@ -1787,7 +1787,7 @@ export default function ResumeEditorPage() {
                                   </h3>
                                   <p className="resume-subtitle">
                                     {item.company}
-                                    {tr(item.location ? ` • ${item.location}` : '')}
+                                    {item.location ? ` • ${item.location}` : ''}
                                   </p>
                                 </div>
 
@@ -1848,7 +1848,7 @@ export default function ResumeEditorPage() {
                                 <div>
                                   <h3 className="resume-item-title">
                                     {item.degree || 'Degree'}
-                                    {tr(item.fieldOfStudy ? ` - ${item.fieldOfStudy}` : '')}
+                                    {item.fieldOfStudy ? ` - ${item.fieldOfStudy}` : ''}
                                   </h3>
                                   <p className="resume-subtitle">{item.institution}</p>
                                 </div>
@@ -1876,7 +1876,7 @@ export default function ResumeEditorPage() {
                       <div className="classic-skills">
                         {cleanSkills.map((item: string, index: number) => (
                           <span key={index} className="classic-skill">
-                            {tr(item)}
+                            {item}
                           </span>
                         ))}
                       </div>
@@ -1890,7 +1890,7 @@ export default function ResumeEditorPage() {
                         {resume.certifications
                           .filter((item: string) => item.trim())
                           .map((item: string, index: number) => (
-                            <li key={index}>{tr(item)}</li>
+                            <li key={index}>{item}</li>
                           ))}
                       </ul>
                     </section>
@@ -1903,7 +1903,7 @@ export default function ResumeEditorPage() {
                         {resume.languages
                           .filter((item: string) => item.trim())
                           .map((item: string, index: number) => (
-                            <span key={index}>{tr(item)}</span>
+                            <span key={index}>{item}</span>
                           ))}
                       </div>
                     </section>

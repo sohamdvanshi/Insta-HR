@@ -1,4 +1,6 @@
 'use client'
+import { readStoredUser } from '@/lib/storage'
+import { API_BASE } from '@/lib/api'
 import { tr, useLocale, locale } from '@/lib/localization'
 
 
@@ -136,12 +138,12 @@ function JobsPageContent() {
 
   const fetchSavedJobIds = async () => {
     const token = localStorage.getItem('token')
-    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    const user = readStoredUser()
 
     if (!token || user.role !== 'candidate') return
 
     try {
-      const res = await fetch('http://localhost:5000/api/v1/jobs-actions/saved', {
+      const res = await fetch(`${API_BASE}/jobs-actions/saved`, {
         headers: { Authorization: 'Bearer ' + token }
       })
       const data = await res.json()
@@ -165,7 +167,7 @@ function JobsPageContent() {
     }
 
     try {
-      const res = await fetch(`http://localhost:5000/api/v1/jobs-actions/save/${jobId}`, {
+      const res = await fetch(`${API_BASE}/jobs-actions/save/${jobId}`, {
         method: 'POST',
         headers: { Authorization: 'Bearer ' + token }
       })
@@ -185,7 +187,7 @@ function JobsPageContent() {
     }
   }
 
-  const fetchJobs = async () => {
+  const fetchJobs = async (signal: AbortSignal) => {
     setLoading(true)
 
     const params = new URLSearchParams()
@@ -202,9 +204,10 @@ function JobsPageContent() {
 
     try {
       const res = await fetch(
-        `http://localhost:5000/api/v1/jobs/search/advanced?${params.toString()}`
+        `${API_BASE}/jobs/search/advanced?${params.toString()}`, { signal }
       )
       const data = await res.json()
+      if (signal.aborted) return
 
       if (data.success) {
         setJobs(data.data || [])
@@ -216,12 +219,13 @@ function JobsPageContent() {
         setTotalPages(1)
       }
     } catch (error) {
+      if (signal.aborted) return
       console.error('Failed to fetch jobs', error)
       setJobs([])
       setTotal(0)
       setTotalPages(1)
     } finally {
-      setLoading(false)
+      if (!signal.aborted) setLoading(false)
     }
   }
 
@@ -230,7 +234,9 @@ function JobsPageContent() {
   }, [])
 
   useEffect(() => {
-    fetchJobs()
+    const controller = new AbortController()
+    void fetchJobs(controller.signal)
+    return () => controller.abort()
   }, [keywordParam, locationParam, industryParam, jobTypeParam, sortByParam, pageParam])
 
   const handleIndustryChange = (value: string) => {

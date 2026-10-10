@@ -1,10 +1,10 @@
 'use client';
+import { API_BASE } from '@/lib/api'
 import { tr, trError, useLocale } from '@/lib/localization'
 
 
 import { useEffect, useState } from 'react';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
 
 type Deployment = {
   id: string;
@@ -268,7 +268,7 @@ export default function EmployerDeploymentsPage() {
                   <option value="">{tr("Select Manpower Request (Optional)")}</option>
                   {requests.map(request => (
                     <option key={request.id} value={request.id}>
-                      {tr(request.jobTitle)}
+                      {request.jobTitle}
                     </option>
                   ))}
                 </select>
@@ -282,7 +282,7 @@ export default function EmployerDeploymentsPage() {
                   <option value="">{tr("Select Candidate")}</option>
                   {candidates.map(candidate => (
                     <option key={candidate.userId} value={candidate.userId}>
-                      {tr(getCandidateLabel(candidate))}
+                      {getCandidateLabel(candidate)}
                     </option>
                   ))}
                 </select>
@@ -417,7 +417,7 @@ export default function EmployerDeploymentsPage() {
                           <td className="rounded-l-2xl px-3 py-4 font-medium">
                             {item.candidate?.email || tr('—')}
                           </td>
-                          <td className="px-3 py-4">{tr(item.siteName)}</td>
+                          <td className="px-3 py-4">{item.siteName}</td>
                           <td className="px-3 py-4">{item.location}</td>
                           <td className="px-3 py-4">{tr(item.startDate)}</td>
                           <td className="px-3 py-4">{tr(item.shiftType)}</td>

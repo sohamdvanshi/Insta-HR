@@ -48,6 +48,8 @@ test('catalog index resolves known messages, plural forms and safe interpolation
     assert.equal(tr('constructor'), 'constructor')
     assert.equal(tr('__proto__'), '__proto__')
     assert.equal(tr(null), '')
+    assert.equal(tr(false), '')
+    assert.equal(tr(true), '')
     assert.equal(trError('unexpected database exception'), tr('Unable to complete request'))
     assert.equal(trError('User not found'), tr('User not found'))
     assert.equal(locale(), `${lang}-IN`)
@@ -109,5 +111,22 @@ test('Hindi/Marathi switcher and admin tools render translated HTML and preserve
     assert.ok(!admin.includes('>First Name<'))
     assert.ok(admin.includes('प्रलंबित') || admin.includes('लंबित'))
     assert.ok(!admin.includes('>Admin dashboard<'))
+  }
+})
+
+
+test('wage workspace renders localized import controls and preserves the read-only view', async () => {
+  const Workspace = load(path.join(src, 'components/payroll/WageRegisterWorkspace.tsx')).default
+  for (const lang of ['hi', 'mr']) {
+    await i18n.changeLanguage(lang)
+    const editable = renderToStaticMarkup(React.createElement(Workspace))
+    assert.ok(!editable.includes('Workbook policy:') && !editable.includes('Import monthly attendance'))
+    assert.ok(editable.includes(tr('Import monthly attendance')))
+    assert.ok(editable.includes('P + PH') && editable.includes('12%') && editable.includes('0.75%'))
+    const readonly = renderToStaticMarkup(React.createElement(Workspace, { readOnly: true }))
+    assert.ok(!readonly.includes('type="file"'))
+    assert.ok(readonly.includes(tr('Saved registers')))
+    assert.ok(!tr('Updated 3 selected employees. Save to persist changes.').includes('Updated'))
+    assert.ok(tr('Select {{value0}}', { value0: 'Open' }).includes('Open'))
   }
 })

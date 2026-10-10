@@ -10,7 +10,7 @@ const {
   awardReferralReward
 } = require('../services/referralReward.service')
 
-const isAdmin = (req) => req.user?.role === 'admin'
+const isAdmin = (req) => ['admin', 'super_admin'].includes(req.user?.role)
 const isEmployer = (req) => req.user?.role === 'employer'
 const isCandidate = (req) => req.user?.role === 'candidate'
 const getId = (value) => (value ? String(value) : null)

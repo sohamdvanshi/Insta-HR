@@ -1,4 +1,5 @@
 const { Contract, Deployment, User } = require('../models');
+const { dateRange, money } = require('../services/recordValidation');
 
 const createContract = async (req, res) => {
   try {
@@ -23,6 +24,10 @@ const createContract = async (req, res) => {
         message: 'Contract title and start date are required.',
       });
     }
+
+    dateRange(startDate, endDate);
+    money(billingRate, true);
+    if (renewalDate) dateRange(startDate, renewalDate);
 
     if (deploymentId) {
       const deployment = await Deployment.findOne({
@@ -58,7 +63,7 @@ const createContract = async (req, res) => {
       data: contract,
     });
   } catch (error) {
-    return res.status(500).json({
+    return res.status(error.status || 500).json({
       success: false,
       message: error.message || 'Failed to create contract.',
     });
@@ -93,7 +98,7 @@ const getEmployerContracts = async (req, res) => {
       data: contracts,
     });
   } catch (error) {
-    return res.status(500).json({
+    return res.status(error.status || 500).json({
       success: false,
       message: error.message || 'Failed to fetch contracts.',
     });
@@ -135,7 +140,7 @@ const updateContractStatus = async (req, res) => {
       data: contract,
     });
   } catch (error) {
-    return res.status(500).json({
+    return res.status(error.status || 500).json({
       success: false,
       message: error.message || 'Failed to update contract status.',
     });

@@ -1,4 +1,6 @@
 'use client'
+import { readStoredUser } from '@/lib/storage'
+import { API_BASE } from '@/lib/api'
 import { tr, useLocale, locale } from '@/lib/localization'
 
 import { useState, useEffect } from 'react'
@@ -25,14 +27,14 @@ export default function SavedJobsPage() {
     const token = localStorage.getItem('token')
     const userData = localStorage.getItem('user')
     if (!token) { router.push('/login'); return }
-    if (userData) setUser(JSON.parse(userData))
+    if (userData) setUser(readStoredUser())
     fetchSavedJobs(token)
     fetchAlerts(token)
   }, [])
 
   const fetchSavedJobs = async (token: string) => {
     try {
-      const res = await fetch('http://localhost:5000/api/v1/jobs-actions/saved', {
+      const res = await fetch(`${API_BASE}/jobs-actions/saved`, {
         headers: { Authorization: 'Bearer ' + token }
       })
       const data = await res.json()
@@ -43,7 +45,7 @@ export default function SavedJobsPage() {
 
   const fetchAlerts = async (token: string) => {
     try {
-      const res = await fetch('http://localhost:5000/api/v1/jobs-actions/alerts', {
+      const res = await fetch(`${API_BASE}/jobs-actions/alerts`, {
         headers: { Authorization: 'Bearer ' + token }
       })
       const data = await res.json()
@@ -53,7 +55,7 @@ export default function SavedJobsPage() {
 
   const unsaveJob = async (jobId: number) => {
     const token = localStorage.getItem('token')
-    await fetch('http://localhost:5000/api/v1/jobs-actions/save/' + jobId, {
+    await fetch(`${API_BASE}/jobs-actions/save/` + jobId, {
       method: 'POST', headers: { Authorization: 'Bearer ' + token }
     })
     setSavedJobs(prev => prev.filter(s => s.jobId !== jobId))
@@ -65,9 +67,9 @@ export default function SavedJobsPage() {
       return
     }
     const token = localStorage.getItem('token')
-    const userData = JSON.parse(localStorage.getItem('user') || '{}')
+    const userData = readStoredUser()
     try {
-      const res = await fetch('http://localhost:5000/api/v1/jobs-actions/alerts', {
+      const res = await fetch(`${API_BASE}/jobs-actions/alerts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
         body: JSON.stringify({ ...alertForm, email: alertForm.email || userData.email })
@@ -85,7 +87,7 @@ export default function SavedJobsPage() {
 
   const deleteAlert = async (id: number) => {
     const token = localStorage.getItem('token')
-    await fetch('http://localhost:5000/api/v1/jobs-actions/alerts/' + id, {
+    await fetch(`${API_BASE}/jobs-actions/alerts/` + id, {
       method: 'DELETE', headers: { Authorization: 'Bearer ' + token }
     })
     setAlerts(prev => prev.filter(a => a.id !== id))
@@ -93,7 +95,7 @@ export default function SavedJobsPage() {
 
   const toggleAlert = async (id: number) => {
     const token = localStorage.getItem('token')
-    const res = await fetch('http://localhost:5000/api/v1/jobs-actions/alerts/' + id + '/toggle', {
+    const res = await fetch(`${API_BASE}/jobs-actions/alerts/` + id + '/toggle', {
       method: 'PATCH', headers: { Authorization: 'Bearer ' + token }
     })
     const data = await res.json()

@@ -1,4 +1,5 @@
 'use client';
+import { API_BASE } from '@/lib/api'
 import { tr, trError, useLocale } from '@/lib/localization'
 
 
@@ -22,7 +23,6 @@ import {
   Line,
 } from 'recharts';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
 
 type ConversionRates = {
   applicationToShortlisted: number;
@@ -702,7 +702,7 @@ export default function EmployerAnalyticsPage() {
                             className="border-b border-gray-100 last:border-b-0"
                           >
                             <td className="py-3 pr-4 font-medium text-gray-900">
-                              {tr(job.jobTitle)}
+                              {job.jobTitle}
                             </td>
                             <td className="py-3 pr-4 text-gray-700">
                               {tr(formatNumber(job.applications))}
@@ -825,7 +825,7 @@ export default function EmployerAnalyticsPage() {
                           className="border-b border-gray-100 last:border-b-0"
                         >
                           <td className="py-3 pr-4 font-medium text-gray-900">
-                            {tr(job.jobTitle)}
+                            {job.jobTitle}
                           </td>
                           <td className="py-3 pr-4 text-gray-700">
                             {tr(formatNumber(job.applications))}

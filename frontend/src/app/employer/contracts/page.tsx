@@ -1,10 +1,10 @@
 'use client';
+import { API_BASE } from '@/lib/api'
 import { tr, trError, useLocale } from '@/lib/localization'
 
 
 import { useEffect, useState } from 'react';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
 
 type Contract = {
   id: string;
@@ -455,12 +455,12 @@ export default function EmployerContractsPage() {
                       contracts.map(item => (
                         <tr key={item.id} className="rounded-2xl bg-gray-50 text-sm text-gray-800">
                           <td className="rounded-l-2xl px-3 py-4 font-medium">
-                            {tr(item.contractTitle)}
+                            {item.contractTitle}
                           </td>
                           <td className="px-3 py-4">
-                            {tr(item.deployment
+                            {item.deployment
                               ? `${item.deployment.siteName}${item.deployment.candidate?.email ? ` - ${item.deployment.candidate.email}` : ''}`
-                              : '—')}
+                              : '—'}
                           </td>
                           <td className="px-3 py-4">{tr(item.startDate)}</td>
                           <td className="px-3 py-4">{tr(item.renewalDate || '—')}</td>

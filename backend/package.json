@@ -12,7 +12,9 @@
     "migrate:phase6": "node scripts/db/migrate-phase6.js",
     "test:phase6": "node --test test/phase6*.test.js",
     "migrate:wages": "node scripts/db/migrate-wages.js",
-    "test:wages": "node --test test/wages*.test.js"
+    "test:wages": "node --test test/wages*.test.js",
+    "test:audit": "node --test test/audit*.test.js",
+    "migrate:phase7-audit": "node scripts/db/migrate-phase7-audit.js"
   },
   "keywords": [],
   "author": "",

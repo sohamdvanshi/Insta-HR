@@ -1,4 +1,5 @@
 'use client'
+import { API_BASE } from '@/lib/api'
 import { tr, useLocale } from '@/lib/localization'
 
 import { useState, useEffect } from 'react'
@@ -13,11 +14,14 @@ export default function AIMatchPage() {
   const [message, setMessage] = useState('')
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/v1/jobs')
+    const token = localStorage.getItem('token')
+    if (!token) { window.location.assign('/login'); return }
+    fetch(`${API_BASE}/jobs/my`, { headers: { Authorization: `Bearer ${token}` } })
       .then(res => res.json())
       .then(data => {
         if (data.success) setJobs(data.data)
-      })
+        else setMessage(data.message || 'Unable to complete request')
+      }).catch(() => setMessage('Unable to complete request'))
   }, [])
 
   const handleMatch = async () => {
@@ -33,16 +37,17 @@ export default function AIMatchPage() {
     }
 
     setLoading(true)
+    setResults([])
     setMessage('')
     try {
-      const res = await fetch(`http://localhost:5000/api/v1/candidates/ai-match/${selectedJob}`, {
+      const res = await fetch(`${API_BASE}/candidates/ai-match/${selectedJob}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       const data = await res.json()
       if (data.success) {
         setResults(data.data)
         if (data.data.length === 0) setMessage('No candidates found!')
-      }
+      } else setMessage(data.message || 'Unable to complete request')
     } catch (err) {
       setMessage('Something went wrong')
     }

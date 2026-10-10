@@ -1,4 +1,5 @@
-export const TRAINING_API = `${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1').replace(/\/$/, '')}/training`
+import { API_BASE } from './api'
+export const TRAINING_API = `${API_BASE}/training`
 
 export async function trainingRequest(path: string, options: RequestInit = {}) {
   const token = localStorage.getItem('token')

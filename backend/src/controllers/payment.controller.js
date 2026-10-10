@@ -5,10 +5,11 @@ const { User, Payment, SubscriptionPlan, sequelize } = require('../models/index'
 const { fail, USER_FIELDS } = require('../services/adminPolicy');
 const { audit } = require('../services/adminOperations');
 
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
+let razorpay;
+const getRazorpay = () => {
+  if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) fail('Payment service is not configured', 503);
+  return razorpay ||= new Razorpay({ key_id: process.env.RAZORPAY_KEY_ID, key_secret: process.env.RAZORPAY_KEY_SECRET });
+};
 
 const formatCurrency = amount => {
   return `₹${Number(amount || 0).toLocaleString('en-IN')}`;
@@ -28,7 +29,7 @@ exports.createOrder = async (req, res) => {
     if (typeof req.body?.plan !== 'string' || !['standard', 'premium', 'enterprise'].includes(req.body.plan)) fail('Choose an active paid plan');
     const details = await SubscriptionPlan.findByPk(req.body.plan);
     if (!details || !details.isActive || details.id === 'free') fail('Choose an active paid plan');
-    const order = await razorpay.orders.create({ amount: details.amountPaise, currency: details.currency,
+    const order = await getRazorpay().orders.create({ amount: details.amountPaise, currency: details.currency,
       receipt: ('rcpt_' + req.user.id + '_' + Date.now()).substring(0, 40),
       notes: { userId: req.user.id, plan: details.id, planName: details.name } });
     await Payment.create({ userId: req.user.id, orderId: order.id, amount: details.amountPaise / 100, currency: details.currency,
@@ -44,12 +45,13 @@ exports.verifyPayment = async (req, res) => {
   try {
     const { razorpay_order_id: orderId, razorpay_payment_id: paymentId, razorpay_signature: signature } = req.body || {};
     if ([orderId, paymentId, signature].some(value => typeof value !== 'string' || !value || value.length > 200)) fail('Invalid payment verification');
+    if (!process.env.RAZORPAY_KEY_SECRET) fail('Payment service is not configured', 503);
     const expected = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET).update(orderId + '|' + paymentId).digest('hex');
     if (signature.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) fail('Payment verification failed');
     const pending = await Payment.findOne({ where: { userId: req.user.id, orderId } });
     if (!pending) fail('No matching order exists. Start a new purchase or contact support.', 409);
     if (pending.status !== 'success') {
-      const receipt = await razorpay.payments.fetch(paymentId);
+      const receipt = await getRazorpay().payments.fetch(paymentId);
       if (receipt.order_id !== orderId || receipt.status !== 'captured' || Number(receipt.amount) !== Math.round(Number(pending.amount) * 100) || receipt.currency !== pending.currency) fail('Payment has not been captured for the expected order. Contact support.', 409);
     }
     const result = await sequelize.transaction(async transaction => {

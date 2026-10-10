@@ -1,4 +1,5 @@
 'use client'
+import { readStoredUser } from '@/lib/storage'
 import { tr, trError, useLocale, locale } from '@/lib/localization'
 
 import { createContext, useContext, useEffect, useState } from 'react'
@@ -20,7 +21,7 @@ export default function AdminShell({ children, superOnly = false }: { children: 
     let cancelled = false
     adminRequest('/admin/workspace/me').then(result => {
       if (superOnly && result.data.role !== 'super_admin') { window.location.assign('/admin'); return }
-      if (!cancelled) { setStaff(result.data); localStorage.setItem('user', JSON.stringify({ ...JSON.parse(localStorage.getItem('user') || '{}'), ...result.data })) }
+      if (!cancelled) { setStaff(result.data); localStorage.setItem('user', JSON.stringify({ ...readStoredUser(), ...result.data })) }
     }).catch(err => { if (!cancelled) setError(err.message) })
     return () => { cancelled = true }
   }, [superOnly])

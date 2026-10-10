@@ -47,6 +47,7 @@ const savedJobsRoutes = require('./routes/savedJobs.routes')
 const internalCommunicationRoutes = require('./routes/internalCommunication.routes')
 const adminWorkspaceRoutes = require('./routes/adminWorkspace.routes')
 const { requireFeature } = require('./services/featureControl')
+const { protect, requireAdmin } = require('./middleware/auth')
 
 const app = express()
 const PORT = Number(process.env.PORT) || 5000
@@ -169,17 +170,20 @@ app.get('/', (req, res) => {
   res.json({ success: true, message: 'InstaHire API is running 🚀' })
 })
 
-app.get('/health', (req, res) => {
+app.get('/health', async (req, res) => {
+  try { await sequelize.authenticate() } catch {
+    return res.status(503).json({ success: false, status: 'unhealthy', database: 'unavailable' })
+  }
   res.status(200).json({
     success: true,
     status: 'healthy',
-    database: sequelize.authenticate ? 'configured' : 'unavailable',
+    database: 'connected',
     uptime: process.uptime(),
     timestamp: new Date().toISOString()
   })
 })
 
-app.get('/uploads-check', (req, res) => {
+app.get('/uploads-check', protect, requireAdmin, (req, res) => {
   const files = fs.existsSync(resumesDir)
     ? fs.readdirSync(resumesDir)
     : []
@@ -227,8 +231,10 @@ async function startServer() {
     await createRedisConnection()
     // createRedisConnection already logs its connection status.
 
-    await connectElasticsearch()
-    await ensureJobsIndex()
+    const search = await connectElasticsearch()
+    if (search) {
+      try { await ensureJobsIndex() } catch (error) { console.error('Search index unavailable:', error.message) }
+    }
 
     // Start cron only after all required services are available.
     startSubscriptionCron()
@@ -247,6 +253,6 @@ async function startServer() {
   }
 }
 
-startServer()
+if (require.main === module) startServer()
 
 module.exports = app

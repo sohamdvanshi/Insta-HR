@@ -1,4 +1,5 @@
 'use client'
+import { API_BASE } from '@/lib/api'
 import { tr, trError, useLocale } from '@/lib/localization'
 
 
@@ -6,7 +7,6 @@ import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'next/navigation'
 
-const API_BASE = 'http://localhost:5000/api/v1'
 
 const emptyResume = {
   title: 'My Resume',
@@ -217,7 +217,7 @@ export default function PublicResumePage() {
                       <div className="flex flex-wrap gap-2">
                         {cleanSkills.map((item: string, index: number) => (
                           <span key={index} className="modern-pill">
-                            {tr(item)}
+                            {item}
                           </span>
                         ))}
                       </div>
@@ -231,7 +231,7 @@ export default function PublicResumePage() {
                         {resume.languages
                           .filter((item: string) => item.trim())
                           .map((item: string, index: number) => (
-                            <p key={index}>{tr(item)}</p>
+                            <p key={index}>{item}</p>
                           ))}
                       </div>
                     </div>
@@ -244,7 +244,7 @@ export default function PublicResumePage() {
                         {resume.certifications
                           .filter((item: string) => item.trim())
                           .map((item: string, index: number) => (
-                            <p key={index}>{tr(item)}</p>
+                            <p key={index}>{item}</p>
                           ))}
                       </div>
                     </div>
@@ -279,7 +279,7 @@ export default function PublicResumePage() {
                                   </h3>
                                   <p className="resume-subtitle">
                                     {item.company}
-                                    {tr(item.location ? ` • ${item.location}` : '')}
+                                    {item.location ? ` • ${item.location}` : ''}
                                   </p>
                                 </div>
 
@@ -340,7 +340,7 @@ export default function PublicResumePage() {
                                 <div>
                                   <h3 className="resume-item-title">
                                     {item.degree || 'Degree'}
-                                    {tr(item.fieldOfStudy ? ` - ${item.fieldOfStudy}` : '')}
+                                    {item.fieldOfStudy ? ` - ${item.fieldOfStudy}` : ''}
                                   </h3>
                                   <p className="resume-subtitle">{item.institution}</p>
                                 </div>
@@ -416,7 +416,7 @@ export default function PublicResumePage() {
                                 </h3>
                                 <p className="resume-subtitle">
                                   {item.company}
-                                  {tr(item.location ? ` • ${item.location}` : '')}
+                                  {item.location ? ` • ${item.location}` : ''}
                                 </p>
                               </div>
 
@@ -477,7 +477,7 @@ export default function PublicResumePage() {
                               <div>
                                 <h3 className="resume-item-title">
                                   {item.degree || 'Degree'}
-                                  {tr(item.fieldOfStudy ? ` - ${item.fieldOfStudy}` : '')}
+                                  {item.fieldOfStudy ? ` - ${item.fieldOfStudy}` : ''}
                                 </h3>
                                 <p className="resume-subtitle">{item.institution}</p>
                               </div>
@@ -505,7 +505,7 @@ export default function PublicResumePage() {
                     <div className="classic-skills">
                       {cleanSkills.map((item: string, index: number) => (
                         <span key={index} className="classic-skill">
-                          {tr(item)}
+                          {item}
                         </span>
                       ))}
                     </div>
@@ -519,7 +519,7 @@ export default function PublicResumePage() {
                       {resume.certifications
                         .filter((item: string) => item.trim())
                         .map((item: string, index: number) => (
-                          <li key={index}>{tr(item)}</li>
+                          <li key={index}>{item}</li>
                         ))}
                     </ul>
                   </section>
@@ -532,7 +532,7 @@ export default function PublicResumePage() {
                       {resume.languages
                         .filter((item: string) => item.trim())
                         .map((item: string, index: number) => (
-                          <span key={index}>{tr(item)}</span>
+                          <span key={index}>{item}</span>
                         ))}
                     </div>
                   </section>

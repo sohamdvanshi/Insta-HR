@@ -21,6 +21,6 @@ router.post('/resume', protect, authorize('candidate'), (req, res, next) => {
   });
 }, candidateController.uploadResume);
 
-router.get('/ai-match/:jobId', protect, authorize('employer', 'admin'), candidateController.getAIMatches);
+router.get('/ai-match/:jobId', protect, authorize('employer', 'admin', 'super_admin'), require('../services/featureControl').requireFeature('ai_screening'), candidateController.getAIMatches);
 
 module.exports = router;

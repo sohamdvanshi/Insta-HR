@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "i18n:index": "node scripts/build-i18n-index.cjs",
-    "test:i18n": "node --test test/i18n.test.cjs"
+    "test:i18n": "node --test test/i18n.test.cjs",
+    "test:audit": "node --test test/audit.test.cjs"
   },
   "dependencies": {
     "@react-oauth/google": "^0.13.5",

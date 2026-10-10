@@ -10,6 +10,7 @@ const { Op } = require('sequelize');
 const { randomUUID } = crypto;
 process.env.JWT_SECRET = 'phase6-isolated-test';
 process.env.RAZORPAY_KEY_SECRET = 'phase6-provider-secret';
+process.env.RAZORPAY_KEY_ID = 'phase6-provider-key';
 const rows = {}, models = {};
 let auditFails = false, providerPayment, orderCounter = 0, queue = Promise.resolve();
 const copy = value => JSON.parse(JSON.stringify(value));

@@ -1,4 +1,5 @@
 'use client'
+import { API_BASE } from '@/lib/api'
 import { tr, trError, useLocale, locale } from '@/lib/localization'
 
 
@@ -6,7 +7,6 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
-const API_BASE = 'http://localhost:5000/api/v1'
 
 interface StoredUser {
   id?: string

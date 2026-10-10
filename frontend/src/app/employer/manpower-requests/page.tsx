@@ -1,10 +1,10 @@
 'use client';
+import { API_BASE } from '@/lib/api'
 import { tr, trError, useLocale } from '@/lib/localization'
 
 
 import { useEffect, useState } from 'react';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
 
 type ManpowerRequest = {
   id: string;
@@ -286,7 +286,7 @@ export default function EmployerManpowerRequestsPage() {
                     ) : (
                       requests.map(request => (
                         <tr key={request.id} className="rounded-2xl bg-gray-50 text-sm text-gray-800">
-                          <td className="rounded-l-2xl px-3 py-4 font-medium">{tr(request.jobTitle)}</td>
+                          <td className="rounded-l-2xl px-3 py-4 font-medium">{request.jobTitle}</td>
                           <td className="px-3 py-4">{request.headcountRequired}</td>
                           <td className="px-3 py-4">{request.location}</td>
                           <td className="px-3 py-4">{tr(request.employmentType)}</td>

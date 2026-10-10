@@ -1,16 +1,17 @@
 'use client'
+import { API_BASE } from '@/lib/api'
 import { tr, useLocale } from '@/lib/localization'
 
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 
-const API_BASE = 'http://localhost:5000/api/v1'
 
 export default function NewResumePage() {
   useLocale()
 
   const router = useRouter()
+  const creation = useRef<Promise<string> | null>(null)
 
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -20,7 +21,10 @@ export default function NewResumePage() {
       return
     }
 
-    createResume()
+    let cancelled = false
+    creation.current ||= createResume()
+    creation.current.then(id => { if (!cancelled) router.replace(`/resume/${id}`) }).catch(() => { if (!cancelled) router.replace('/resume') })
+    return () => { cancelled = true }
   }, [router])
 
   const createResume = async () => {
@@ -63,9 +67,9 @@ export default function NewResumePage() {
         throw new Error(data.message || 'Failed to create resume')
       }
 
-      router.replace('/resume/' + data.data.id)
+      return String(data.data.id)
     } catch (error) {
-      router.replace('/resume')
+      throw error
     }
   }
 

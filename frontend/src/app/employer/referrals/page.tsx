@@ -1,11 +1,11 @@
 'use client'
+import { API_BASE } from '@/lib/api'
 import { tr, trError, useLocale, locale } from '@/lib/localization'
 
 
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
-const API_BASE = 'http://localhost:5000/api/v1'
 
 type ReferralRecord = {
   id: string

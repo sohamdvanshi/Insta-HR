@@ -1,4 +1,5 @@
 'use client'
+import { API_BASE } from '@/lib/api'
 import { tr, trError, useLocale } from '@/lib/localization'
 
 import { useState } from 'react'
@@ -33,7 +34,7 @@ export default function RegisterPage() {
 
     setLoading(true)
     try {
-      const res = await fetch('http://localhost:5000/api/v1/auth/register', {
+      const res = await fetch(`${API_BASE}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -48,9 +49,9 @@ export default function RegisterPage() {
       const data = await res.json()
 
       if (data.success) {
-        localStorage.setItem('token', data.token)
-        localStorage.setItem('user', JSON.stringify(data.user))
-        window.location.href = `/auth/verify-otp?userId=${data.user.id}&email=${formData.email}`
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        window.location.href = `/auth/verify-otp?userId=${data.user.id}&email=${encodeURIComponent(formData.email)}`
       } else {
         setError(data.message)
       }
@@ -100,6 +101,8 @@ export default function RegisterPage() {
                 <input
                   type='text'
                   name='firstName'
+                  required={formData.role === 'candidate'}
+                  maxLength={100}
                   value={formData.firstName}
                   onChange={handleChange}
                   placeholder={tr("John")}

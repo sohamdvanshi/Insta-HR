@@ -105,8 +105,10 @@ exports.jobStatus = handle(async (req, res) => {
     await audit(req, transaction, 'admin.job_status', 'job', job.id, { reason: why, before, after: job.status });
     return job;
   });
+  const { clearCacheByPattern } = require('../middleware/cache');
+  await Promise.all(['instahr:jobs-*', 'instahr:job-detail:*', 'instahr:admin-analytics-*', `instahr:employer-${data.employerId}-*`].map(clearCacheByPattern));
   // Keep Elasticsearch consistent with the SQL moderation decision when available.
-  try { const { elasticClient } = require('../config/elasticsearch'); const { JOBS_INDEX } = require('../services/search/jobSearch.service'); await elasticClient.update({ index: JOBS_INDEX, id: data.id, doc: { status: data.status } }, { requestTimeout: 2000, maxRetries: 0 }); } catch { /* SQL remains authoritative; reindex:jobs repairs the search mirror. */ }
+  try { const { elasticClient } = require('../config/elasticsearch'); const { JOBS_INDEX } = require('../services/search/jobSearch.service'); await elasticClient.update({ index: JOBS_INDEX, id: data.id, doc: { status: data.status }, refresh: true }, { requestTimeout: 2000, maxRetries: 0 }); } catch { /* SQL remains authoritative; reindex:jobs repairs the search mirror. */ }
   res.json({ success: true, data });
 });
 exports.adjust = handle(async (req, res) => {

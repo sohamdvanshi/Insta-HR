@@ -1,4 +1,5 @@
 "use client"
+import { API_BASE, BACKEND_BASE } from '@/lib/api'
 import { tr, trError, useLocale, locale } from '@/lib/localization'
 
 
@@ -100,7 +101,7 @@ export default function EmployerDashboard() {
     setError("")
 
     try {
-      const res = await fetch("http://localhost:5000/api/v1/employer/jobs", {
+      const res = await fetch(`${API_BASE}/employer/jobs`, {
         headers: {
           Authorization: "Bearer " + token
         }
@@ -136,7 +137,7 @@ export default function EmployerDashboard() {
     const token = localStorage.getItem("token")
 
     try {
-      const res = await fetch(`http://localhost:5000/api/v1/employer/jobs/${job.id}/applications`, {
+      const res = await fetch(`${API_BASE}/employer/jobs/${job.id}/applications`, {
         headers: {
           Authorization: "Bearer " + token
         }
@@ -162,7 +163,7 @@ export default function EmployerDashboard() {
     setError("")
 
     try {
-      const res = await fetch(`http://localhost:5000/api/v1/applications/${appId}/status`, {
+      const res = await fetch(`${API_BASE}/applications/${appId}/status`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -247,7 +248,7 @@ export default function EmployerDashboard() {
         body.interviewLocation = interviewForm.interviewLocation
       }
 
-      const res = await fetch(`http://localhost:5000/api/v1/applications/${appId}/schedule-interview`, {
+      const res = await fetch(`${API_BASE}/applications/${appId}/schedule-interview`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -298,7 +299,7 @@ export default function EmployerDashboard() {
     setJobActionLoading(true)
 
     try {
-      const res = await fetch(`http://localhost:5000/api/v1/jobs/${jobId}`, {
+      const res = await fetch(`${API_BASE}/jobs/${jobId}`, {
         method: "DELETE",
         headers: {
           Authorization: "Bearer " + token
@@ -342,8 +343,8 @@ export default function EmployerDashboard() {
 
     try {
       const endpoint = isClosing
-        ? `http://localhost:5000/api/v1/jobs/${job.id}/close`
-        : `http://localhost:5000/api/v1/jobs/${job.id}/reopen`
+        ? `${API_BASE}/jobs/${job.id}/close`
+        : `${API_BASE}/jobs/${job.id}/reopen`
 
       const res = await fetch(endpoint, {
         method: "PATCH",
@@ -552,7 +553,7 @@ export default function EmployerDashboard() {
                         <div className="flex items-start justify-between mb-3 gap-4">
                           <div>
                             <p className="font-bold text-gray-900">
-                              {tr(getCandidateDisplayName(app))}
+                              {getCandidateDisplayName(app)}
                             </p>
                             <p className="text-gray-500 text-sm">{app.candidate?.email}</p>
                             {app.candidate?.candidateProfile?.headline && (
@@ -577,7 +578,7 @@ export default function EmployerDashboard() {
                             <span>{tr("Exp: ")}{app.candidate.candidateProfile.yearsOfExperience}{tr(" yrs")}</span>
                           )}
                           {app.candidate?.candidateProfile?.currentLocation && (
-                            <span>{tr("Location: ")}{tr(app.candidate.candidateProfile.currentLocation)}</span>
+                            <span>{tr("Location: ")}{app.candidate.candidateProfile.currentLocation}</span>
                           )}
                           {app.candidate?.phone && <span>{tr("Phone: ")}{app.candidate.phone}</span>}
                         </div>
@@ -598,13 +599,13 @@ export default function EmployerDashboard() {
 
                         {app.coverLetter && (
                           <p className="text-gray-600 text-sm bg-gray-50 rounded-xl p-3 mb-3 italic">
-                            "{tr(app.coverLetter)}"
+                            "{app.coverLetter}"
                           </p>
                         )}
 
                         {app.candidate?.candidateProfile?.resumeUrl && (
                           <a
-                            href={"http://localhost:5000" + app.candidate.candidateProfile.resumeUrl}
+                            href={/^https?:\/\//i.test(app.candidate.candidateProfile.resumeUrl) ? app.candidate.candidateProfile.resumeUrl : `${BACKEND_BASE}/${app.candidate.candidateProfile.resumeUrl.replace(/^\/+/, '')}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-blue-600 text-sm hover:underline mr-4"
@@ -632,11 +633,11 @@ export default function EmployerDashboard() {
                               >{tr("Join Meeting")}</a>
                             )}
                             {app.interviewLocation && (
-                              <p className="text-purple-700 mt-1">{tr("Location: ")}{tr(app.interviewLocation)}
+                              <p className="text-purple-700 mt-1">{tr("Location: ")}{app.interviewLocation}
                               </p>
                             )}
                             {app.interviewNotes && (
-                              <p className="text-purple-700 mt-1">{tr("Notes: ")}{tr(app.interviewNotes)}
+                              <p className="text-purple-700 mt-1">{tr("Notes: ")}{app.interviewNotes}
                               </p>
                             )}
                           </div>

@@ -1,4 +1,5 @@
 'use client'
+import { API_BASE } from '@/lib/api'
 import { tr, trError, useLocale } from '@/lib/localization'
 
 import { Suspense, useState } from 'react'
@@ -29,7 +30,7 @@ function VerifyOTPPageContent() {
     setError('')
 
     try {
-      const res = await fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1').replace(/\/$/, '') + '/auth/verify-otp', {
+      const res = await fetch(API_BASE + '/auth/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, otp })
@@ -56,7 +57,7 @@ function VerifyOTPPageContent() {
     setError('')
     setSuccess('')
     try {
-      const res = await fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1').replace(/\/$/, '') + '/auth/resend-otp', {
+      const res = await fetch(API_BASE + '/auth/resend-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId })

@@ -1,15 +1,11 @@
 const { Invoice, Payroll, Deployment, User } = require('../models');
 
-const generateInvoiceNumber = () => {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = `${now.getMonth() + 1}`.padStart(2, '0');
-  const random = Math.floor(1000 + Math.random() * 9000);
-  return `INV-${year}${month}-${random}`;
-};
+const { randomUUID } = require('crypto');
+const { monthRange, dateRange, money } = require('../services/recordValidation');
+const generateInvoiceNumber = () => `INV-${Date.now()}-${randomUUID()}`;
 
 const calculateTotal = (subtotal, taxAmount) => {
-  return Number(subtotal || 0) + Number(taxAmount || 0);
+  return Math.round((Number(subtotal || 0) + Number(taxAmount || 0)) * 100) / 100;
 };
 
 const createInvoice = async (req, res) => {
@@ -33,6 +29,10 @@ const createInvoice = async (req, res) => {
         message: 'Deployment, billing period, invoice date, due date, and subtotal are required.',
       });
     }
+
+    monthRange(billingPeriodMonth);
+    dateRange(invoiceDate, dueDate);
+    const subtotalValue = money(subtotal), taxValue = money(taxAmount, true);
 
     const deployment = await Deployment.findOne({
       where: { id: deploymentId, employerId },
@@ -74,8 +74,6 @@ const createInvoice = async (req, res) => {
       linkedPayrollId = payroll.id;
     }
 
-    const subtotalValue = Number(subtotal || 0);
-    const taxValue = Number(taxAmount || 0);
     const totalAmount = calculateTotal(subtotalValue, taxValue);
 
     const invoice = await Invoice.create({
@@ -101,7 +99,7 @@ const createInvoice = async (req, res) => {
       data: invoice,
     });
   } catch (error) {
-    return res.status(500).json({
+    return res.status(error.status || (error.name === 'SequelizeUniqueConstraintError' ? 409 : 500)).json({
       success: false,
       message: error.message || 'Failed to create invoice.',
     });
@@ -147,7 +145,7 @@ const getEmployerInvoices = async (req, res) => {
       data: invoices,
     });
   } catch (error) {
-    return res.status(500).json({
+    return res.status(error.status || (error.name === 'SequelizeUniqueConstraintError' ? 409 : 500)).json({
       success: false,
       message: error.message || 'Failed to fetch invoices.',
     });
@@ -189,7 +187,7 @@ const updateInvoiceStatus = async (req, res) => {
       data: invoice,
     });
   } catch (error) {
-    return res.status(500).json({
+    return res.status(error.status || (error.name === 'SequelizeUniqueConstraintError' ? 409 : 500)).json({
       success: false,
       message: error.message || 'Failed to update invoice status.',
     });

@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken')
 const crypto = require('crypto')
 const { OAuth2Client } = require('google-auth-library')
 
-const { User, CandidateProfile } = require('../models/index')
+const { User, CandidateProfile, sequelize } = require('../models/index')
 const emailService = require('../services/email/emailService')
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
@@ -98,8 +98,22 @@ const getUserResponse = (user) => ({
 })
 
 const sendWelcomeEmail = async (email, name) => {
-  if (typeof emailService.sendWelcomeEmail === 'function') {
-    await emailService.sendWelcomeEmail(email, name)
+  try {
+    if (typeof emailService.sendWelcomeEmail === 'function') await emailService.sendWelcomeEmail(email, name)
+  } catch (error) { console.error('Welcome email delivery failed:', error.message) }
+}
+
+// User and candidate profile are one atomic account creation. Retry a rare
+// referral collision in a fresh transaction rather than a failed transaction.
+const createAccount = async (data, profile) => {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      return await sequelize.transaction(async transaction => {
+        const user = await User.create({ ...data, referralCode: await getReferralCodeForRole(data.role) }, { transaction })
+        if (data.role === 'candidate') await CandidateProfile.create({ ...profile, userId: user.id }, { transaction })
+        return user
+      })
+    } catch (error) { if (attempt || !isReferralCodeUniqueConstraintError(error)) throw error }
   }
 }
 
@@ -117,7 +131,7 @@ exports.register = async (req, res) => {
     const normalizedEmail = normalizeEmail(email)
     const normalizedRole = normalizeRole(role)
 
-    if (!normalizedEmail || !password) {
+    if (!normalizedEmail || typeof password !== 'string' || !password) {
       return res.status(400).json({
         success: false,
         message: 'Email and password are required'
@@ -138,6 +152,10 @@ exports.register = async (req, res) => {
       })
     }
 
+    if (normalizedRole === 'candidate' && (typeof firstName !== 'string' || !firstName.trim() || firstName.trim().length > 100)) {
+      return res.status(400).json({ success: false, message: 'First name is required' })
+    }
+
     const existing = await User.findOne({
       where: { email: normalizedEmail },
       attributes: ['id']
@@ -154,51 +172,21 @@ exports.register = async (req, res) => {
     const otpExpiry = new Date(Date.now() + 10 * 60 * 1000)
     const hashedPassword = await bcrypt.hash(password, 12)
 
-    let user
+    const user = await createAccount({
+      email: normalizedEmail, password: hashedPassword,
+      phone: typeof phone === 'string' ? phone.trim() || null : null,
+      role: normalizedRole, otp, otpExpiry, authProvider: 'local',
+      isEmailVerified: false, isActive: true
+    }, { firstName: typeof firstName === 'string' ? firstName.trim() : '', lastName: typeof lastName === 'string' ? lastName.trim() : '' })
 
-    try {
-      user = await User.create({
-        email: normalizedEmail,
-        password: hashedPassword,
-        phone: typeof phone === 'string' ? phone.trim() || null : null,
-        role: normalizedRole,
-        referralCode: await getReferralCodeForRole(normalizedRole),
-        otp,
-        otpExpiry,
-        authProvider: 'local',
-        isEmailVerified: false,
-        isActive: true
-      })
-    } catch (error) {
-      if (!isReferralCodeUniqueConstraintError(error)) throw error
-
-      user = await User.create({
-        email: normalizedEmail,
-        password: hashedPassword,
-        phone: typeof phone === 'string' ? phone.trim() || null : null,
-        role: normalizedRole,
-        referralCode: await generateUniqueReferralCode(),
-        otp,
-        otpExpiry,
-        authProvider: 'local',
-        isEmailVerified: false,
-        isActive: true
-      })
-    }
-
-    if (normalizedRole === 'candidate') {
-      await CandidateProfile.create({
-        userId: user.id,
-        firstName: typeof firstName === 'string' ? firstName.trim() : '',
-        lastName: typeof lastName === 'string' ? lastName.trim() : ''
-      })
-    }
-
-    await emailService.sendOTPEmail(normalizedEmail, otp)
+    let otpSent = true
+    try { await emailService.sendOTPEmail(normalizedEmail, otp) }
+    catch (error) { otpSent = false; console.error('OTP email delivery failed:', error.message) }
 
     return res.status(201).json({
       success: true,
-      message: 'Account created successfully. Please verify your email with OTP.',
+      message: otpSent ? 'Account created successfully. Please verify your email with OTP.' : 'Account created. OTP email could not be sent. Please resend OTP.',
+      otpSent,
       userId: user.id,
       user: getUserResponse(user)
     })
@@ -222,6 +210,8 @@ exports.verifyOTP = async (req, res) => {
         message: 'User not found'
       })
     }
+
+    if (!user.isActive) return res.status(403).json({ success: false, message: 'Your account is inactive' })
 
     if (!otp || user.otp !== String(otp)) {
       return res.status(400).json({
@@ -317,7 +307,7 @@ exports.login = async (req, res) => {
     const normalizedEmail = normalizeEmail(req.body.email)
     const { password } = req.body
 
-    if (!normalizedEmail || !password) {
+    if (!normalizedEmail || typeof password !== 'string' || !password) {
       return res.status(400).json({
         success: false,
         message: 'Email and password are required'
@@ -447,49 +437,14 @@ exports.googleLogin = async (req, res) => {
         })
       }
 
-      try {
-        user = await User.create({
-          email: normalizedEmail,
-          password: null,
-          phone: null,
-          googleId,
-          authProvider: 'google',
-          avatar: picture || null,
-          role: normalizedRole,
-          referralCode: await getReferralCodeForRole(normalizedRole),
-          isEmailVerified: true,
-          isActive: true,
-          lastLogin: new Date()
-        })
-      } catch (error) {
-        if (!isReferralCodeUniqueConstraintError(error)) throw error
-
-        user = await User.create({
-          email: normalizedEmail,
-          password: null,
-          phone: null,
-          googleId,
-          authProvider: 'google',
-          avatar: picture || null,
-          role: normalizedRole,
-          referralCode: await generateUniqueReferralCode(),
-          isEmailVerified: true,
-          isActive: true,
-          lastLogin: new Date()
-        })
-      }
-
-      if (normalizedRole === 'candidate') {
-        await CandidateProfile.create({
-          userId: user.id,
-          firstName: typeof firstName === 'string'
-            ? firstName.trim()
-            : givenName || name?.split(' ')[0] || '',
-          lastName: typeof lastName === 'string'
-            ? lastName.trim()
-            : familyName || name?.split(' ').slice(1).join(' ') || ''
-        })
-      }
+      user = await createAccount({
+        email: normalizedEmail, password: null, phone: null, googleId,
+        authProvider: 'google', avatar: picture || null, role: normalizedRole,
+        isEmailVerified: true, isActive: true, lastLogin: new Date()
+      }, {
+        firstName: (typeof firstName === 'string' && firstName.trim()) || givenName || name?.split(' ')[0] || normalizedEmail.split('@')[0],
+        lastName: (typeof lastName === 'string' && lastName.trim()) || familyName || name?.split(' ').slice(1).join(' ') || ''
+      })
 
       await sendWelcomeEmail(
         normalizedEmail,

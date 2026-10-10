@@ -1,4 +1,5 @@
 'use client'
+import { API_BASE } from '@/lib/api'
 import { tr, useLocale, locale } from '@/lib/localization'
 
 
@@ -75,7 +76,7 @@ export default function ApplicationsPage() {
 
   const fetchApplications = async (token: string) => {
     try {
-      const res = await fetch('http://localhost:5000/api/v1/applications/my', {
+      const res = await fetch(`${API_BASE}/applications/my`, {
         headers: { Authorization: `Bearer ${token}` }
       })
 
@@ -191,7 +192,7 @@ export default function ApplicationsPage() {
                   {app.aiSummary && (
                     <div className="mb-3 bg-blue-50 rounded-xl p-3">
                       <p className="text-blue-700 text-sm">
-                        <span className="font-medium">{tr("AI Summary:")}</span> {tr(app.aiSummary)}
+                        <span className="font-medium">{tr("AI Summary:")}</span> {app.aiSummary}
                       </p>
                     </div>
                   )}
@@ -221,12 +222,12 @@ export default function ApplicationsPage() {
                       )}
 
                       {app.interviewLocation && (
-                        <p className="text-purple-700 text-sm mb-1">{tr("Location: ")}{tr(app.interviewLocation)}
+                        <p className="text-purple-700 text-sm mb-1">{tr("Location: ")}{app.interviewLocation}
                         </p>
                       )}
 
                       {app.interviewNotes && (
-                        <p className="text-purple-700 text-sm">{tr("Notes: ")}{tr(app.interviewNotes)}
+                        <p className="text-purple-700 text-sm">{tr("Notes: ")}{app.interviewNotes}
                         </p>
                       )}
                     </div>

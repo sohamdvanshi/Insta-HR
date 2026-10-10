@@ -1,4 +1,6 @@
 'use client'
+import { readStoredUser } from '@/lib/storage'
+import { API_BASE } from '@/lib/api'
 import { tr, useLocale } from '@/lib/localization'
 
 
@@ -54,7 +56,7 @@ export default function EditJobPage() {
   })
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    const user = readStoredUser()
 
     if (!user || user.role !== 'employer') {
       router.replace('/login')
@@ -70,7 +72,7 @@ export default function EditJobPage() {
       if (!token) return
 
       try {
-        const res = await fetch('http://localhost:5000/api/v1/payments/subscription', {
+        const res = await fetch(`${API_BASE}/payments/subscription`, {
           headers: { Authorization: 'Bearer ' + token }
         })
         const data = await res.json()
@@ -94,7 +96,7 @@ export default function EditJobPage() {
       }
 
       try {
-        const res = await fetch(`http://localhost:5000/api/v1/jobs/${jobId}`, {
+        const res = await fetch(`${API_BASE}/jobs/${jobId}`, {
           headers: {
             Authorization: `Bearer ${token}`
           },
@@ -173,7 +175,7 @@ export default function EditJobPage() {
     try {
       const minExp = formData.experienceMin ? Number(formData.experienceMin) : 0
 
-      const res = await fetch(`http://localhost:5000/api/v1/jobs/${jobId}`, {
+      const res = await fetch(`${API_BASE}/jobs/${jobId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

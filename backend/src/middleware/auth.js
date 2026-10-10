@@ -47,8 +47,6 @@ exports.protect = async (req, res, next) => {
       })
     }
 
-    console.log('AUTH DEBUG: token user id:', decoded.id)
-
     const user = await User.findByPk(decoded.id)
 
     if (!user) {
@@ -72,12 +70,6 @@ exports.protect = async (req, res, next) => {
       })
     }
 
-    console.log('AUTH DEBUG: user loaded:', {
-      id: user.id,
-      email: user.email,
-      role: user.role
-    })
-
     if (user.role === 'trainer' && !/^\/api\/v1\/training(?:\/|$)/.test(req.originalUrl.split('?')[0])) {
       return res.status(403).json({ success: false, message: 'Trainer accounts only have access to training modules' })
     }
@@ -87,6 +79,9 @@ exports.protect = async (req, res, next) => {
   } catch (error) {
     console.error('Authentication error:', error.message)
 
+    if (!['JsonWebTokenError', 'TokenExpiredError', 'NotBeforeError'].includes(error.name)) {
+      return res.status(503).json({ success: false, message: 'Authentication service unavailable. Please try again.' })
+    }
     return res.status(401).json({
       success: false,
       code: 'INVALID_OR_EXPIRED_TOKEN',

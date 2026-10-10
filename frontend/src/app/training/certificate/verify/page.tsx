@@ -1,4 +1,5 @@
 'use client'
+import { API_BASE } from '@/lib/api'
 import { tr, trError, useLocale, locale } from '@/lib/localization'
 
 
@@ -32,7 +33,7 @@ function VerifyCertificatePageContent() {
       const cleanedId = certificateId.trim().toUpperCase()
 
       const res = await fetch(
-        'http://localhost:5000/api/v1/training/certificate/verify/' + encodeURIComponent(cleanedId)
+        `${API_BASE}/training/certificate/verify/` + encodeURIComponent(cleanedId)
       )
 
       const data = await res.json()

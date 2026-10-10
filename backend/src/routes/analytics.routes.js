@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { cacheResponse } = require('../middleware/cache');
+const { protect, requireAdmin } = require('../middleware/auth');
+router.use(protect, requireAdmin);
 
 const {
   getAdminAnalytics,

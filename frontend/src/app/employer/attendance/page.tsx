@@ -1,11 +1,11 @@
 'use client';
+import { API_BASE } from '@/lib/api'
 import { tr, trError, useLocale, locale } from '@/lib/localization'
 
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
 
 type AttendanceRecord = {
   id: string;
@@ -314,7 +314,7 @@ export default function EmployerAttendancePage() {
                     <option value="">{tr("Select Deployment")}</option>
                     {deployments.map(deployment => (
                       <option key={deployment.id} value={deployment.id}>
-                        {tr(getDeploymentLabel(deployment))}
+                        {getDeploymentLabel(deployment)}
                       </option>
                     ))}
                   </select>
@@ -460,7 +460,7 @@ export default function EmployerAttendancePage() {
                               {tr(record.candidate?.email || record.deployment?.candidate?.email || '—')}
                             </td>
                             <td className="px-3 py-4">
-                              {tr(record.deployment?.siteName || '—')}
+                              {record.deployment?.siteName || '—'}
                             </td>
                             <td className="px-3 py-4">{tr(record.attendanceDate)}</td>
 
@@ -522,9 +522,9 @@ export default function EmployerAttendancePage() {
                                   rows={2}
                                   className="w-40 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs outline-none focus:border-black"
                                 />
-                              ) : tr((
+                              ) : (
                                 record.remarks || '—'
-                              ))}
+                              )}
                             </td>
 
                             <td className="rounded-r-2xl px-3 py-4">
