@@ -2547,6 +2547,34 @@
     "ns": "common",
     "key": "super_admin"
   },
+  "Career": {
+    "ns": "common",
+    "key": "Career"
+  },
+  "Learning": {
+    "ns": "common",
+    "key": "Learning"
+  },
+  "AI Match": {
+    "ns": "common",
+    "key": "AI Match"
+  },
+  "Resources": {
+    "ns": "common",
+    "key": "Resources"
+  },
+  "People": {
+    "ns": "common",
+    "key": "People"
+  },
+  "Team tools": {
+    "ns": "common",
+    "key": "Team tools"
+  },
+  "Main navigation": {
+    "ns": "common",
+    "key": "Main navigation"
+  },
   "online": {
     "ns": "jobs",
     "key": "online"
@@ -2828,6 +2856,10 @@
     "key": "Interviews"
   },
   "Search public candidate profiles by skill, location, industry, and experience": {
+    "ns": "jobs",
+    "key": "Search public candidate profiles by skill, location, industry, and experience"
+  },
+  "Search shared resumes and your applicants by skill, location, industry, and experience": {
     "ns": "jobs",
     "key": "Search public candidate profiles by skill, location, industry, and experience"
   },
@@ -3363,6 +3395,74 @@
     "ns": "jobs",
     "key": "Job share with location"
   },
+  "One candidate, all available resumes.": {
+    "ns": "jobs",
+    "key": "One candidate, all available resumes."
+  },
+  "City / location": {
+    "ns": "jobs",
+    "key": "City / location"
+  },
+  "Maximum experience": {
+    "ns": "jobs",
+    "key": "Maximum experience"
+  },
+  "Education / qualification": {
+    "ns": "jobs",
+    "key": "Education / qualification"
+  },
+  "Maximum expected salary": {
+    "ns": "jobs",
+    "key": "Maximum expected salary"
+  },
+  "All job types": {
+    "ns": "jobs",
+    "key": "All job types"
+  },
+  "Job type": {
+    "ns": "jobs",
+    "key": "Job type"
+  },
+  "City includes current location, preferred cities, and cities where the candidate has applied. All listed skills must match.": {
+    "ns": "jobs",
+    "key": "City includes current location, preferred cities, and cities where the candidate has applied. All listed skills must match."
+  },
+  "Preferred cities": {
+    "ns": "jobs",
+    "key": "Preferred cities"
+  },
+  "Applied cities": {
+    "ns": "jobs",
+    "key": "Applied cities"
+  },
+  "Preferred or applied job types": {
+    "ns": "jobs",
+    "key": "Preferred or applied job types"
+  },
+  "Resumes": {
+    "ns": "jobs",
+    "key": "Resumes"
+  },
+  "yrs": {
+    "ns": "jobs",
+    "key": "yrs"
+  },
+  "Work preferences": {
+    "ns": "jobs",
+    "key": "Work preferences"
+  },
+  "Preferred cities (comma separated)": {
+    "ns": "jobs",
+    "key": "Preferred cities (comma separated)"
+  },
+  "Preferred job types": {
+    "ns": "jobs",
+    "key": "Preferred job types"
+  },
+  "Basic matching is active because the AI service is unavailable. Results use skills, experience, and resume text.": {
+    "ns": "jobs",
+    "key": "Basic matching is active because the AI service is unavailable. Results use skills, experience, and resume text."
+  },
   "Account:": {
     "ns": "auth",
     "key": "Account:"
@@ -3622,6 +3722,94 @@
   "← Back to Login": {
     "ns": "auth",
     "key": "← Back to Login"
+  },
+  "Reset your password": {
+    "ns": "auth",
+    "key": "Reset your password"
+  },
+  "Forgot your password?": {
+    "ns": "auth",
+    "key": "Forgot your password?"
+  },
+  "Choose a new password for your account.": {
+    "ns": "auth",
+    "key": "Choose a new password for your account."
+  },
+  "Enter your email and we will send you a password reset link.": {
+    "ns": "auth",
+    "key": "Enter your email and we will send you a password reset link."
+  },
+  "Checking reset link…": {
+    "ns": "auth",
+    "key": "Checking reset link…"
+  },
+  "New password": {
+    "ns": "auth",
+    "key": "New password"
+  },
+  "Confirm new password": {
+    "ns": "auth",
+    "key": "Confirm new password"
+  },
+  "Save new password": {
+    "ns": "auth",
+    "key": "Save new password"
+  },
+  "Send reset link": {
+    "ns": "auth",
+    "key": "Send reset link"
+  },
+  "Please wait…": {
+    "ns": "auth",
+    "key": "Please wait…"
+  },
+  "Back to login": {
+    "ns": "auth",
+    "key": "Back to login"
+  },
+  "Request a new reset link": {
+    "ns": "auth",
+    "key": "Request a new reset link"
+  },
+  "Account recovery navigation": {
+    "ns": "auth",
+    "key": "Account recovery navigation"
+  },
+  "The link expires in 15 minutes. Wait one minute before requesting another link. If you use Google sign-in, continue with Google on the login page.": {
+    "ns": "auth",
+    "key": "The link expires in 15 minutes. Wait one minute before requesting another link. If you use Google sign-in, continue with Google on the login page."
+  },
+  "If an eligible account exists, a password reset link has been sent. Check your inbox and spam folder.": {
+    "ns": "auth",
+    "key": "If an eligible account exists, a password reset link has been sent. Check your inbox and spam folder."
+  },
+  "This password reset link is invalid or expired. Request a new link.": {
+    "ns": "auth",
+    "key": "This password reset link is invalid or expired. Request a new link."
+  },
+  "Use at least 8 characters and no more than 72 UTF-8 bytes for your password.": {
+    "ns": "auth",
+    "key": "Use at least 8 characters and no more than 72 UTF-8 bytes for your password."
+  },
+  "Passwords do not match.": {
+    "ns": "auth",
+    "key": "Passwords do not match."
+  },
+  "Password changed successfully. Sign in with your new password.": {
+    "ns": "auth",
+    "key": "Password changed successfully. Sign in with your new password."
+  },
+  "Unable to reset your password right now. Please try again.": {
+    "ns": "auth",
+    "key": "Unable to reset your password right now. Please try again."
+  },
+  "Too many password reset attempts. Please try again later.": {
+    "ns": "auth",
+    "key": "Too many password reset attempts. Please try again later."
+  },
+  "Your password changed. Please sign in again.": {
+    "ns": "auth",
+    "key": "Your password changed. Please sign in again."
   },
   "AI-Powered Job Matching Platform": {
     "ns": "dashboard",
@@ -3998,10 +4186,6 @@
   "Exp:": {
     "ns": "dashboard",
     "key": "Exp:"
-  },
-  "yrs": {
-    "ns": "dashboard",
-    "key": "yrs"
   },
   "Phone:": {
     "ns": "dashboard",
@@ -6258,6 +6442,30 @@
   "Workbook policy: payable days = P + PH (H is mapped to PH). Weekly offs and leave codes are excluded. Basic = daily rate × payable days; overtime = daily rate ÷ 4 × hours. PF = 12% of Basic capped at ₹15,000; ESIC = 0.75% of total earnings rounded to a rupee. Employer contributions are separate.": {
     "ns": "payroll",
     "key": "Workbook policy: payable days = P + PH (H is mapped to PH). Weekly offs and leave codes are excluded. Basic = daily rate × payable days; overtime = daily rate ÷ 4 × hours. PF = 12% of Basic capped at ₹15,000; ESIC = 0.75% of total earnings rounded to a rupee. Employer contributions are separate."
+  },
+  "Standard attendance template": {
+    "ns": "payroll",
+    "key": "Standard attendance template"
+  },
+  "Select a payroll month, download its template, fill employee details and daily attendance, then upload the completed file below.": {
+    "ns": "payroll",
+    "key": "Select a payroll month, download its template, fill employee details and daily attendance, then upload the completed file below."
+  },
+  "Download attendance template": {
+    "ns": "payroll",
+    "key": "Download attendance template"
+  },
+  "The template includes every date of the selected month, 50 blank employee rows and attendance-code dropdowns.": {
+    "ns": "payroll",
+    "key": "The template includes every date of the selected month, 50 blank employee rows and attendance-code dropdowns."
+  },
+  "Choose a valid payroll month": {
+    "ns": "payroll",
+    "key": "Choose a valid payroll month"
+  },
+  "Unable to download attendance template": {
+    "ns": "payroll",
+    "key": "Unable to download attendance template"
   },
   "failed": {
     "ns": "training",
@@ -11123,6 +11331,18 @@
     "ns": "errors",
     "key": "Account created. OTP email could not be sent. Please resend OTP."
   },
+  "Invalid search filters": {
+    "ns": "errors",
+    "key": "Invalid search filters"
+  },
+  "Invalid preferred job type": {
+    "ns": "errors",
+    "key": "Invalid preferred job type"
+  },
+  "Profile storage needs an update. Please contact support.": {
+    "ns": "errors",
+    "key": "Profile storage needs an update. Please contact support."
+  },
   "CANDIDATE": {
     "ns": "common",
     "key": "candidate"
@@ -13271,6 +13491,34 @@
     "ns": "common",
     "key": "verified"
   },
+  "career": {
+    "ns": "common",
+    "key": "Career"
+  },
+  "learning": {
+    "ns": "common",
+    "key": "Learning"
+  },
+  "ai match": {
+    "ns": "common",
+    "key": "AI Match"
+  },
+  "resources": {
+    "ns": "common",
+    "key": "Resources"
+  },
+  "people": {
+    "ns": "common",
+    "key": "People"
+  },
+  "team tools": {
+    "ns": "common",
+    "key": "Team tools"
+  },
+  "main navigation": {
+    "ns": "common",
+    "key": "Main navigation"
+  },
   "🤖 ai resume matching": {
     "ns": "jobs",
     "key": "🤖 AI Resume Matching"
@@ -13524,6 +13772,10 @@
     "key": "Interviews"
   },
   "search public candidate profiles by skill, location, industry, and experience": {
+    "ns": "jobs",
+    "key": "Search public candidate profiles by skill, location, industry, and experience"
+  },
+  "search shared resumes and your applicants by skill, location, industry, and experience": {
     "ns": "jobs",
     "key": "Search public candidate profiles by skill, location, industry, and experience"
   },
@@ -14011,6 +14263,70 @@
     "ns": "jobs",
     "key": "Job share with location"
   },
+  "one candidate, all available resumes.": {
+    "ns": "jobs",
+    "key": "One candidate, all available resumes."
+  },
+  "city / location": {
+    "ns": "jobs",
+    "key": "City / location"
+  },
+  "maximum experience": {
+    "ns": "jobs",
+    "key": "Maximum experience"
+  },
+  "education / qualification": {
+    "ns": "jobs",
+    "key": "Education / qualification"
+  },
+  "maximum expected salary": {
+    "ns": "jobs",
+    "key": "Maximum expected salary"
+  },
+  "all job types": {
+    "ns": "jobs",
+    "key": "All job types"
+  },
+  "job type": {
+    "ns": "jobs",
+    "key": "Job type"
+  },
+  "city includes current location, preferred cities, and cities where the candidate has applied. all listed skills must match.": {
+    "ns": "jobs",
+    "key": "City includes current location, preferred cities, and cities where the candidate has applied. All listed skills must match."
+  },
+  "preferred cities": {
+    "ns": "jobs",
+    "key": "Preferred cities"
+  },
+  "applied cities": {
+    "ns": "jobs",
+    "key": "Applied cities"
+  },
+  "preferred or applied job types": {
+    "ns": "jobs",
+    "key": "Preferred or applied job types"
+  },
+  "YRS": {
+    "ns": "jobs",
+    "key": "yrs"
+  },
+  "work preferences": {
+    "ns": "jobs",
+    "key": "Work preferences"
+  },
+  "preferred cities (comma separated)": {
+    "ns": "jobs",
+    "key": "Preferred cities (comma separated)"
+  },
+  "preferred job types": {
+    "ns": "jobs",
+    "key": "Preferred job types"
+  },
+  "basic matching is active because the ai service is unavailable. results use skills, experience, and resume text.": {
+    "ns": "jobs",
+    "key": "Basic matching is active because the AI service is unavailable. Results use skills, experience, and resume text."
+  },
   "account:": {
     "ns": "auth",
     "key": "Account:"
@@ -14254,6 +14570,94 @@
   "← back to login": {
     "ns": "auth",
     "key": "← Back to Login"
+  },
+  "reset your password": {
+    "ns": "auth",
+    "key": "Reset your password"
+  },
+  "forgot your password?": {
+    "ns": "auth",
+    "key": "Forgot your password?"
+  },
+  "choose a new password for your account.": {
+    "ns": "auth",
+    "key": "Choose a new password for your account."
+  },
+  "enter your email and we will send you a password reset link.": {
+    "ns": "auth",
+    "key": "Enter your email and we will send you a password reset link."
+  },
+  "checking reset link…": {
+    "ns": "auth",
+    "key": "Checking reset link…"
+  },
+  "new password": {
+    "ns": "auth",
+    "key": "New password"
+  },
+  "confirm new password": {
+    "ns": "auth",
+    "key": "Confirm new password"
+  },
+  "save new password": {
+    "ns": "auth",
+    "key": "Save new password"
+  },
+  "send reset link": {
+    "ns": "auth",
+    "key": "Send reset link"
+  },
+  "please wait…": {
+    "ns": "auth",
+    "key": "Please wait…"
+  },
+  "back to login": {
+    "ns": "auth",
+    "key": "Back to login"
+  },
+  "request a new reset link": {
+    "ns": "auth",
+    "key": "Request a new reset link"
+  },
+  "account recovery navigation": {
+    "ns": "auth",
+    "key": "Account recovery navigation"
+  },
+  "the link expires in 15 minutes. wait one minute before requesting another link. if you use google sign-in, continue with google on the login page.": {
+    "ns": "auth",
+    "key": "The link expires in 15 minutes. Wait one minute before requesting another link. If you use Google sign-in, continue with Google on the login page."
+  },
+  "if an eligible account exists, a password reset link has been sent. check your inbox and spam folder.": {
+    "ns": "auth",
+    "key": "If an eligible account exists, a password reset link has been sent. Check your inbox and spam folder."
+  },
+  "this password reset link is invalid or expired. request a new link.": {
+    "ns": "auth",
+    "key": "This password reset link is invalid or expired. Request a new link."
+  },
+  "use at least 8 characters and no more than 72 utf-8 bytes for your password.": {
+    "ns": "auth",
+    "key": "Use at least 8 characters and no more than 72 UTF-8 bytes for your password."
+  },
+  "passwords do not match.": {
+    "ns": "auth",
+    "key": "Passwords do not match."
+  },
+  "password changed successfully. sign in with your new password.": {
+    "ns": "auth",
+    "key": "Password changed successfully. Sign in with your new password."
+  },
+  "unable to reset your password right now. please try again.": {
+    "ns": "auth",
+    "key": "Unable to reset your password right now. Please try again."
+  },
+  "too many password reset attempts. please try again later.": {
+    "ns": "auth",
+    "key": "Too many password reset attempts. Please try again later."
+  },
+  "your password changed. please sign in again.": {
+    "ns": "auth",
+    "key": "Your password changed. Please sign in again."
   },
   "ai-powered job matching platform": {
     "ns": "dashboard",
@@ -14627,10 +15031,6 @@
     "ns": "dashboard",
     "key": "Exp:"
   },
-  "YRS": {
-    "ns": "dashboard",
-    "key": "yrs"
-  },
   "phone:": {
     "ns": "dashboard",
     "key": "Phone:"
@@ -14838,10 +15238,6 @@
   "by job type": {
     "ns": "dashboard",
     "key": "By Job Type"
-  },
-  "job type": {
-    "ns": "dashboard",
-    "key": "Job Type"
   },
   "by industry": {
     "ns": "dashboard",
@@ -16666,6 +17062,30 @@
   "workbook policy: payable days = p + ph (h is mapped to ph). weekly offs and leave codes are excluded. basic = daily rate × payable days; overtime = daily rate ÷ 4 × hours. pf = 12% of basic capped at ₹15,000; esic = 0.75% of total earnings rounded to a rupee. employer contributions are separate.": {
     "ns": "payroll",
     "key": "Workbook policy: payable days = P + PH (H is mapped to PH). Weekly offs and leave codes are excluded. Basic = daily rate × payable days; overtime = daily rate ÷ 4 × hours. PF = 12% of Basic capped at ₹15,000; ESIC = 0.75% of total earnings rounded to a rupee. Employer contributions are separate."
+  },
+  "standard attendance template": {
+    "ns": "payroll",
+    "key": "Standard attendance template"
+  },
+  "select a payroll month, download its template, fill employee details and daily attendance, then upload the completed file below.": {
+    "ns": "payroll",
+    "key": "Select a payroll month, download its template, fill employee details and daily attendance, then upload the completed file below."
+  },
+  "download attendance template": {
+    "ns": "payroll",
+    "key": "Download attendance template"
+  },
+  "the template includes every date of the selected month, 50 blank employee rows and attendance-code dropdowns.": {
+    "ns": "payroll",
+    "key": "The template includes every date of the selected month, 50 blank employee rows and attendance-code dropdowns."
+  },
+  "choose a valid payroll month": {
+    "ns": "payroll",
+    "key": "Choose a valid payroll month"
+  },
+  "unable to download attendance template": {
+    "ns": "payroll",
+    "key": "Unable to download attendance template"
   },
   "failed to enroll": {
     "ns": "training",
@@ -21182,6 +21602,18 @@
   "account created. otp email could not be sent. please resend otp.": {
     "ns": "errors",
     "key": "Account created. OTP email could not be sent. Please resend OTP."
+  },
+  "invalid search filters": {
+    "ns": "errors",
+    "key": "Invalid search filters"
+  },
+  "invalid preferred job type": {
+    "ns": "errors",
+    "key": "Invalid preferred job type"
+  },
+  "profile storage needs an update. please contact support.": {
+    "ns": "errors",
+    "key": "Profile storage needs an update. Please contact support."
   },
   "Job results": {
     "ns": "jobs",

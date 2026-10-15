@@ -1,542 +1,80 @@
 'use client'
-import { tr, useLocale } from '@/lib/localization'
-
-
 import Link from 'next/link'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
-import { useTranslation } from 'react-i18next'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
+import { tr, useLocale } from '@/lib/localization'
+import { readStoredUser } from '@/lib/storage'
+import { getNavigation, isNavActive, type NavGroup, type NavItem } from '@/lib/navigation'
 
-interface NavUser {
-  email: string
-  role: string
-  firstName?: string
-  name?: string
-}
-
-type NavItem = {
-  label: string
-  href: string
-}
-
-type NavGroup = {
-  label: string
-  items: NavItem[]
-}
-
+type NavUser = { email: string; role: string; firstName?: string; name?: string }
 export default function Navbar() {
   const { language } = useLocale()
-
-  const { t } = useTranslation()
-
-  const [isMobileOpen, setIsMobileOpen] = useState(false)
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null)
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [open, setOpen] = useState<string | null>(null)
   const [user, setUser] = useState<NavUser | null>(null)
   const pathname = usePathname()
-  const navRef = useRef<HTMLDivElement | null>(null)
-
+  const navRef = useRef<HTMLElement | null>(null)
+  const triggers = useRef<Record<string, HTMLButtonElement | null>>({})
+  const navigation = getNavigation(user?.role)
+  const close = () => { setOpen(null); setMobileOpen(false) }
   useEffect(() => {
-    try {
-      const userData = localStorage.getItem('user')
-      const parsed: NavUser | null = userData ? JSON.parse(userData) : null
-      setUser(parsed)
-    } catch {
-      setUser(null)
-    }
-
-    setIsMobileOpen(false)
-    setOpenDropdown(null)
+    const stored = readStoredUser()
+    setUser(typeof stored.email === 'string' && ['candidate', 'employer', 'admin', 'super_admin', 'trainer'].includes(stored.role) ? { email: stored.email, role: stored.role, firstName: typeof stored.firstName === 'string' ? stored.firstName : undefined, name: typeof stored.name === 'string' ? stored.name : undefined } : null)
+    close()
   }, [pathname, language])
-
   useEffect(() => {
-    const handleOutsideClick = (event: MouseEvent) => {
-      if (navRef.current && !navRef.current.contains(event.target as Node)) {
-        setOpenDropdown(null)
+    const outside = (event: PointerEvent) => { if (navRef.current && !navRef.current.contains(event.target as Node)) close() }
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        if (mobileOpen) triggers.current.mobile?.focus()
+        else if (open) triggers.current[open]?.focus()
+        setOpen(null); setMobileOpen(false)
       }
     }
-
-    document.addEventListener('mousedown', handleOutsideClick)
-    return () => document.removeEventListener('mousedown', handleOutsideClick)
-  }, [])
-
-  const logout = () => {
-    const keys = [
-      'token',
-      'user',
-      'authToken',
-      'accessToken',
-      'currentUser'
-    ]
-
-    keys.forEach((key) => {
-      localStorage.removeItem(key)
-      sessionStorage.removeItem(key)
-    })
-
-    setUser(null)
-    window.location.href = '/'
+    document.addEventListener('pointerdown', outside)
+    document.addEventListener('keydown', escape)
+    return () => { document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', escape) }
+  }, [open, mobileOpen])
+  function logout() {
+    for (const key of ['token', 'user', 'authToken', 'accessToken', 'currentUser']) { localStorage.removeItem(key); sessionStorage.removeItem(key) }
+    setUser(null); window.location.href = '/'
   }
-
-  const getDashboardLink = () => {
-    if (!user) return '/dashboard'
-    if (user.role === 'super_admin') return '/super-admin'
-    if (user.role === 'admin') return '/admin'
-    if (user.role === 'trainer') return '/trainer'
-    if (user.role === 'employer') return '/employer'
-    return '/dashboard'
+  const link = (item: NavItem, dropdown = false) => {
+    const active = isNavActive(pathname, item)
+    return <Link key={item.href} href={item.href} onClick={close} aria-current={active ? 'page' : undefined} className={`${dropdown ? 'block rounded-lg px-3 py-2.5' : 'rounded-lg px-3 py-2'} text-sm ${active ? 'bg-blue-50 font-semibold text-blue-700' : 'text-gray-700 hover:bg-gray-50 hover:text-blue-700'}`}>{tr(item.label)}</Link>
   }
-
-  const isActive = (href: string) => {
-    if (href === '/') return pathname === '/'
-    return pathname === href || pathname.startsWith(`${href}/`)
+  function disclosure(group: NavGroup, mobile = false) {
+    const id = `${mobile ? 'mobile-' : ''}${group.id}`, expanded = open === id
+    const active = group.items.some(item => isNavActive(pathname, item))
+    return <div key={id} className={mobile ? 'rounded-xl border border-gray-100' : 'relative'}>
+      <button ref={node => { if (triggers.current) triggers.current[id] = node }} type="button" onClick={() => setOpen(expanded ? null : id)} aria-expanded={expanded} aria-controls={`nav-${id}`} className={`flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm font-medium ${mobile ? 'w-full' : ''} ${active ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50'}`}>
+        {tr(group.label)}<span aria-hidden="true" className={`transition-transform ${expanded ? 'rotate-180' : ''}`}>⌄</span>
+      </button>
+      {expanded && <div id={`nav-${id}`} className={mobile ? 'px-2 pb-2' : 'absolute right-0 top-full z-50 mt-2 max-h-[70vh] w-64 overflow-y-auto rounded-xl border border-gray-200 bg-white p-2 shadow-xl'}>{group.items.map(item => link(item, true))}</div>}
+    </div>
   }
-
-  const isGroupActive = (items: NavItem[]) => {
-    return items.some((item) => isActive(item.href))
+  function account(mobile = false) {
+    if (!user) return <div className="flex items-center gap-2">{link({ label: 'Login', href: '/login' })}<Link href="/register" onClick={close} className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700">{tr('Sign Up')}</Link></div>
+    const id = mobile ? 'mobile-account' : 'account', expanded = open === id
+    const active = navigation.account.some(item => isNavActive(pathname, item))
+    return <div className={mobile ? 'rounded-xl border border-gray-100' : 'relative'}>
+      <button ref={node => { if (triggers.current) triggers.current[id] = node }} type="button" onClick={() => setOpen(expanded ? null : id)} aria-expanded={expanded} aria-controls={`nav-${id}`} className={`flex items-center gap-2 rounded-lg px-3 py-2 text-left ${active ? 'bg-blue-50' : 'hover:bg-gray-50'} ${mobile ? 'w-full' : ''}`}>
+        <div className="min-w-0"><p className="max-w-36 truncate text-sm font-semibold text-gray-900">{user.firstName || user.name || user.email}</p><p className="text-xs text-gray-500">{tr(user.role)}</p></div><span aria-hidden="true">⌄</span>
+      </button>
+      {expanded && <div id={`nav-${id}`} className={mobile ? 'px-2 pb-2' : 'absolute right-0 top-full z-50 mt-2 w-64 rounded-xl border border-gray-200 bg-white p-2 shadow-xl'}>
+        <p className="break-all px-3 py-2 text-xs text-gray-500">{user.email}</p>{navigation.account.map(item => link(item, true))}
+        <button type="button" onClick={logout} className="mt-1 block w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium text-red-600 hover:bg-red-50">{tr('Logout')}</button>
+      </div>}
+    </div>
   }
-
-  const desktopLinkClass = (href: string) => {
-    return 'transition-colors ' +
-      (isActive(href)
-        ? 'font-semibold text-blue-600'
-        : 'text-gray-600 hover:text-blue-600')
-  }
-
-  const mobileLinkClass = (href: string) => {
-    return 'block rounded-lg px-2 py-1 font-medium transition-colors ' +
-      (isActive(href)
-        ? 'text-blue-600'
-        : 'text-gray-700 hover:text-blue-600')
-  }
-
-  const dropdownButtonClass = (active: boolean) => {
-    return 'inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ' +
-      (active
-        ? 'bg-blue-50 text-blue-700'
-        : 'text-gray-700 hover:bg-gray-50 hover:text-blue-600')
-  }
-
-  const publicLinks: NavItem[] = [
-    { label: t('findJobs'), href: '/jobs' },
-    { label: t('training'), href: '/training' },
-    { label: t('verifyCertificate'), href: '/training/certificate/verify' }
-  ]
-
-  const guestLinks: NavItem[] = [
-    { label: t('pricing'), href: '/subscription' },
-    { label: t('forEmployers'), href: '/register' }
-  ]
-
-  const candidateLinks: NavItem[] = [
-    { label: t('resumeBuilder'), href: '/resume' },
-    { label: t('myLearning'), href: '/training/my-learning' },
-    { label: 'My classes', href: '/training/classes' },
-    { label: t('myCertificates'), href: '/training/my-certificates' },
-    { label: t('myApplications'), href: '/applications' },
-    { label: t('savedJobs'), href: '/saved-jobs' }
-  ]
-
-  const employerGroups: NavGroup[] = [
-    {
-      label: t('hiring'),
-      items: [
-        { label: t('postJob'), href: '/post-job' },
-        { label: t('resumeDatabank'), href: '/employer/candidates' },
-        { label: t('emailCampaigns'), href: '/employer/campaigns' },
-        { label: t('analytics'), href: '/employer/analytics' },
-        { label: 'Referral Tracking', href: '/employer/referrals' }
-      ]
-    },
-    {
-      label: t('operations'),
-      items: [
-        { label: t('manpowerRequests'), href: '/employer/manpower-requests' },
-        { label: t('deployments'), href: '/employer/deployments' },
-        { label: t('contracts'), href: '/employer/contracts' },
-        { label: t('attendance'), href: '/employer/attendance' }
-      ]
-    },
-    {
-      label: t('finance'),
-      items: [
-        { label: t('payroll'), href: '/employer/payrolls' },
-        { label: 'Wage registers', href: '/employer/wage-register' },
-        { label: t('invoices'), href: '/employer/invoices' },
-        { label: t('upgradePlan'), href: '/subscription' }
-      ]
-    }
-  ]
-
-  const adminGroups: NavGroup[] = [
-    {
-      label: t('admin'),
-      items: [
-        { label: t('dashboard'), href: '/admin' },
-        { label: 'Candidates', href: '/admin/candidates' },
-        { label: 'Employers', href: '/admin/employers' },
-        { label: 'Applications', href: '/admin/applications' },
-        { label: 'Payments', href: '/admin/payments' },
-        { label: 'Courses', href: '/admin/courses' },
-        { label: 'Training & Classes', href: '/admin/training' },
-        { label: t('analytics'), href: '/admin/analytics' },
-        { label: t('auditFraud'), href: '/admin/audit' },
-        { label: 'Internal Communication', href: '/admin/communication' }
-      ]
-    }
-  ]
-
-  const superAdminGroups: NavGroup[] = [
-    {
-      label: 'System Control',
-      items: [
-        { label: 'Dashboard', href: '/super-admin' },
-        { label: 'Courses', href: '/admin/courses' },
-        { label: 'Training & Classes', href: '/admin/training' },
-        { label: 'Staff & Roles', href: '/super-admin/staff' },
-        { label: 'Users', href: '/super-admin/users' },
-        { label: 'Plans & Perks', href: '/super-admin/plans' },
-        { label: 'Feature Flags', href: '/super-admin/feature-flags' },
-        { label: 'Infrastructure', href: '/super-admin/infrastructure' },
-        { label: 'Audit Logs', href: '/super-admin/audit-logs' },
-        { label: 'Internal Communication', href: '/super-admin/communication' }
-      ]
-    }
-  ]
-
-  const userMode = useMemo(() => {
-    if (!user) return 'guest'
-    if (user.role === 'candidate') return 'candidate'
-    if (user.role === 'employer') return 'employer'
-    if (user.role === 'super_admin') return 'super_admin'
-    if (user.role === 'admin') return 'admin'
-    if (user.role === 'trainer') return 'trainer'
-    return 'guest'
-  }, [user])
-
-  const trainerGroups: NavGroup[] = [{ label: 'Training', items: [{ label: 'Courses', href: '/trainer/courses' }, { label: 'Batches, classes & attendance', href: '/trainer' }] }]
-
-  const toggleDropdown = (label: string) => {
-    setOpenDropdown((previous) => (
-      previous === label ? null : label
-    ))
-  }
-
-  const closeMenus = () => {
-    setOpenDropdown(null)
-    setIsMobileOpen(false)
-  }
-
-  const renderDesktopDropdown = (group: NavGroup) => {
-    const active = isGroupActive(group.items)
-    const isOpen = openDropdown === group.label
-
-    return (
-      <div key={group.label} className="relative">
-        <button
-          type="button"
-          onClick={() => toggleDropdown(group.label)}
-          aria-expanded={isOpen}
-          aria-haspopup="menu"
-          className={dropdownButtonClass(active)}
-        >
-          {tr(group.label)}
-          <svg
-            className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            aria-hidden="true"
-          >
-            <path
-              fillRule="evenodd"
-              d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.51a.75.75 0 01-1.08 0L5.21 8.29a.75.75 0 01.02-1.08z"
-              clipRule="evenodd"
-            />
-          </svg>
-        </button>
-
-        {isOpen && (
-          <div
-            className="absolute left-0 top-full z-50 mt-2 w-64 rounded-2xl border border-gray-200 bg-white p-2 shadow-xl"
-            role="menu"
-          >
-            {group.items.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={closeMenus}
-                role="menuitem"
-                className={
-                  'block rounded-xl px-4 py-3 text-sm transition-colors ' +
-                  (isActive(item.href)
-                    ? 'bg-blue-50 font-semibold text-blue-700'
-                    : 'text-gray-700 hover:bg-gray-50 hover:text-blue-600')
-                }
-              >
-                {tr(item.label)}
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
-    )
-  }
-
-  const renderMobileGroup = (group: NavGroup) => {
-    const open = openDropdown === `mobile-${group.label}`
-
-    return (
-      <div key={group.label} className="rounded-2xl border border-gray-100 bg-gray-50">
-        <button
-          type="button"
-          onClick={() => toggleDropdown(`mobile-${group.label}`)}
-          aria-expanded={open}
-          className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-gray-800"
-        >
-          <span>{tr(group.label)}</span>
-          <svg
-            className={`h-4 w-4 transition-transform ${open ? 'rotate-180' : ''}`}
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            aria-hidden="true"
-          >
-            <path
-              fillRule="evenodd"
-              d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25-4.51a.75.75 0 01-1.08 0L5.21 8.29a.75.75 0 01.02-1.08z"
-              clipRule="evenodd"
-            />
-          </svg>
-        </button>
-
-        {open && (
-          <div className="flex flex-col gap-2 px-4 pb-4">
-            {group.items.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={closeMenus}
-                className={mobileLinkClass(item.href)}
-              >
-                {tr(item.label)}
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
-    )
-  }
-
-  return (
-    <nav
-      ref={navRef}
-      className="fixed inset-x-0 top-0 z-50 border-b border-gray-100 bg-white shadow-sm"
-    >
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-        <Link href={userMode === 'trainer' ? '/trainer' : '/'} className="flex items-center gap-2" onClick={closeMenus}>
-          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-600 to-purple-600" />
-          <span className="text-xl font-bold text-gray-900">
-            {tr(t('appName'))}
-          </span>
-        </Link>
-
-        <div className="hidden items-center gap-4 text-sm font-medium md:flex">
-          {publicLinks.filter(link => userMode !== 'trainer' || link.href.startsWith('/training')).map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={desktopLinkClass(link.href)}
-            >
-              {tr(link.label)}
-            </Link>
-          ))}
-
-          {userMode === 'guest' && guestLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={desktopLinkClass(link.href)}
-            >
-              {tr(link.label)}
-            </Link>
-          ))}
-
-          {userMode === 'candidate' && candidateLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={desktopLinkClass(link.href)}
-            >
-              {tr(link.label)}
-            </Link>
-          ))}
-
-          {userMode === 'employer' && employerGroups.map(renderDesktopDropdown)}
-          {userMode === 'admin' && adminGroups.map(renderDesktopDropdown)}
-          {userMode === 'trainer' && trainerGroups.map(renderDesktopDropdown)}
-          {userMode === 'super_admin' && superAdminGroups.map(renderDesktopDropdown)}
-        </div>
-
-        <div className="hidden items-center gap-3 md:flex">
-          <LanguageSwitcher />
-
-          {user ? (
-            <>
-              <div className="hidden text-right lg:block">
-                <p className="text-sm font-semibold text-gray-900">
-                  {user.firstName || user.name || user.email}
-                </p>
-                <p className="text-xs capitalize text-gray-500">
-                  {tr(user.role)}
-                </p>
-              </div>
-
-              <Link
-                href={getDashboardLink()}
-                className={
-                  'rounded-lg px-4 py-2 text-sm font-medium transition-colors ' +
-                  (isActive('/admin') || isActive('/super-admin') || isActive('/employer') || isActive('/dashboard')
-                    ? 'bg-blue-50 text-blue-700'
-                    : 'text-gray-700 hover:text-blue-600')
-                }
-              >
-                {tr(t('dashboard'))}
-              </Link>
-
-              <button
-                type="button"
-                onClick={logout}
-                className="rounded-lg bg-red-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-600"
-              >
-                {tr(t('logout'))}
-              </button>
-            </>
-          ) : (
-            <>
-              <Link
-                href="/login"
-                className="px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:text-blue-600"
-              >
-                {tr(t('login'))}
-              </Link>
-
-              <Link
-                href="/register"
-                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
-              >
-                {tr(t('signup'))}
-              </Link>
-            </>
-          )}
-        </div>
-
-        <button
-          type="button"
-          onClick={() => setIsMobileOpen((previous) => !previous)}
-          className="p-2 md:hidden"
-          aria-label={tr("Toggle menu")}
-          aria-expanded={isMobileOpen}
-        >
-          <div className="mb-1 h-0.5 w-5 bg-gray-600" />
-          <div className="mb-1 h-0.5 w-5 bg-gray-600" />
-          <div className="h-0.5 w-5 bg-gray-600" />
-        </button>
-      </div>
-
-      {isMobileOpen && (
-        <div className="border-t border-gray-100 bg-white px-6 py-4 md:hidden">
-          <div className="flex flex-col gap-4">
-            <div className="pb-2">
-              <LanguageSwitcher />
-            </div>
-
-            <div className="flex flex-col gap-3">
-              {publicLinks.filter(link => userMode !== 'trainer' || link.href.startsWith('/training')).map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={closeMenus}
-                  className={mobileLinkClass(link.href)}
-                >
-                  {tr(link.label)}
-                </Link>
-              ))}
-            </div>
-
-            {userMode === 'guest' && (
-              <div className="flex flex-col gap-3">
-                {guestLinks.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    onClick={closeMenus}
-                    className={mobileLinkClass(link.href)}
-                  >
-                    {tr(link.label)}
-                  </Link>
-                ))}
-              </div>
-            )}
-
-            {userMode === 'candidate' && (
-              <div className="flex flex-col gap-3">
-                {candidateLinks.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    onClick={closeMenus}
-                    className={mobileLinkClass(link.href)}
-                  >
-                    {tr(link.label)}
-                  </Link>
-                ))}
-              </div>
-            )}
-
-            {userMode === 'employer' && employerGroups.map(renderMobileGroup)}
-            {userMode === 'admin' && adminGroups.map(renderMobileGroup)}
-            {userMode === 'trainer' && trainerGroups.map(renderMobileGroup)}
-            {userMode === 'super_admin' && superAdminGroups.map(renderMobileGroup)}
-
-            {user ? (
-              <div className="flex flex-col gap-3 border-t border-gray-100 pt-4">
-                <Link
-                  href={getDashboardLink()}
-                  onClick={closeMenus}
-                  className={mobileLinkClass(getDashboardLink())}
-                >
-                  {tr(t('dashboard'))}
-                </Link>
-
-                <button
-                  type="button"
-                  onClick={logout}
-                  className="text-left font-medium text-red-500"
-                >
-                  {tr(t('logout'))}
-                </button>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-3 border-t border-gray-100 pt-4">
-                <Link
-                  href="/login"
-                  onClick={closeMenus}
-                  className={mobileLinkClass('/login')}
-                >
-                  {tr(t('login'))}
-                </Link>
-
-                <Link
-                  href="/register"
-                  onClick={closeMenus}
-                  className="rounded-lg bg-blue-600 px-4 py-2 text-center font-medium text-white"
-                >
-                  {tr(t('signup'))}
-                </Link>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-    </nav>
-  )
+  return <nav ref={navRef} aria-label={tr('Main navigation')} className="fixed inset-x-0 top-0 z-50 border-b border-gray-100 bg-white shadow-sm">
+    <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-2 px-4 sm:px-6">
+      <Link href={navigation.home} onClick={close} className="flex shrink-0 items-center gap-2"><span className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-600 to-purple-600" aria-hidden="true" /><span className="text-xl font-bold text-gray-900">{tr('InstaHire')}</span></Link>
+      <div className="hidden items-center gap-1 xl:flex">{navigation.primary.map(item => link(item))}{navigation.groups.map(group => disclosure(group))}</div>
+      <div className="hidden shrink-0 items-center gap-2 xl:flex"><LanguageSwitcher />{account()}</div>
+      <button ref={node => { if (triggers.current) triggers.current.mobile = node }} type="button" onClick={() => { setMobileOpen(!mobileOpen); setOpen(null) }} aria-label={tr('Toggle menu')} aria-expanded={mobileOpen} aria-controls="mobile-navigation" className="rounded-lg px-3 py-2 text-gray-700 hover:bg-gray-50 xl:hidden"><span aria-hidden="true">☰</span></button>
+    </div>
+    {mobileOpen && <div id="mobile-navigation" className="max-h-[calc(100dvh-4rem)] space-y-3 overflow-y-auto border-t border-gray-100 bg-white px-4 py-4 xl:hidden"><LanguageSwitcher /><div className="flex flex-col gap-1">{navigation.primary.map(item => link(item))}</div>{navigation.groups.map(group => disclosure(group, true))}{account(true)}</div>}
+  </nav>
 }

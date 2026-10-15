@@ -143,6 +143,20 @@ const CandidateProfile = sequelize.define(
     photoPublicId: { type: DataTypes.STRING(255), allowNull: true },
     resumePublicId: { type: DataTypes.STRING(255), allowNull: true },
 
+    preferredLocations: {
+      type: DataTypes.JSONB, allowNull: false, defaultValue: [],
+      set(value) { this.setDataValue('preferredLocations', normalizeStringArray(value)) }
+    },
+    preferredJobTypes: {
+      type: DataTypes.JSONB, allowNull: false, defaultValue: [],
+      set(value) { this.setDataValue('preferredJobTypes', normalizeStringArray(value)) },
+      validate: {
+        validTypes(value) {
+          if (!Array.isArray(value) || value.some(type => !['full-time', 'part-time', 'internship', 'contract', 'remote'].includes(type))) throw new Error('Invalid preferred job type')
+        }
+      }
+    },
+
     isResumePublic: {
       type: DataTypes.BOOLEAN,
       allowNull: true,

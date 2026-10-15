@@ -2,16 +2,18 @@
 import { API_BASE } from '@/lib/api'
 import { tr, useLocale } from '@/lib/localization'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 export default function AIMatchPage() {
   useLocale()
 
+  const requestId = useRef(0)
   const [jobs, setJobs] = useState<any[]>([])
   const [selectedJob, setSelectedJob] = useState('')
   const [results, setResults] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
+  const [basicMatching, setBasicMatching] = useState(false)
 
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -36,22 +38,26 @@ export default function AIMatchPage() {
       return
     }
 
+    const currentRequest = ++requestId.current
     setLoading(true)
     setResults([])
+    setBasicMatching(false)
     setMessage('')
     try {
       const res = await fetch(`${API_BASE}/candidates/ai-match/${selectedJob}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       const data = await res.json()
-      if (data.success) {
+      if (currentRequest !== requestId.current) return
+      if (res.ok && data.success && Array.isArray(data.data)) {
         setResults(data.data)
+        setBasicMatching(data.matchingMode === 'basic' && !!data.fallback)
         if (data.data.length === 0) setMessage('No candidates found!')
       } else setMessage(data.message || 'Unable to complete request')
     } catch (err) {
-      setMessage('Something went wrong')
+      if (currentRequest === requestId.current) setMessage('Something went wrong')
     }
-    setLoading(false)
+    if (currentRequest === requestId.current) setLoading(false)
   }
 
   const getScoreColor = (score: number) => {
@@ -86,7 +92,7 @@ export default function AIMatchPage() {
           <div className='flex gap-4'>
             <select
               value={selectedJob}
-              onChange={e => setSelectedJob(e.target.value)}
+              onChange={e => { requestId.current++; setSelectedJob(e.target.value); setResults([]); setBasicMatching(false); setMessage(''); setLoading(false) }}
               className='flex-1 px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500 transition-all'
             >
               <option value=''>{tr("-- Select a Job --")}</option>
@@ -110,6 +116,8 @@ export default function AIMatchPage() {
             <p className='text-red-500 text-sm mt-3'>{tr(message)}</p>
           )}
         </div>
+
+        {basicMatching && <p role="status" className="bg-amber-50 text-amber-800 rounded-xl p-4 mb-6">{tr('Basic matching is active because the AI service is unavailable. Results use skills, experience, and resume text.')}</p>}
 
         {/* Results */}
         {results.length > 0 && (

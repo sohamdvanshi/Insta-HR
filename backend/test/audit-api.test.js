@@ -18,6 +18,7 @@ for (const name of ['Job', 'Application', 'CandidateProfile', 'EmployerProfile',
   findAndCountAll: async () => ({ rows: [], count: 0 }), count: async () => 0,
   create: async data => { writes.push({ model: name, ...data }); return instance({ id: randomUUID(), ...data }); }, update: async () => [0]
 };
+models.Resume = { findAll: async () => [] };
 models.User = {
   findByPk: async id => { if (failAuth) throw new Error('database unavailable'); return users.get(id) || null; },
   findOne: async () => null,

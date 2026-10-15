@@ -419,5 +419,8 @@
   "This job is no longer accepting applications": "इस नौकरी के लिए अब आवेदन स्वीकार नहीं किए जा रहे हैं",
   "Authentication service unavailable. Please try again.": "लॉगिन सेवा उपलब्ध नहीं है। कृपया फिर कोशिश करें।",
   "Payment service is not configured": "भुगतान सेवा कॉन्फ़िगर नहीं की गई है",
-  "Account created. OTP email could not be sent. Please resend OTP.": "खाता बन गया है। OTP ईमेल नहीं भेजा जा सका। कृपया OTP दोबारा भेजें।"
+  "Account created. OTP email could not be sent. Please resend OTP.": "खाता बन गया है। OTP ईमेल नहीं भेजा जा सका। कृपया OTP दोबारा भेजें।",
+  "Invalid search filters": "खोज फ़िल्टर अमान्य हैं",
+  "Invalid preferred job type": "पसंदीदा नौकरी प्रकार अमान्य है",
+  "Profile storage needs an update. Please contact support.": "प्रोफ़ाइल संग्रहण को अपडेट करने की आवश्यकता है। कृपया सहायता से संपर्क करें।"
 }

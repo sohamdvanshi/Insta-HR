@@ -532,5 +532,12 @@
   "verified": "✓ Verified",
   "candidate": "Candidate",
   "trainer": "Trainer",
-  "super_admin": "Super Admin"
+  "super_admin": "Super Admin",
+  "Career": "Career",
+  "Learning": "Learning",
+  "AI Match": "AI Match",
+  "Resources": "Resources",
+  "People": "People",
+  "Team tools": "Team tools",
+  "Main navigation": "Main navigation"
 }

@@ -271,5 +271,11 @@
   "Wages saved.": "वेतन जतन केले.",
   "Register approved and locked.": "नोंदवही मंजूर करून लॉक केली.",
   "Unsaved edits discarded.": "जतन न केलेले बदल रद्द केले.",
-  "Workbook policy: payable days = P + PH (H is mapped to PH). Weekly offs and leave codes are excluded. Basic = daily rate × payable days; overtime = daily rate ÷ 4 × hours. PF = 12% of Basic capped at ₹15,000; ESIC = 0.75% of total earnings rounded to a rupee. Employer contributions are separate.": "कार्यपुस्तिका नियम: देय दिवस = P + PH (H ला PH मानले जाते). साप्ताहिक सुट्ट्या आणि रजेचे कोड वगळले आहेत. मूळ वेतन = दैनंदिन दर × देय दिवस; अतिरिक्त कामाचे वेतन = दैनंदिन दर ÷ 4 × तास. PF = ₹15,000 मर्यादा असलेल्या मूळ वेतनाचे 12%; ESIC = एकूण कमाईचे 0.75%, जवळच्या रुपयात. नियोक्त्याचे योगदान वेगळे आहे."
+  "Workbook policy: payable days = P + PH (H is mapped to PH). Weekly offs and leave codes are excluded. Basic = daily rate × payable days; overtime = daily rate ÷ 4 × hours. PF = 12% of Basic capped at ₹15,000; ESIC = 0.75% of total earnings rounded to a rupee. Employer contributions are separate.": "कार्यपुस्तिका नियम: देय दिवस = P + PH (H ला PH मानले जाते). साप्ताहिक सुट्ट्या आणि रजेचे कोड वगळले आहेत. मूळ वेतन = दैनंदिन दर × देय दिवस; अतिरिक्त कामाचे वेतन = दैनंदिन दर ÷ 4 × तास. PF = ₹15,000 मर्यादा असलेल्या मूळ वेतनाचे 12%; ESIC = एकूण कमाईचे 0.75%, जवळच्या रुपयात. नियोक्त्याचे योगदान वेगळे आहे.",
+  "Standard attendance template": "प्रमाणित उपस्थिती नमुना",
+  "Select a payroll month, download its template, fill employee details and daily attendance, then upload the completed file below.": "वेतन महिना निवडा, त्याचा नमुना डाउनलोड करा, कर्मचारी तपशील आणि दैनंदिन उपस्थिती भरा, नंतर पूर्ण केलेली फाइल खाली अपलोड करा.",
+  "Download attendance template": "उपस्थिती नमुना डाउनलोड करा",
+  "The template includes every date of the selected month, 50 blank employee rows and attendance-code dropdowns.": "नमुन्यात निवडलेल्या महिन्याच्या सर्व तारखा, कर्मचाऱ्यांसाठी 50 रिकाम्या ओळी आणि उपस्थिती कोडचे ड्रॉपडाउन आहेत.",
+  "Choose a valid payroll month": "वैध वेतन महिना निवडा",
+  "Unable to download attendance template": "उपस्थिती नमुना डाउनलोड करता आला नाही"
 }

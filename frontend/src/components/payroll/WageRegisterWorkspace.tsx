@@ -49,6 +49,15 @@ export default function WageRegisterWorkspace({ readOnly=false }: { readOnly?: b
   const current=register?.rows.find(r=>r.employeeId===editing);
   const shown=register?.rows.filter(r=>!filter||r.group===filter)||[];
   const total=register?.rows.reduce((t,r)=>{const a=amounts(r);return {earnings:t.earnings+a.earnings,deductions:t.deductions+a.deductions,net:t.net+a.net};},{earnings:0,deductions:0,net:0});
+  async function downloadTemplate() {
+    if (!/^20\d{2}-(0[1-9]|1[0-2])$/.test(period)) throw new Error('Choose a valid payroll month');
+    const response = await fetch(`${API}/wage-registers/template?period=${encodeURIComponent(period)}`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!response.ok) { const data = await response.json(); throw new Error(data.message || 'Unable to download attendance template'); }
+    const url = URL.createObjectURL(await response.blob());
+    const anchor = document.createElement('a'); anchor.href = url; anchor.download = `attendance-template-${period}.xlsx`;
+    document.body.appendChild(anchor); anchor.click(); anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
   async function download() {
     if(!register)return;
     const res=await fetch(`${API}/wage-registers/${register.id}/export`,{headers:{Authorization:`Bearer ${token}`}});
@@ -60,7 +69,7 @@ export default function WageRegisterWorkspace({ readOnly=false }: { readOnly?: b
     {error&&<p role="alert" className="rounded bg-red-50 p-4 text-red-800">{trError(error)}</p>}{success&&<p role="status" className="rounded bg-green-50 p-4">{tr(success)}</p>}
     {!token&&<p>{tr("Sign in to access wage registers.")}{' '}<Link href="/login" className="underline">{tr("Login")}</Link></p>}
     <label className="block max-w-xs">{tr("Payroll month / list filter")}<input className={input} type="month" disabled={busy} value={period} onChange={e=>{setPeriod(e.target.value);setPage(1);setPreview(null);}}/></label>
-    {!readOnly&&<section className="rounded border bg-white p-4 space-y-3"><h2 className="text-xl font-semibold">{tr("Import monthly attendance")}</h2><p>{tr("Use the supplied attendance .xlsx template with employee IDs and date headers. Excel summary formulas are ignored. Imported employees need no portal account.")}</p>
+    {!readOnly&&<section className="rounded border bg-white p-4 space-y-3"><div className="rounded-lg bg-blue-50 p-4"><h2 className="font-semibold">{tr('Standard attendance template')}</h2><p className="mt-1 text-sm">{tr('Select a payroll month, download its template, fill employee details and daily attendance, then upload the completed file below.')}</p><button type="button" className={button+' mt-3'} disabled={busy||!token||!period} onClick={()=>void perform(downloadTemplate)}>{tr('Download attendance template')}</button><p className="mt-2 text-xs">{tr('The template includes every date of the selected month, 50 blank employee rows and attendance-code dropdowns.')}</p></div><h2 className="text-xl font-semibold">{tr("Import monthly attendance")}</h2><p>{tr("Use the supplied attendance .xlsx template with employee IDs and date headers. Excel summary formulas are ignored. Imported employees need no portal account.")}</p>
       <label className="block">{tr("Site / establishment")}<input className={input} maxLength={100} disabled={busy} value={site} onChange={e=>{setSite(e.target.value);setPreview(null);}}/></label>
       <label className="block">{tr("Attendance workbook")}<input className={input} type="file" disabled={busy} accept=".xlsx" onChange={e=>{setFile(e.target.files?.[0]||null);setPreview(null);}}/></label>
       <button className={button} disabled={busy||!token||dirty} onClick={()=>void perform(async()=>setPreview((await request('/preview','POST',uploadBody())).data))}>{tr("Preview attendance")}</button>

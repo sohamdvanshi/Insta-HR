@@ -532,5 +532,12 @@
   "verified": "✓ सत्यापित",
   "candidate": "उम्मीदवार",
   "trainer": "प्रशिक्षक",
-  "super_admin": "मुख्य व्यवस्थापक"
+  "super_admin": "मुख्य व्यवस्थापक",
+  "Career": "करियर",
+  "Learning": "सीखना",
+  "AI Match": "AI मिलान",
+  "Resources": "संसाधन",
+  "People": "लोग",
+  "Team tools": "टीम उपकरण",
+  "Main navigation": "मुख्य नेविगेशन"
 }

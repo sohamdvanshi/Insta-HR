@@ -419,5 +419,8 @@
   "This job is no longer accepting applications": "This job is no longer accepting applications",
   "Authentication service unavailable. Please try again.": "Authentication service unavailable. Please try again.",
   "Payment service is not configured": "Payment service is not configured",
-  "Account created. OTP email could not be sent. Please resend OTP.": "Account created. OTP email could not be sent. Please resend OTP."
+  "Account created. OTP email could not be sent. Please resend OTP.": "Account created. OTP email could not be sent. Please resend OTP.",
+  "Invalid search filters": "Invalid search filters",
+  "Invalid preferred job type": "Invalid preferred job type",
+  "Profile storage needs an update. Please contact support.": "Profile storage needs an update. Please contact support."
 }

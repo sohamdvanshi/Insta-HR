@@ -2,7 +2,6 @@ const { EmployerProfile, Job, Application, User, CandidateProfile } = require('.
 const { cloudinary } = require('../config/cloudinary');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
-const { Op } = require('sequelize');
 const { employerFields } = require('../services/profileFields');
 
 // Cloudinary storage for logos
@@ -183,111 +182,9 @@ exports.verifyEmployer = async (req, res) => {
 
 exports.getCandidateDatabank = async (req, res) => {
   try {
-    const { keyword, location, industry, minExperience, skills } = req.query;
-
-    const where = {
-      isResumePublic: true
-    };
-
-    if (location) {
-      where.currentLocation = {
-        [Op.iLike]: `%${location}%`
-      };
-    }
-
-    if (industry) {
-      where.industry = {
-        [Op.iLike]: `%${industry}%`
-      };
-    }
-
-    if (minExperience) {
-      where.yearsOfExperience = {
-        [Op.gte]: Number(minExperience)
-      };
-    }
-
-    const candidates = await CandidateProfile.findAll({
-      where,
-      include: [
-        {
-          model: User,
-          as: 'user',
-          attributes: ['id', 'email', 'phone', 'role']
-        }
-      ],
-      order: [['updatedAt', 'DESC']]
-    });
-
-    let filteredCandidates = candidates;
-
-    if (keyword) {
-      const lowerKeyword = keyword.toLowerCase();
-
-      filteredCandidates = filteredCandidates.filter((candidate) => {
-        const fullName = `${candidate.firstName || ''} ${candidate.lastName || ''}`.toLowerCase();
-        const headline = (candidate.headline || '').toLowerCase();
-        const summary = (candidate.summary || '').toLowerCase();
-        const industryText = (candidate.industry || '').toLowerCase();
-        const locationText = (candidate.currentLocation || '').toLowerCase();
-
-        return (
-          fullName.includes(lowerKeyword) ||
-          headline.includes(lowerKeyword) ||
-          summary.includes(lowerKeyword) ||
-          industryText.includes(lowerKeyword) ||
-          locationText.includes(lowerKeyword)
-        );
-      });
-    }
-
-    if (skills) {
-      const skillList = String(skills)
-        .split(',')
-        .map((s) => s.trim().toLowerCase())
-        .filter(Boolean);
-
-      if (skillList.length > 0) {
-        filteredCandidates = filteredCandidates.filter((candidate) => {
-          const candidateSkills = Array.isArray(candidate.skills)
-            ? candidate.skills.map((s) => String(s).toLowerCase())
-            : [];
-
-          return skillList.some((skill) => candidateSkills.includes(skill));
-        });
-      }
-    }
-
-    const formatted = filteredCandidates.map((candidate) => ({
-      id: candidate.id,
-      userId: candidate.userId,
-      firstName: candidate.firstName,
-      lastName: candidate.lastName,
-      headline: candidate.headline,
-      summary: candidate.summary,
-      skills: candidate.skills || [],
-      experience: candidate.experience || [],
-      education: candidate.education || [],
-      currentLocation: candidate.currentLocation,
-      expectedSalary: candidate.expectedSalary,
-      yearsOfExperience: candidate.yearsOfExperience,
-      resumeUrl: candidate.resumeUrl,
-      industry: candidate.industry,
-      profileCompleteness: candidate.profileCompleteness,
-      email: candidate.user?.email || null,
-      phone: candidate.user?.phone || null
-    }));
-
-    return res.status(200).json({
-      success: true,
-      count: formatted.length,
-      data: formatted
-    });
-  } catch (err) {
-    console.error('getCandidateDatabank error:', err);
-    return res.status(500).json({
-      success: false,
-      message: err.message || 'Internal server error'
-    });
+    const data = await require('../services/candidateDiscovery').databank(req.user.id, req.query);
+    return res.json({ success: true, count: data.length, data });
+  } catch (error) {
+    return res.status(error.statusCode || 500).json({ success: false, message: error.message || 'Failed to load candidates' });
   }
 };

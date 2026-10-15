@@ -271,5 +271,11 @@
   "Wages saved.": "वेतन सहेजा गया।",
   "Register approved and locked.": "रजिस्टर अनुमोदित और लॉक किया गया।",
   "Unsaved edits discarded.": "बिना सहेजे बदलाव हटाए गए।",
-  "Workbook policy: payable days = P + PH (H is mapped to PH). Weekly offs and leave codes are excluded. Basic = daily rate × payable days; overtime = daily rate ÷ 4 × hours. PF = 12% of Basic capped at ₹15,000; ESIC = 0.75% of total earnings rounded to a rupee. Employer contributions are separate.": "कार्यपुस्तिका नियम: देय दिन = P + PH (H को PH माना जाता है)। साप्ताहिक छुट्टियाँ और अवकाश कोड शामिल नहीं हैं। मूल वेतन = दैनिक दर × देय दिन; ओवरटाइम = दैनिक दर ÷ 4 × घंटे। PF = ₹15,000 की सीमा वाले मूल वेतन का 12%; ESIC = कुल आय का 0.75%, निकटतम रुपये में। नियोक्ता योगदान अलग हैं।"
+  "Workbook policy: payable days = P + PH (H is mapped to PH). Weekly offs and leave codes are excluded. Basic = daily rate × payable days; overtime = daily rate ÷ 4 × hours. PF = 12% of Basic capped at ₹15,000; ESIC = 0.75% of total earnings rounded to a rupee. Employer contributions are separate.": "कार्यपुस्तिका नियम: देय दिन = P + PH (H को PH माना जाता है)। साप्ताहिक छुट्टियाँ और अवकाश कोड शामिल नहीं हैं। मूल वेतन = दैनिक दर × देय दिन; ओवरटाइम = दैनिक दर ÷ 4 × घंटे। PF = ₹15,000 की सीमा वाले मूल वेतन का 12%; ESIC = कुल आय का 0.75%, निकटतम रुपये में। नियोक्ता योगदान अलग हैं।",
+  "Standard attendance template": "मानक उपस्थिति टेम्पलेट",
+  "Select a payroll month, download its template, fill employee details and daily attendance, then upload the completed file below.": "वेतन माह चुनें, उसका टेम्पलेट डाउनलोड करें, कर्मचारी विवरण और दैनिक उपस्थिति भरें, फिर पूरी फ़ाइल नीचे अपलोड करें।",
+  "Download attendance template": "उपस्थिति टेम्पलेट डाउनलोड करें",
+  "The template includes every date of the selected month, 50 blank employee rows and attendance-code dropdowns.": "टेम्पलेट में चुने गए महीने की सभी तारीखें, कर्मचारियों के लिए 50 खाली पंक्तियाँ और उपस्थिति कोड के ड्रॉपडाउन हैं।",
+  "Choose a valid payroll month": "सही वेतन माह चुनें",
+  "Unable to download attendance template": "उपस्थिति टेम्पलेट डाउनलोड नहीं हो सका"
 }

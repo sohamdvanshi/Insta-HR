@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const WageRegister = require('../models/WageRegister');
 const AuditLog = require('../models/AuditLog');
 const sequelize = require('../config/database');
+const { attendanceTemplate } = require('../services/attendanceTemplate');
 const { parse } = require('../services/attendanceWorkbook');
 const { normalizeRows } = require('../services/wageCalculation');
 const { exported } = require('../services/wageExport');
@@ -101,4 +102,12 @@ exports.replaceAttendance = run(async (req,res) => {
     await r.update({ rows, warnings: parsed.warnings, version: r.version + 1, sourceName: req.file.originalname.slice(0,255), sourceHash: crypto.createHash('sha256').update(req.file.buffer).digest('hex') }, { transaction });
     await audit(req,r,'wage_register.replace_attendance',{ before, after: rows },transaction); return r;
   }); res.json({ data: result });
+});
+
+exports.template = run(async (req, res) => {
+  const buffer = await attendanceTemplate(req.query.period);
+  res.set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.set('Content-Disposition', `attachment; filename="attendance-template-${req.query.period}.xlsx"`);
+  res.set('Cache-Control', 'no-store');
+  res.send(buffer);
 });

@@ -1,319 +1,116 @@
 "use client"
-import { API_BASE } from '@/lib/api'
+import { API_BASE, BACKEND_BASE } from '@/lib/api'
 import { tr, trError, useLocale } from '@/lib/localization'
+import { readStoredUser } from '@/lib/storage'
+import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 
-
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-
-interface Candidate {
-  id: string
-  userId: string
-  firstName?: string
-  lastName?: string
-  headline?: string
-  summary?: string
-  skills?: string[]
-  experience?: any[]
-  education?: any[]
-  currentLocation?: string
-  expectedSalary?: string | number
-  yearsOfExperience?: number | string
-  resumeUrl?: string
-  industry?: string
-  profileCompleteness?: number
-  email?: string
-  phone?: string
+type ResumeLink = { id: string; resumeId?: string; url?: string; title?: string }
+type Candidate = {
+  id: string; userId: string; firstName?: string; lastName?: string; email?: string; phone?: string;
+  headline?: string; summary?: string; currentLocation?: string; yearsOfExperience?: number;
+  expectedSalary?: string | number; skills: string[]; industries: string[]; preferredLocations: string[];
+  appliedLocations: string[]; jobTypes: string[]; resumes: ResumeLink[];
 }
+const emptyFilters = { keyword: '', location: '', jobType: '', industry: '', skills: '', minExperience: '', maxExperience: '', education: '', maxSalary: '' }
+const fields = [
+  ['keyword', 'Keyword', 'text'], ['location', 'City / location', 'text'],
+  ['industry', 'Industry', 'text'], ['skills', 'Skills (comma separated)', 'text'],
+  ['minExperience', 'Min Experience', 'number'], ['maxExperience', 'Maximum experience', 'number'],
+  ['education', 'Education / qualification', 'text'], ['maxSalary', 'Maximum expected salary', 'number']
+] as const
+const jobTypes = [['full-time', 'Full-time'], ['part-time', 'Part-time'], ['internship', 'Internship'], ['contract', 'Contract'], ['remote', 'Remote']]
 
 export default function EmployerCandidatesPage() {
   useLocale()
-
-  const router = useRouter()
-
+  const router = useRouter(), requestId = useRef(0)
   const [candidates, setCandidates] = useState<Candidate[]>([])
   const [loading, setLoading] = useState(true)
   const [searching, setSearching] = useState(false)
-  const [error, setError] = useState("")
-  const [filters, setFilters] = useState({
-    keyword: "",
-    location: "",
-    industry: "",
-    minExperience: "",
-    skills: ""
-  })
-
-  useEffect(() => {
-    const user = localStorage.getItem("user")
-    if (!user) {
-      router.replace("/login")
-      return
-    }
-
-    const parsed = JSON.parse(user)
-    if (parsed.role !== "employer") {
-      router.replace("/dashboard")
-      return
-    }
-
-    fetchCandidates()
-  }, [router])
-
-  const fetchCandidates = async (customFilters = filters) => {
-    const token = localStorage.getItem("token")
-    setError("")
-    setSearching(true)
-
+  const [error, setError] = useState('')
+  const [filters, setFilters] = useState(emptyFilters)
+  const fetchCandidates = async (values = filters) => {
+    const currentRequest = ++requestId.current
+    const token = localStorage.getItem('token')
+    if (!token) { router.replace('/login'); return }
+    setError(''); setSearching(true)
     try {
-      const params = new URLSearchParams()
-
-      if (customFilters.keyword.trim()) params.append("keyword", customFilters.keyword.trim())
-      if (customFilters.location.trim()) params.append("location", customFilters.location.trim())
-      if (customFilters.industry.trim()) params.append("industry", customFilters.industry.trim())
-      if (customFilters.minExperience.trim()) params.append("minExperience", customFilters.minExperience.trim())
-      if (customFilters.skills.trim()) params.append("skills", customFilters.skills.trim())
-
+      const params = new URLSearchParams(Object.entries(values).map(([key, value]) => [key, value.trim()]).filter(([, value]) => value))
       const query = params.toString()
-      const url = `${API_BASE}/employer/candidates${query ? `?${query}` : ""}`
-
-      const res = await fetch(url, {
-        headers: {
-          Authorization: "Bearer " + token
-        }
-      })
-
-      const data = await res.json()
-
-      if (data.success) {
-        setCandidates(data.data || [])
-      } else {
-        setError(data.message || "Failed to load candidates")
-      }
-    } catch (err) {
-      console.error(err)
-      setError("Failed to load candidates")
+      const response = await fetch(`${API_BASE}/employer/candidates${query ? `?${query}` : ''}`, { headers: { Authorization: `Bearer ${token}` } })
+      const data = await response.json()
+      if (currentRequest !== requestId.current) return
+      if (!response.ok || !data.success || !Array.isArray(data.data)) { setError(data.message || 'Failed to load candidates'); return }
+      setCandidates(data.data)
+    } catch {
+      if (currentRequest === requestId.current) setError('Failed to load candidates')
     } finally {
-      setLoading(false)
-      setSearching(false)
+      if (currentRequest === requestId.current) { setLoading(false); setSearching(false) }
     }
   }
-
-  const handleSearch = () => {
-    fetchCandidates(filters)
-  }
-
-  const clearFilters = () => {
-    const cleared = {
-      keyword: "",
-      location: "",
-      industry: "",
-      minExperience: "",
-      skills: ""
-    }
-    setFilters(cleared)
-    fetchCandidates(cleared)
-  }
-
-  const formatNamePart = (value?: string) => {
-    if (!value) return ""
-    return value
-      .trim()
-      .split(" ")
-      .filter(Boolean)
-      .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-      .join(" ")
-  }
-
-  const getCandidateName = (candidate: Candidate) => {
-    const firstName = formatNamePart(candidate.firstName)
-    const lastName = formatNamePart(candidate.lastName)
-    const fullName = `${firstName} ${lastName}`.trim()
-    return fullName || candidate.email || "Candidate"
-  }
-
-  const getExperienceValue = (value?: number | string) => {
-    if (value === undefined || value === null || value === "") return null
-    const parsed = Number(value)
-    return Number.isNaN(parsed) ? null : parsed
-  }
-
-  if (loading) {
-    return (
-      <main className="min-h-screen bg-gray-50 pt-24 flex items-center justify-center">
-        <p className="text-gray-400">{tr("Loading candidates...")}</p>
-      </main>
-    )
-  }
-
-  return (
-    <main className="min-h-screen bg-gray-50 pt-16">
-      <div className="max-w-7xl mx-auto px-6 py-10">
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white mb-8">
-          <h1 className="text-3xl font-bold mb-1">{tr("Resume Databank")}</h1>
-          <p className="text-blue-100">{tr("Search public candidate profiles by skill, location, industry, and experience")}</p>
+  useEffect(() => {
+    const user = readStoredUser()
+    if (!localStorage.getItem('token')) { router.replace('/login'); return }
+    if (user.role !== 'employer') { router.replace('/dashboard'); return }
+    fetchCandidates(emptyFilters)
+    return () => { requestId.current++ }
+  }, [router])
+  return <main className="min-h-screen bg-gray-50 pt-20 pb-12">
+    <div className="max-w-7xl mx-auto px-6">
+      <header className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white my-6">
+        <h1 className="text-3xl font-bold">{tr('Resume Databank')}</h1>
+        <p className="mt-2 text-blue-100">{tr('One candidate, all available resumes.')}</p>
+      </header>
+      <form onSubmit={event => { event.preventDefault(); fetchCandidates() }} className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {fields.map(([key, label, type]) => <label key={key} className="text-sm font-medium text-gray-700">
+            {tr(label)}
+            <input type={type} placeholder={tr(label)} value={filters[key]} min={type === 'number' ? 0 : undefined} step={type === 'number' ? 'any' : undefined}
+              onChange={event => setFilters(previous => ({ ...previous, [key]: event.target.value }))}
+              className="block w-full mt-1 px-3 py-2.5 border border-gray-200 rounded-xl font-normal" />
+          </label>)}
+          <label className="text-sm font-medium text-gray-700">{tr('Job type')}
+            <select value={filters.jobType} onChange={event => setFilters(previous => ({ ...previous, jobType: event.target.value }))} className="block w-full mt-1 px-3 py-2.5 border border-gray-200 rounded-xl font-normal">
+              <option value="">{tr('All job types')}</option>
+              {jobTypes.map(([value, label]) => <option key={value} value={value}>{tr(label)}</option>)}
+            </select>
+          </label>
         </div>
-
-        {error && (
-          <div className="bg-red-50 text-red-700 px-4 py-3 rounded-xl mb-6 font-medium">
-            {trError(error)}
-          </div>
-        )}
-
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
-            <input
-              type="text"
-              placeholder={tr("Keyword")}
-              value={filters.keyword}
-              onChange={(e) => setFilters((prev) => ({ ...prev, keyword: e.target.value }))}
-              className="px-4 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:border-blue-500"
-            />
-
-            <input
-              type="text"
-              placeholder={tr("Location")}
-              value={filters.location}
-              onChange={(e) => setFilters((prev) => ({ ...prev, location: e.target.value }))}
-              className="px-4 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:border-blue-500"
-            />
-
-            <input
-              type="text"
-              placeholder={tr("Industry")}
-              value={filters.industry}
-              onChange={(e) => setFilters((prev) => ({ ...prev, industry: e.target.value }))}
-              className="px-4 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:border-blue-500"
-            />
-
-            <input
-              type="number"
-              min="0"
-              step="0.1"
-              placeholder={tr("Min Experience")}
-              value={filters.minExperience}
-              onChange={(e) => setFilters((prev) => ({ ...prev, minExperience: e.target.value }))}
-              className="px-4 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:border-blue-500"
-            />
-
-            <input
-              type="text"
-              placeholder={tr("Skills (comma separated)")}
-              value={filters.skills}
-              onChange={(e) => setFilters((prev) => ({ ...prev, skills: e.target.value }))}
-              className="px-4 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:border-blue-500"
-            />
-          </div>
-
-          <div className="flex flex-wrap gap-3 mt-4">
-            <button
-              onClick={handleSearch}
-              disabled={searching}
-              className="px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 disabled:opacity-50"
-            >
-              {tr(searching ? "Searching..." : "Search Candidates")}
-            </button>
-
-            <button
-              onClick={clearFilters}
-              className="px-5 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-200"
-            >{tr("Clear Filters")}</button>
-          </div>
+        <p className="text-sm text-gray-500 mt-4">{tr('City includes current location, preferred cities, and cities where the candidate has applied. All listed skills must match.')}</p>
+        <div className="flex gap-3 mt-4">
+          <button type="submit" disabled={searching} className="bg-blue-600 text-white rounded-xl px-5 py-2 disabled:opacity-50">{tr(searching ? 'Searching...' : 'Search Candidates')}</button>
+          <button type="button" onClick={() => { setFilters(emptyFilters); fetchCandidates(emptyFilters) }} className="bg-gray-100 rounded-xl px-5 py-2">{tr('Clear Filters')}</button>
         </div>
-
-        {candidates.length === 0 ? (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center text-gray-400">
-            <p className="text-lg mb-2">{tr("No candidates found")}</p>
-            <p className="text-sm">{tr("Try changing your filters or search terms")}</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {candidates.map((candidate) => {
-              const experienceValue = getExperienceValue(candidate.yearsOfExperience)
-              const hasSkills = Array.isArray(candidate.skills) && candidate.skills.length > 0
-              const hasSummary = !!candidate.summary?.trim()
-              const hasHeadline = !!candidate.headline?.trim()
-              const hasLocation = !!candidate.currentLocation?.trim()
-              const hasIndustry = !!candidate.industry?.trim()
-              const hasPhone = !!candidate.phone?.trim()
-              const showCompleteness =
-                typeof candidate.profileCompleteness === "number" && candidate.profileCompleteness > 0
-
-              return (
-                <div
-                  key={candidate.id}
-                  className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6"
-                >
-                  <div className="flex items-start justify-between gap-4 mb-3">
-                    <div>
-                      <h2 className="text-lg font-bold text-gray-900">
-                        {getCandidateName(candidate)}
-                      </h2>
-                      <p className="text-gray-500 text-sm">
-                        {candidate.email || tr("No email available")}
-                      </p>
-
-                      {hasHeadline && (
-                        <p className="text-gray-600 text-sm mt-1">{candidate.headline}</p>
-                      )}
-                    </div>
-
-                    {showCompleteness && (
-                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full whitespace-nowrap">
-                        {candidate.profileCompleteness}{tr("% complete")}</span>
-                    )}
-                  </div>
-
-                  {(experienceValue !== null || hasLocation || hasIndustry || hasPhone) && (
-                    <div className="flex flex-wrap gap-3 mb-3 text-xs text-gray-500">
-                      {experienceValue !== null && <span>{tr("Exp: ")}{experienceValue}{tr(" yrs")}</span>}
-                      {hasLocation && <span>{tr("Location: ")}{candidate.currentLocation}</span>}
-                      {hasIndustry && <span>{tr("Industry: ")}{tr(candidate.industry)}</span>}
-                      {hasPhone && <span>{tr("Phone: ")}{candidate.phone}</span>}
-                    </div>
-                  )}
-
-                  {hasSummary ? (
-                    <p className="text-gray-600 text-sm mb-3 leading-6">{candidate.summary}</p>
-                  ) : (
-                    <p className="text-gray-400 text-sm mb-3 italic">{tr("No summary added yet.")}</p>
-                  )}
-
-                  {hasSkills && (
-                    <div className="flex flex-wrap gap-1 mb-4">
-                      {candidate.skills!.slice(0, 8).map((skill, i) => (
-                        <span
-                          key={i}
-                          className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full"
-                        >
-                          {skill}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="flex flex-wrap gap-3">
-                    {candidate.resumeUrl && (
-                      <a
-                        href={candidate.resumeUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 text-sm hover:underline"
-                      >{tr("View Resume")}</a>
-                    )}
-
-                    {candidate.email && (
-                      <a
-                        href={`mailto:${candidate.email}`}
-                        className="text-purple-600 text-sm hover:underline"
-                      >{tr("Contact Candidate")}</a>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
+      </form>
+      {error && <p role="alert" className="bg-red-50 text-red-700 p-4 rounded-xl mt-6">{trError(error)}</p>}
+      <div aria-live="polite" aria-busy={loading || searching} className="my-6 text-gray-600">
+        {loading ? tr('Loading candidates...') : <>{candidates.length} {tr('Candidates')}</>}
       </div>
-    </main>
-  )
+      {!loading && !error && candidates.length === 0 && <div className="p-10 bg-white rounded-2xl text-center text-gray-500"><p>{tr('No candidates found')}</p><p className="mt-2 text-sm">{tr('Try changing your filters or search terms')}</p></div>}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {candidates.map(candidate => <article key={candidate.userId} className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+          <h2 className="text-lg font-bold text-gray-900">{[candidate.firstName, candidate.lastName].filter(Boolean).join(' ') || candidate.email || tr('Candidate')}</h2>
+          <p className="text-sm text-gray-500">{candidate.email}</p>
+          {candidate.headline && <p className="mt-2 text-gray-700">{candidate.headline}</p>}
+          <dl className="text-sm text-gray-600 space-y-2 mt-4">
+            <div><dt className="inline font-medium">{tr('Current location')}: </dt><dd className="inline">{candidate.currentLocation || '—'}</dd></div>
+            {!!candidate.preferredLocations?.length && <div><dt className="inline font-medium">{tr('Preferred cities')}: </dt><dd className="inline">{candidate.preferredLocations.join(', ')}</dd></div>}
+            {!!candidate.appliedLocations?.length && <div><dt className="inline font-medium">{tr('Applied cities')}: </dt><dd className="inline">{candidate.appliedLocations.join(', ')}</dd></div>}
+            {!!candidate.jobTypes?.length && <div><dt className="inline font-medium">{tr('Preferred or applied job types')}: </dt><dd className="inline">{candidate.jobTypes.map(value => tr(jobTypes.find(([type]) => type === value)?.[1] || value)).join(', ')}</dd></div>}
+            <div><dt className="inline font-medium">{tr('Experience')}: </dt><dd className="inline">{candidate.yearsOfExperience ?? 0} {tr('yrs')}</dd></div>
+            {!!candidate.industries?.length && <div><dt className="inline font-medium">{tr('Industry')}: </dt><dd className="inline">{candidate.industries.join(', ')}</dd></div>}
+          </dl>
+          {candidate.summary && <p className="text-sm text-gray-600 mt-4">{candidate.summary}</p>}
+          <div className="flex flex-wrap gap-2 my-4">{candidate.skills?.map(skill => <span key={skill.toLowerCase()} className="bg-blue-50 text-blue-700 text-xs rounded-full px-3 py-1">{skill}</span>)}</div>
+          {!!candidate.resumes?.length && <details className="border-t border-gray-100 py-3">
+            <summary className="cursor-pointer font-medium text-blue-700">{tr('Resumes')} ({candidate.resumes.length})</summary>
+            <ul className="mt-3 space-y-2">{candidate.resumes.map(resume => <li key={resume.id}>
+              <a href={resume.resumeId ? `/resume/share/${resume.resumeId}` : /^https?:\/\//i.test(resume.url || '') ? resume.url : `${BACKEND_BASE}/${(resume.url || '').replace(/^\/+/, '')}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm">{resume.title || tr('View Resume')}</a>
+            </li>)}</ul>
+          </details>}
+          {candidate.email && <a href={`mailto:${candidate.email}`} className="text-purple-600 text-sm hover:underline">{tr('Contact Candidate')}</a>}
+        </article>)}
+      </div>
+    </div>
+  </main>
 }

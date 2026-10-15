@@ -4,6 +4,14 @@ const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
 const { candidateFields } = require('../services/profileFields');
 
+function profileError(res, error) {
+  if (error.name === 'SequelizeForeignKeyConstraintError' || error.parent?.code === '23503') {
+    console.error('Candidate profile foreign key requires schema repair');
+    return res.status(503).json({ success: false, code: 'PROFILE_SCHEMA_MISMATCH', message: 'Profile storage needs an update. Please contact support.' });
+  }
+  return res.status(error.name === 'SequelizeValidationError' ? 400 : 500).json({ success: false, message: error.message });
+}
+
 // Cloudinary storage for photos
 const photoStorage = new CloudinaryStorage({
   cloudinary,
@@ -26,7 +34,7 @@ exports.getProfile = async (req, res) => {
     if (!profile) return res.status(404).json({ success: false, message: 'Profile not found' });
     res.json({ success: true, data: profile });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    profileError(res, error);
   }
 };
 
@@ -38,7 +46,7 @@ exports.createProfile = async (req, res) => {
     const profile = await CandidateProfile.create({ ...candidateFields(req.body), userId: req.user.id });
     res.status(201).json({ success: true, data: profile });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    profileError(res, error);
   }
 };
 
@@ -53,7 +61,7 @@ exports.updateProfile = async (req, res) => {
     }
     res.json({ success: true, data: profile });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    profileError(res, error);
   }
 };
 
@@ -69,7 +77,7 @@ exports.uploadPhoto = async (req, res) => {
     await profile.update({ photoUrl: req.file.path, photoPublicId: req.file.filename });
     res.json({ success: true, message: 'Photo uploaded!', photoUrl: req.file.path });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    profileError(res, error);
   }
 };
 
@@ -85,7 +93,7 @@ exports.uploadResume = async (req, res) => {
     await profile.update({ resumeUrl: req.file.path, resumePublicId: req.file.filename });
     res.json({ success: true, message: 'Resume uploaded!', resumeUrl: req.file.path });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    profileError(res, error);
   }
 };
 
@@ -99,26 +107,9 @@ exports.getAIMatches = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Not authorized to screen this job' });
     }
 
-    // FIX #11: Limit candidates fetched to avoid full table scan (max 500)
-    const candidates = await CandidateProfile.findAll({ limit: 500 });
-    if (candidates.length === 0) return res.json({ success: true, data: [], message: 'No candidates found' });
-
-    // FIX #5: Use AI_SERVICE_URL env var instead of hardcoded localhost:8000
-    const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
-
-    const response = await fetch(`${aiServiceUrl.replace(/\/+$/, '')}/match-candidates`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(15000),
-      body: JSON.stringify({
-      job_skills: job.requiredSkills || [],
-      job_description: job.description,
-      job_experience_min: job.minExperienceYears || 0,
-      candidates: candidates.map(c => c.toJSON())
-      })
-    });
-    if (!response.ok) return res.status(503).json({ success: false, message: 'AI service unavailable' });
-    const result = await response.json();
-    if (!result.success || !Array.isArray(result.data)) throw new Error('Invalid AI service response');
-    res.json({ success: true, data: result.data });
+    const candidates = await require('../services/candidateDiscovery').matchingCandidates(job.id);
+    const result = await require('../services/candidateMatching').matchCandidates(job, candidates);
+    res.json({ success: true, ...result });
   } catch (error) {
     if (error.cause?.code === 'ECONNREFUSED' || ['TimeoutError', 'AbortError'].includes(error.name)) return res.status(503).json({ success: false, message: 'AI service unavailable' });
     res.status(500).json({ success: false, message: error.message });

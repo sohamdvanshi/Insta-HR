@@ -62,6 +62,10 @@ exports.protect = async (req, res, next) => {
       })
     }
 
+    if (Number(decoded.authVersion || 0) !== Number(user.authVersion || 0)) {
+      return res.status(401).json({ success: false, code: 'SESSION_REVOKED', message: 'Your password changed. Please sign in again.' })
+    }
+
     if (user.isActive === false) {
       return res.status(403).json({
         success: false,

@@ -271,5 +271,11 @@
   "Wages saved.": "Wages saved.",
   "Register approved and locked.": "Register approved and locked.",
   "Unsaved edits discarded.": "Unsaved edits discarded.",
-  "Workbook policy: payable days = P + PH (H is mapped to PH). Weekly offs and leave codes are excluded. Basic = daily rate × payable days; overtime = daily rate ÷ 4 × hours. PF = 12% of Basic capped at ₹15,000; ESIC = 0.75% of total earnings rounded to a rupee. Employer contributions are separate.": "Workbook policy: payable days = P + PH (H is mapped to PH). Weekly offs and leave codes are excluded. Basic = daily rate × payable days; overtime = daily rate ÷ 4 × hours. PF = 12% of Basic capped at ₹15,000; ESIC = 0.75% of total earnings rounded to a rupee. Employer contributions are separate."
+  "Workbook policy: payable days = P + PH (H is mapped to PH). Weekly offs and leave codes are excluded. Basic = daily rate × payable days; overtime = daily rate ÷ 4 × hours. PF = 12% of Basic capped at ₹15,000; ESIC = 0.75% of total earnings rounded to a rupee. Employer contributions are separate.": "Workbook policy: payable days = P + PH (H is mapped to PH). Weekly offs and leave codes are excluded. Basic = daily rate × payable days; overtime = daily rate ÷ 4 × hours. PF = 12% of Basic capped at ₹15,000; ESIC = 0.75% of total earnings rounded to a rupee. Employer contributions are separate.",
+  "Standard attendance template": "Standard attendance template",
+  "Select a payroll month, download its template, fill employee details and daily attendance, then upload the completed file below.": "Select a payroll month, download its template, fill employee details and daily attendance, then upload the completed file below.",
+  "Download attendance template": "Download attendance template",
+  "The template includes every date of the selected month, 50 blank employee rows and attendance-code dropdowns.": "The template includes every date of the selected month, 50 blank employee rows and attendance-code dropdowns.",
+  "Choose a valid payroll month": "Choose a valid payroll month",
+  "Unable to download attendance template": "Unable to download attendance template"
 }

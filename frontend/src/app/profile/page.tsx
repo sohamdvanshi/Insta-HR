@@ -57,7 +57,7 @@ export default function ProfilePage() {
   const [form, setForm] = useState({
     firstName: '', lastName: '', headline: '', summary: '',
     currentLocation: '', industry: '', yearsOfExperience: '',
-    expectedSalary: '', skills: '', isResumePublic: true
+    expectedSalary: '', skills: '', isResumePublic: true, preferredLocations: '', preferredJobTypes: [] as string[]
   })
 
   const [education, setEducation] = useState<Education[]>([])
@@ -88,7 +88,9 @@ export default function ProfilePage() {
           yearsOfExperience: p.yearsOfExperience?.toString() || '',
           expectedSalary: p.expectedSalary?.toString() || '',
           skills: p.skills?.join(', ') || '',
-          isResumePublic: p.isResumePublic ?? true
+          isResumePublic: p.isResumePublic ?? true,
+          preferredLocations: (p.preferredLocations || []).join(', '),
+          preferredJobTypes: p.preferredJobTypes || []
         })
         setEducation(p.education || [])
         setExperience(p.experience || [])
@@ -111,6 +113,7 @@ export default function ProfilePage() {
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
         body: JSON.stringify({
           ...form,
+          preferredLocations: form.preferredLocations.split(',').map(s => s.trim()).filter(Boolean),
           yearsOfExperience: form.yearsOfExperience ? Number(form.yearsOfExperience) : 0,
           expectedSalary: form.expectedSalary ? Number(form.expectedSalary) : 0,
           skills: form.skills.split(',').map(s => s.trim()).filter(Boolean),
@@ -284,6 +287,18 @@ export default function ProfilePage() {
         </div>
 
         {/* Basic Info Tab */}
+        {activeTab === 'basic' && <section className="bg-white border border-gray-100 rounded-2xl p-6 mb-6">
+          <h2 className="font-bold text-gray-900 mb-4">{tr('Work preferences')}</h2>
+          <label className="block text-sm text-gray-700">{tr('Preferred cities (comma separated)')}
+            <input value={form.preferredLocations} onChange={e => setForm({ ...form, preferredLocations: e.target.value })} className="block w-full border border-gray-200 rounded-xl px-4 py-2 mt-2" />
+          </label>
+          <fieldset className="mt-4"><legend className="text-sm text-gray-700 mb-2">{tr('Preferred job types')}</legend>
+            <div className="flex flex-wrap gap-4">{[['full-time', 'Full-time'], ['part-time', 'Part-time'], ['internship', 'Internship'], ['contract', 'Contract'], ['remote', 'Remote']].map(([value, label]) => <label key={value} className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={form.preferredJobTypes.includes(value)} onChange={e => setForm({ ...form, preferredJobTypes: e.target.checked ? [...form.preferredJobTypes, value] : form.preferredJobTypes.filter(type => type !== value) })} />{tr(label)}
+            </label>)}</div>
+          </fieldset>
+        </section>}
+
         {activeTab === 'basic' && (
           <div className="space-y-6">
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">

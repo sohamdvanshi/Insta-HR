@@ -25,13 +25,13 @@ const normalizeRole = (role) => {
 
 const generateOTP = () => crypto.randomInt(100000, 1000000).toString()
 
-const signToken = (id) => {
+const signToken = (user) => {
   if (!process.env.JWT_SECRET) {
     throw new Error('JWT_SECRET is not configured')
   }
 
   return jwt.sign(
-    { id: String(id) },
+    { id: String(user.id), authVersion: Number(user.authVersion || 0) },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
   )
@@ -239,7 +239,7 @@ exports.verifyOTP = async (req, res) => {
     return res.json({
       success: true,
       message: 'Email verified successfully!',
-      token: signToken(user.id),
+      token: signToken(user),
       user: getUserResponse(user)
     })
   } catch (error) {
@@ -357,7 +357,7 @@ exports.login = async (req, res) => {
     return res.json({
       success: true,
       message: 'Login successful!',
-      token: signToken(user.id),
+      token: signToken(user),
       user: getUserResponse(user)
     })
   } catch (error) {
@@ -464,7 +464,7 @@ exports.googleLogin = async (req, res) => {
     return res.json({
       success: true,
       message: 'Google login successful!',
-      token: signToken(user.id),
+      token: signToken(user),
       user: getUserResponse(user)
     })
   } catch (error) {

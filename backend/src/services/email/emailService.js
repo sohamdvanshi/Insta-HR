@@ -412,3 +412,13 @@ exports.sendTrainingSessionEmail = async (email, session) => {
   return sendMail({ to: email, subject: `Training class ${session.status}: ${session.title}`.replace(/[\r\n]/g, ' '), text, html: wrapTemplate({ title: 'Training class update', content: `<p style="white-space:pre-wrap">${escaped}</p>` }) });
 };
 exports.verifySMTP = verifySMTP;
+
+exports.sendPasswordResetEmail = async (email, resetLink) => {
+  const safeLink = resetLink.replace(/[&<>"']/g, value => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[value]));
+  return sendMail({
+    to: email,
+    subject: 'InstaHire - Reset your password',
+    text: `Reset your InstaHire password: ${resetLink}\nThis link expires in 15 minutes and can be used once. If you did not request it, ignore this email.`,
+    html: wrapTemplate({ title: 'Reset your password', content: `<p>Use the link below to choose a new password.</p><p><a href="${safeLink}">Reset password</a></p><p>This link expires in 15 minutes and can be used once. If you did not request it, ignore this email.</p>` })
+  });
+};
