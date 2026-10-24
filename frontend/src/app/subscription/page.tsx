@@ -1,4 +1,5 @@
 'use client'
+import LoyaltyRedemption from '@/components/LoyaltyRedemption'
 import { readStoredUser } from '@/lib/storage'
 import { API_BASE } from '@/lib/api'
 import { tr, trError, useLocale, locale } from '@/lib/localization'
@@ -12,12 +13,13 @@ declare global {
   }
 }
 
-type Plan = { id: string; name: string; price: number; durationDays: number; priceLabel: string; period: string; color: string; badge: string; features: string[]; missing: string[]; cta: string; disabled: boolean }
+type Plan = { id: string; name: string; price: number; yearlyPrice: number; durationDays: number; priceLabel: string; period: string; color: string; badge: string; features: string[]; missing: string[]; cta: string; disabled: boolean }
 
 export default function SubscriptionPage() {
   useLocale()
 
   const router = useRouter()
+  const [billingCycle, setBillingCycle] = useState<'monthly'|'yearly'>('monthly')
   const [plans, setPlans] = useState<Plan[]>([])
   const [planError, setPlanError] = useState('')
   const [plansLoading, setPlansLoading] = useState(true)
@@ -37,7 +39,7 @@ export default function SubscriptionPage() {
       const result = await response.json()
       if (!response.ok || !result.success) throw new Error(result.message || 'Unable to load plans')
       const colors: Record<string, string> = { free: 'gray', standard: 'blue', premium: 'purple', enterprise: 'gold' }
-      setPlans(result.data.map((plan: any) => ({ id: plan.id, name: plan.name, price: plan.amountPaise / 100, durationDays: plan.durationDays, priceLabel: `₹${(plan.amountPaise / 100).toLocaleString(locale())}`, period: plan.id === 'free' ? 'forever' : `/${plan.durationDays} days`, color: colors[plan.id] || 'blue', badge: '', features: plan.features, missing: [], cta: `Get ${plan.name}`, disabled: plan.id === 'free' })))
+      setPlans(result.data.map((plan: any) => ({ id: plan.id, name: plan.name, price: plan.amountPaise / 100, yearlyPrice: plan.yearlyAmountPaise / 100, durationDays: plan.durationDays, priceLabel: `₹${(plan.amountPaise / 100).toLocaleString(locale())}`, period: plan.id === 'free' ? 'forever' : `/${plan.durationDays} days`, color: colors[plan.id] || 'blue', badge: '', features: plan.features, missing: [], cta: `Get ${plan.name}`, disabled: plan.id === 'free' })))
     }).catch(error => setPlanError(error.message)).finally(() => setPlansLoading(false))
     fetchSubscription()
   }, [])
@@ -156,7 +158,7 @@ export default function SubscriptionPage() {
           'Content-Type': 'application/json',
           Authorization: 'Bearer ' + token
         },
-        body: JSON.stringify({ plan: planId })
+        body: JSON.stringify({ plan: planId, billingCycle })
       })
 
       const orderData = await orderRes.json()
@@ -264,7 +266,7 @@ export default function SubscriptionPage() {
     <main className="min-h-screen bg-gray-50 pt-16">
       <div className="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-16 px-6 text-center">
         <h1 className="text-4xl font-bold mb-3">{tr("Simple, Transparent Pricing")}</h1>
-        <p className="text-blue-100 text-lg max-w-xl mx-auto">{tr("Choose the plan that fits your hiring needs. Upgrade or cancel anytime.")}</p>
+        <p className="text-blue-100 text-lg max-w-xl mx-auto">{tr("Choose the plan that fits your hiring needs. Choose monthly or yearly access. Renewals extend your current plan.")}</p>
 
         {!loading && currentPlan !== 'free' && expiresAt && (
           <div className="mt-4 inline-block bg-white/20 rounded-xl px-6 py-3">
@@ -283,6 +285,9 @@ export default function SubscriptionPage() {
         {plansLoading && <p role="status" className="mb-4">{tr("Loading current plans…")}</p>}
         {planError && <p role="alert" className="mb-4 rounded-lg bg-red-50 p-4 text-red-800">{trError(planError)}</p>}
         {!plansLoading && !planError && !plans.length && <p>{tr("No plans are available right now.")}</p>}
+        {currentPlan !== 'free' && <p className="mb-4 text-sm text-gray-600">{tr('While your plan is active, you can renew it. You can switch plans after it expires.')}</p>}
+        {user?.role === 'candidate' && <LoyaltyRedemption onRedeemed={()=>void fetchSubscription()}/>}
+        <div className="mb-6 flex gap-3">{(['monthly','yearly'] as const).map(cycle=><button key={cycle} disabled={!!processingPlan} aria-pressed={billingCycle===cycle} onClick={()=>setBillingCycle(cycle)} className={'rounded-lg px-5 py-2 '+(billingCycle===cycle?'bg-blue-700 text-white':'bg-white border')}>{tr(cycle==='monthly'?'Monthly':'Yearly')}</button>)}</div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {plans.map(plan => {
             const colors = colorMap[plan.color]
@@ -311,8 +316,8 @@ export default function SubscriptionPage() {
                 <div className={'rounded-xl p-4 mb-4 ' + colors.header}>
                   <h3 className="font-bold text-gray-900 text-lg">{tr(plan.name)}</h3>
                   <div className="flex items-end gap-1 mt-1">
-                    <span className="text-3xl font-bold text-gray-900">{new Intl.NumberFormat(locale(), { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(plan.price)}</span>
-                    <span className="text-gray-500 text-sm mb-1">{plan.id === 'free' ? tr('forever') : tr('/{{value0}} days', { value0: new Intl.NumberFormat(locale()).format(plan.durationDays) })}</span>
+                    <span className="text-3xl font-bold text-gray-900">{new Intl.NumberFormat(locale(), { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(billingCycle === 'yearly' ? plan.yearlyPrice : plan.price)}</span>
+                    <span className="text-gray-500 text-sm mb-1">{plan.id === 'free' ? tr('forever') : tr('/{{value0}} days', { value0: new Intl.NumberFormat(locale()).format(billingCycle === 'yearly' ? 365 : plan.durationDays) })}</span>
                   </div>
                 </div>
 
@@ -332,8 +337,8 @@ export default function SubscriptionPage() {
                 </ul>
 
                 <button
-                  onClick={() => !plan.disabled && !isCurrent && handleSubscribe(plan.id)}
-                  disabled={plan.disabled || isCurrent || isProcessing}
+                  onClick={() => !plan.disabled && handleSubscribe(plan.id)}
+                  disabled={plan.disabled || !!processingPlan || user?.role === 'candidate' || (currentPlan !== 'free' && !isCurrent)}
                   className={
                     'w-full py-3 rounded-xl font-bold text-sm transition-colors ' +
                     (isCurrent
@@ -347,7 +352,7 @@ export default function SubscriptionPage() {
                   {isProcessing ? (
                     <span className="flex items-center justify-center gap-2">
                       <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>{tr("Processing...")}</span>
-                  ) : isCurrent ? tr('✓ Current Plan') : tr('Get {{value0}}', { value0: tr(plan.name) })}
+                  ) : isCurrent ? tr('Renew plan') : tr('Get {{value0}}', { value0: tr(plan.name) })}
                 </button>
               </div>
             )

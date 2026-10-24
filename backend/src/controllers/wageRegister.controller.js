@@ -34,6 +34,7 @@ const run = fn => async (req,res) => { try { await fn(req,res); } catch(e) {
   e.parent?.code,
   e.parent?.message || e.message
 );
+  return res.status(500).json({ message: 'Unable to save wage register. Please try again or contact support.' });
 } };
 exports.preview = run(async (req,res) => {
   const { period } = metadata(req.body); if (!req.file) throw fail('Select an attendance .xlsx file');
@@ -52,6 +53,7 @@ exports.list = run(async (req,res) => {
   const page = Math.max(1, Math.min(10000, parseInt(req.query.page) || 1)); const where = scope(req);
   if (req.query.period) { if (!/^20\d{2}-(0[1-9]|1[0-2])$/.test(req.query.period)) throw fail('Invalid month'); where.period = req.query.period; }
   if (req.query.employerId && req.user.role === 'super_admin') { if (!uuid(req.query.employerId)) throw fail('Invalid employer ID'); where.employerId = req.query.employerId; }
+  if (req.query.status) { if (!['draft','submitted','approved'].includes(req.query.status)) throw fail('Invalid register status'); where.status = req.query.status; }
   const result = await WageRegister.findAndCountAll({ where, attributes: ['id','employerId','period','site','status','version','createdAt','updatedAt'], order: [['createdAt','DESC']], limit: 20, offset: (page-1)*20 });
   res.json({ data: result.rows, pagination: { page, pages: Math.ceil(result.count/20), total: result.count } });
 });
@@ -59,7 +61,7 @@ exports.get = run(async (req,res) => res.json({ data: await record(req) }));
 exports.update = run(async (req,res) => {
   const updated = await sequelize.transaction(async transaction => {
     const r = await record(req,transaction);
-    if (r.status !== 'draft') throw fail('Approved registers are locked',409);
+    if (r.status !== 'draft') throw fail('Submitted and approved registers are locked',409);
     if (req.body.version !== r.version) throw fail('This register changed in another tab. Reload before editing.',409);
     const rows = normalizeRows(req.body.rows);
     // Attendance and identity cannot be rewritten by a wage edit.
@@ -69,15 +71,15 @@ exports.update = run(async (req,res) => {
     await audit(req,r,'wage_register.update',{ before, after: rows },transaction); return r;
   }); res.json({ data: updated });
 });
-exports.approve = run(async (req,res) => {
+exports.submit = run(async (req,res) => {
   const r = await sequelize.transaction(async transaction => {
     const r = await record(req,transaction);
-    if (r.version !== req.body.version) throw fail('Reload this register before approving',409);
-    if (r.status !== 'draft') throw fail('Register is already approved',409);
+    if (r.version !== req.body.version) throw fail('Reload this register before submitting',409);
+    if (r.status !== 'draft') throw fail('Only drafts can be submitted',409);
     const rows = normalizeRows(r.rows);
-    if (rows.some(row => row.rate <= 0 || row.net < 0 || row.days.some(d => !d.code))) throw fail('Approval requires positive wage rates, nonnegative net wages and no blank daily attendance codes');
-    await r.update({ rows, status: 'approved', version: r.version+1, approvedAt: new Date() },{ transaction });
-    await audit(req,r,'wage_register.approve',{ totalNet: rows.reduce((n,row)=>n+row.net,0) },transaction); return r;
+    if (rows.some(row => row.rate <= 0 || row.net < 0 || row.days.some(d => !d.code))) throw fail('Submission requires positive wage rates, nonnegative net wages and no blank daily attendance codes');
+    await r.update({ rows, status: 'submitted', version: r.version+1, submittedAt: new Date(), reviewedAt: null, reviewedBy: null },{ transaction });
+    await audit(req,r,'wage_register.submit',{ totalNet: rows.reduce((n,row)=>n+row.net,0) },transaction); return r;
   }); res.json({ data: r });
 });
 exports.export = run(async (req,res) => {
@@ -91,7 +93,7 @@ exports.replaceAttendance = run(async (req,res) => {
   const parsed = await parse(req.file.buffer, meta.period);
   const result = await sequelize.transaction(async transaction => {
     const r = await record(req,transaction);
-    if (r.status !== 'draft') throw fail('Approved registers are locked',409);
+    if (r.status !== 'draft') throw fail('Submitted and approved registers are locked',409);
     if (Number(req.body.version) !== r.version) throw fail('Reload before replacing attendance',409);
     if (meta.period !== r.period || meta.site !== r.site) throw fail('Month and site must match the open register');
     const previous = new Map(r.rows.map(row => [row.employeeId,row]));
@@ -110,4 +112,22 @@ exports.template = run(async (req, res) => {
   res.set('Content-Disposition', `attachment; filename="attendance-template-${req.query.period}.xlsx"`);
   res.set('Cache-Control', 'no-store');
   res.send(buffer);
+});
+
+exports.review = run(async (req, res) => {
+  if (req.user.role !== 'super_admin') throw fail('Only superadmins can review registers', 403);
+  const { decision, notes, version } = req.body;
+  if (!['approve', 'return'].includes(decision)) throw fail('Choose approve or return');
+  if (typeof notes !== 'string' || notes.trim().length > 2000 || (decision === 'return' && notes.trim().length < 5)) throw fail('Provide a review note (5–2000 characters when returning)');
+  const result = await sequelize.transaction(async transaction => {
+    const r = await record(req, transaction);
+    if (r.status !== 'submitted') throw fail('Only submitted registers can be reviewed', 409);
+    if (version !== r.version) throw fail('This register changed. Reload before reviewing.', 409);
+    const rows = normalizeRows(r.rows);
+    if (decision === 'approve' && rows.some(row => row.rate <= 0 || row.net < 0 || row.days.some(d => !d.code))) throw fail('Correct wage rates and attendance before approval');
+    await r.update({ status: decision === 'approve' ? 'approved' : 'draft', version: r.version + 1, reviewedAt: new Date(), reviewedBy: req.user.id, reviewNotes: notes.trim(), approvedAt: decision === 'approve' ? new Date() : null }, { transaction });
+    await audit(req, r, 'wage_register.' + decision, { notes: notes.trim(), version: r.version }, transaction);
+    return r;
+  });
+  res.json({ data: result });
 });

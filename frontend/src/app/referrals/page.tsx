@@ -1,4 +1,5 @@
 'use client'
+import LoyaltyRedemption from '@/components/LoyaltyRedemption'
 import { API_BASE } from '@/lib/api'
 import { tr, trError, useLocale, locale } from '@/lib/localization'
 
@@ -308,6 +309,7 @@ export default function ReferralsPage() {
 
   return (
     <main className="min-h-screen bg-gray-50 pt-16">
+<div className="mx-auto max-w-6xl px-6"><LoyaltyRedemption onRedeemed={()=>void loadReferralData(localStorage.getItem('token') || '')}/></div>
       <section className="bg-gradient-to-r from-blue-700 to-violet-700 py-12 px-6">
         <div className="max-w-6xl mx-auto">
           <Link

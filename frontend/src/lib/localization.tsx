@@ -4,10 +4,10 @@ import { useTranslation } from 'react-i18next'
 import i18n from '@/i18n'
 import { sourceIndex, templateIndex } from '@/locales/source-index'
 
-export const LANGUAGES = ['en', 'hi', 'mr'] as const
+export const LANGUAGES = ['en', 'hi', 'mr', 'kn', 'ta'] as const
 export type Language = typeof LANGUAGES[number]
 export const validLanguage = (value: unknown): value is Language => typeof value === 'string' && (LANGUAGES as readonly string[]).includes(value)
-export const locale = () => ({ en: 'en-IN', hi: 'hi-IN', mr: 'mr-IN' }[i18n.resolvedLanguage as Language] || 'en-IN')
+export const locale = () => ({ en: 'en-IN', hi: 'hi-IN', mr: 'mr-IN', kn: 'kn-IN', ta: 'ta-IN' }[i18n.resolvedLanguage as Language] || 'en-IN')
 
 /** Lookup app-authored presentation copy. Unknown text and user content remain intact. */
 export function tr(value: unknown, variables?: Record<string, unknown>): string {

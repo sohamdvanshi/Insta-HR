@@ -7,24 +7,10 @@ const {
   searchJobsAdvanced
 } = require('../services/search/jobSearch.service')
 
-const FEATURED_ALLOWED_PLANS = ['premium', 'enterprise']
+const { entitlementsFor } = require('../services/planEntitlements')
 const FEATURED_DURATION_DAYS = 30
 
-const normalizePlan = (plan) => String(plan || '').trim().toLowerCase()
-
-const hasActiveSubscription = (user) => {
-  if (!user?.subscriptionExpiry) return false
-  return new Date(user.subscriptionExpiry) > new Date()
-}
-
-const isFeatureAllowed = (user) => {
-  if (!user) return false
-
-  return (
-    FEATURED_ALLOWED_PLANS.includes(normalizePlan(user.subscriptionPlan)) &&
-    hasActiveSubscription(user)
-  )
-}
+const isFeatureAllowed = async user => (await entitlementsFor(user)).featuredJobs
 
 const toArray = (value) => {
   if (!value) return []
@@ -144,11 +130,11 @@ exports.createJob = async (req, res) => {
     let featuredUntil = null
 
     if (wantsFeatured) {
-      if (!isFeatureAllowed(employer)) {
+      if (!(await isFeatureAllowed(employer))) {
         return res.status(403).json({
           success: false,
           message:
-            'Only employers with an active Premium or Enterprise plan can feature jobs.'
+            'Your current plan does not include featured jobs.'
         })
       }
 
@@ -481,11 +467,11 @@ exports.updateJob = async (req, res) => {
       const wantsFeatured = [true, 'true', 1, '1'].includes(isFeatured)
 
       if (wantsFeatured) {
-        if (!isFeatureAllowed(employer)) {
+        if (!(await isFeatureAllowed(employer))) {
           return res.status(403).json({
             success: false,
             message:
-              'Only employers with an active Premium or Enterprise plan can feature jobs.'
+              'Your current plan does not include featured jobs.'
           })
         }
 

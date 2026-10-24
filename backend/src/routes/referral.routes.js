@@ -14,6 +14,10 @@ const {
 |--------------------------------------------------------------------------
 */
 
+const redemption = require('../controllers/loyaltyRedemption.controller');
+router.get('/redemption-options', protect, authorize('candidate'), redemption.options);
+router.post('/redeem', protect, authorize('candidate'), redemption.redeem);
+
 router.get(
   '/code',
   protect,

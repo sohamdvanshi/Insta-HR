@@ -115,7 +115,7 @@ export default function TrainingWorkspace() {
     <main className="min-h-screen bg-gray-50 px-5 pb-12 pt-24">
       <div className="mx-auto max-w-6xl space-y-6">
         <header><h1 className="text-3xl font-bold">{tr("Training workspace")}</h1><p className="mt-2 text-gray-600">{tr("Manage courses, batches, class schedules, and trainee attendance.")}</p>
-          <nav className="mt-4 flex flex-wrap gap-4"><Link href={coursesPath} className="text-blue-700 underline">{tr("Manage courses")}</Link><a href="#batches" className="text-blue-700 underline">{tr("Batches")}</a><a href="#classes" className="text-blue-700 underline">{tr("Classes")}</a><a href="#attendance" className="text-blue-700 underline">{tr("Attendance")}</a></nav>
+          <nav className="mt-4 flex flex-wrap gap-4">{role === 'trainer' && <Link href="/" className="text-blue-700 underline">{tr("Back to home")}</Link>}<Link href={coursesPath} className="text-blue-700 underline">{tr("Manage courses")}</Link><a href="#batches" className="text-blue-700 underline">{tr("Batches")}</a><a href="#classes" className="text-blue-700 underline">{tr("Classes")}</a><a href="#attendance" className="text-blue-700 underline">{tr("Attendance")}</a></nav>
         </header>
         {error && <p role="alert" className="rounded-xl bg-red-50 p-4 text-red-700">{trError(error)}</p>}
         {message && <p role="status" className="rounded-xl bg-green-50 p-4 text-green-800">{tr(message)}</p>}

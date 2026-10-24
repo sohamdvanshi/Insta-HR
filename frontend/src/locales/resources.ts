@@ -28,42 +28,31 @@ import mr_resume from './mr/resume.json'
 import mr_subscription from './mr/subscription.json'
 import mr_admin from './mr/admin.json'
 import mr_errors from './mr/errors.json'
+import kn_common from './kn/common.json'
+import kn_jobs from './kn/jobs.json'
+import kn_auth from './kn/auth.json'
+import kn_dashboard from './kn/dashboard.json'
+import kn_payroll from './kn/payroll.json'
+import kn_training from './kn/training.json'
+import kn_resume from './kn/resume.json'
+import kn_subscription from './kn/subscription.json'
+import kn_admin from './kn/admin.json'
+import kn_errors from './kn/errors.json'
+import ta_common from './ta/common.json'
+import ta_jobs from './ta/jobs.json'
+import ta_auth from './ta/auth.json'
+import ta_dashboard from './ta/dashboard.json'
+import ta_payroll from './ta/payroll.json'
+import ta_training from './ta/training.json'
+import ta_resume from './ta/resume.json'
+import ta_subscription from './ta/subscription.json'
+import ta_admin from './ta/admin.json'
+import ta_errors from './ta/errors.json'
 
 export const resources = {
-  "en": {
-    "common": en_common,
-    "jobs": en_jobs,
-    "auth": en_auth,
-    "dashboard": en_dashboard,
-    "payroll": en_payroll,
-    "training": en_training,
-    "resume": en_resume,
-    "subscription": en_subscription,
-    "admin": en_admin,
-    "errors": en_errors
-  },
-  "hi": {
-    "common": hi_common,
-    "jobs": hi_jobs,
-    "auth": hi_auth,
-    "dashboard": hi_dashboard,
-    "payroll": hi_payroll,
-    "training": hi_training,
-    "resume": hi_resume,
-    "subscription": hi_subscription,
-    "admin": hi_admin,
-    "errors": hi_errors
-  },
-  "mr": {
-    "common": mr_common,
-    "jobs": mr_jobs,
-    "auth": mr_auth,
-    "dashboard": mr_dashboard,
-    "payroll": mr_payroll,
-    "training": mr_training,
-    "resume": mr_resume,
-    "subscription": mr_subscription,
-    "admin": mr_admin,
-    "errors": mr_errors
-  }
+  en: { common: en_common, jobs: en_jobs, auth: en_auth, dashboard: en_dashboard, payroll: en_payroll, training: en_training, resume: en_resume, subscription: en_subscription, admin: en_admin, errors: en_errors },
+  hi: { common: hi_common, jobs: hi_jobs, auth: hi_auth, dashboard: hi_dashboard, payroll: hi_payroll, training: hi_training, resume: hi_resume, subscription: hi_subscription, admin: hi_admin, errors: hi_errors },
+  mr: { common: mr_common, jobs: mr_jobs, auth: mr_auth, dashboard: mr_dashboard, payroll: mr_payroll, training: mr_training, resume: mr_resume, subscription: mr_subscription, admin: mr_admin, errors: mr_errors },
+  kn: { common: kn_common, jobs: kn_jobs, auth: kn_auth, dashboard: kn_dashboard, payroll: kn_payroll, training: kn_training, resume: kn_resume, subscription: kn_subscription, admin: kn_admin, errors: kn_errors },
+  ta: { common: ta_common, jobs: ta_jobs, auth: ta_auth, dashboard: ta_dashboard, payroll: ta_payroll, training: ta_training, resume: ta_resume, subscription: ta_subscription, admin: ta_admin, errors: ta_errors }
 }

@@ -27,7 +27,7 @@ test('candidate ORM model includes photo and resume upload metadata', () => {
 });
 test('missing Razorpay credentials do not prevent importing payment routes', async () => {
   delete process.env.RAZORPAY_KEY_ID; delete process.env.RAZORPAY_KEY_SECRET;
-  mock('../src/models/index', { SubscriptionPlan: { findByPk: async () => ({ id: 'premium', isActive: true }) } });
+  mock('../src/models/index', { SubscriptionPlan: { findByPk: async () => ({ id: 'premium', isActive: true, amountPaise: 399900, durationDays: 30 }) } });
   mock('../src/services/adminOperations', { audit: async () => {} });
   const controller = require('../src/controllers/payment.controller');
   let status, body; const response = { status(code) { status = code; return this; }, json(value) { body = value; return this; } };

@@ -15,7 +15,7 @@ export default function TrainerAccessGuard({ children }: { children: React.React
   const pathname = usePathname()
   const router = useRouter()
   const role = useSyncExternalStore(subscribe, getRole, () => '')
-  const blocked = role === 'trainer' && !/^\/(trainer|training)(\/|$)/.test(pathname)
+  const blocked = role === 'trainer' && pathname !== '/' && !/^\/(trainer|training)(\/|$)/.test(pathname)
   useEffect(() => { if (blocked) router.replace('/trainer') }, [blocked, router])
   return blocked ? <main className="pt-24 text-center">{tr("Opening your training workspace...")}</main> : children
 }

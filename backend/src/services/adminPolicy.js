@@ -18,6 +18,19 @@ const parsePlan = (body, planId) => {
   if (!Number.isSafeInteger(body.durationDays) || body.durationDays < 1 || body.durationDays > 365) fail('Duration must be 1–365 days');
   if (!Array.isArray(body.features) || body.features.length > 30 || body.features.some(item => typeof item !== 'string' || !item.trim() || item.length > 200)) fail('Provide up to 30 nonempty perks (200 characters each)');
   if (typeof body.isActive !== 'boolean') fail('Plan active status must be a boolean');
-  return { name, amountPaise: body.amountPaise, currency: 'INR', durationDays: body.durationDays, features: body.features.map(item => item.trim()), isActive: body.isActive };
+  const extra = {};
+  if (body.yearlyAmountPaise !== undefined) {
+    if (!Number.isSafeInteger(body.yearlyAmountPaise) || body.yearlyAmountPaise < (planId === 'free' ? 0 : 100) || body.yearlyAmountPaise > 100000000 || (planId === 'free' && body.yearlyAmountPaise !== 0)) fail('Invalid yearly price in paise');
+    extra.yearlyAmountPaise = body.yearlyAmountPaise;
+  }
+  if (body.loyaltyPoints !== undefined) {
+    if (!Number.isSafeInteger(body.loyaltyPoints) || body.loyaltyPoints < 0 || body.loyaltyPoints > 100000000 || (planId === 'free' && body.loyaltyPoints !== 0)) fail('Invalid loyalty redemption cost');
+    extra.loyaltyPoints = body.loyaltyPoints;
+  }
+  if (body.featuredJobs !== undefined) {
+    if (typeof body.featuredJobs !== 'boolean') fail('Featured jobs must be a boolean');
+    extra.featuredJobs = body.featuredJobs;
+  }
+  return { ...extra, name, amountPaise: body.amountPaise, currency: 'INR', durationDays: body.durationDays, features: body.features.map(item => item.trim()), isActive: body.isActive };
 };
 module.exports = { ROLES, FLAGS, USER_FIELDS, fail, uuid, id, reason, text, pagination, safeUser, parsePlan };

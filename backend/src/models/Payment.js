@@ -41,6 +41,8 @@ const Payment = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: true
     },
+    billingCycle: { type: DataTypes.STRING(10), allowNull: false, defaultValue: 'monthly' },
+    invoiceSnapshot: { type: DataTypes.JSONB, allowNull: true },
     status: {
       type: DataTypes.ENUM('created', 'success', 'failed'),
       defaultValue: 'created'

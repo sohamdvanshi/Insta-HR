@@ -30,13 +30,29 @@ test('save recalculates totals, detects stale edits and prohibits attendance cha
  assert.equal((await req('employer','/'+r.id,'PUT',{version:1,rows:r.rows})).status,409);
  r.rows[0].days[0].code='A';assert.equal((await req('employer','/'+r.id,'PUT',{version:2,rows:r.rows})).status,400);
 });
-test('approval validates rates, locks edits and is not repeatable; super can export not mutate',async()=>{
- let r=await imported();assert.equal((await req('employer','/'+r.id+'/approve','POST',{version:1})).status,400);
+test('employer submits, superadmin reviews, stale reviews and employer approvals are rejected',async()=>{
+ let r=await imported();assert.equal((await req('employer','/'+r.id+'/submit','POST',{version:1})).status,400);
  r.rows[0].rate=595;r=(await req('employer','/'+r.id,'PUT',{version:1,rows:r.rows})).data.data;
  assert.equal((await req('super_admin','/'+r.id,'PUT',{version:2,rows:r.rows})).status,403);
- const approved=await req('employer','/'+r.id+'/approve','POST',{version:2});assert.equal(approved.status,200);assert.equal(approved.data.data.status,'approved');
- assert.equal((await req('employer','/'+r.id,'PUT',{version:3,rows:r.rows})).status,409);assert.equal((await req('employer','/'+r.id+'/approve','POST',{version:3})).status,409);
- assert.equal((await req('super_admin','/'+r.id+'/export')).status,200);assert.equal(audits.length,3);
+ assert.equal((await req('otherEmployer','/'+r.id+'/submit','POST',{version:2})).status,404);
+ const submitted=await req('employer','/'+r.id+'/submit','POST',{version:2});assert.equal(submitted.status,200);assert.equal(submitted.data.data.status,'submitted');
+ assert.equal((await req('employer','/'+r.id,'PUT',{version:3,rows:r.rows})).status,409);
+ assert.equal((await req('employer','/'+r.id+'/review','POST',{version:3,decision:'approve',notes:''})).status,403);
+ assert.equal((await req('super_admin','/'+r.id+'/review','POST',{version:2,decision:'approve',notes:''})).status,409);
+ const reviewed=await req('super_admin','/'+r.id+'/review','POST',{version:3,decision:'approve',notes:'Checked wages'});assert.equal(reviewed.status,200);assert.equal(reviewed.data.data.status,'approved');
+ assert.equal(reviewed.data.data.reviewedBy,users.super_admin.id);
+ assert.equal((await req('super_admin','/'+r.id+'/review','POST',{version:4,decision:'approve',notes:''})).status,409);
+ assert.equal((await req('super_admin','/'+r.id+'/export')).status,200);assert.equal(audits.length,4);
+});
+test('return requires a reason, audit failure rolls back review, returned draft can be edited',async()=>{
+ let r=await imported();r.rows[0].rate=595;r=(await req('employer','/'+r.id,'PUT',{version:1,rows:r.rows})).data.data;
+ await req('employer','/'+r.id+'/submit','POST',{version:2});
+ assert.equal((await req('super_admin','/'+r.id+'/review','POST',{version:3,decision:'return',notes:''})).status,400);
+ auditFail=true;assert.equal((await req('super_admin','/'+r.id+'/review','POST',{version:3,decision:'return',notes:'Correct the deduction'})).status,500);
+ assert.equal(records[0].status,'submitted');auditFail=false;
+ const returned=await req('super_admin','/'+r.id+'/review','POST',{version:3,decision:'return',notes:'Correct the deduction'});
+ assert.equal(returned.data.data.status,'draft');assert.equal(returned.data.data.version,4);
+ assert.equal((await req('employer','/'+r.id,'PUT',{version:4,rows:r.rows})).status,200);
 });
 test('audit failure rolls back imports and wage changes',async()=>{
  auditFail=true;assert.equal((await req('employer','','POST',await form())).status,500);assert.equal(records.length,0);
@@ -47,7 +63,7 @@ test('attendance replacement keeps matched wage values and rejects stale/approve
  let r=await imported();r.rows[0].rate=595;r=(await req('employer','/'+r.id,'PUT',{version:1,rows:r.rows})).data.data;
  let f=await form();f.append('version','2');const result=await req('employer','/'+r.id+'/attendance','POST',f);assert.equal(result.status,200);assert.equal(result.data.data.rows[0].rate,595);assert.equal(result.data.data.version,3);
  f=await form();f.append('version','2');assert.equal((await req('employer','/'+r.id+'/attendance','POST',f)).status,409);
- await req('employer','/'+r.id+'/approve','POST',{version:3});f=await form();f.append('version','4');assert.equal((await req('employer','/'+r.id+'/attendance','POST',f)).status,409);
+ await req('employer','/'+r.id+'/submit','POST',{version:3});f=await form();f.append('version','4');assert.equal((await req('employer','/'+r.id+'/attendance','POST',f)).status,409);
 });
 
 test('JSONB property ordering does not reject unchanged attendance during wage edits',async()=>{

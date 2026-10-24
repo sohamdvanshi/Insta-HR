@@ -1,4 +1,8 @@
-const { Invoice, Payroll, Deployment, User } = require('../models');
+const { fail, id } = require('../services/adminPolicy');
+const { audit } = require('../services/adminOperations');
+const { validateTransition } = require('../services/invoicePolicy');
+const { renderInvoice } = require('../services/invoiceDocument');
+const { Invoice, Payroll, Deployment, User, sequelize } = require('../models');
 
 const { randomUUID } = require('crypto');
 const { monthRange, dateRange, money } = require('../services/recordValidation');
@@ -76,12 +80,16 @@ const createInvoice = async (req, res) => {
 
     const totalAmount = calculateTotal(subtotalValue, taxValue);
 
-    const invoice = await Invoice.create({
+    const employer = await User.findByPk(employerId, { attributes: ['id','email'] });
+    const invoiceNumber = generateInvoiceNumber();
+    const invoice = await sequelize.transaction(async transaction => {
+    const created = await Invoice.create({
       employerId,
       deploymentId,
       candidateId: deployment.candidateId,
       payrollId: linkedPayrollId,
-      invoiceNumber: generateInvoiceNumber(),
+      invoiceNumber,
+      invoiceSnapshot: { number: invoiceNumber, date: invoiceDate, dueDate, seller: process.env.BILLING_SELLER_NAME || 'Insta-HR', sellerAddress: process.env.BILLING_SELLER_ADDRESS || '', sellerTaxId: process.env.BILLING_SELLER_TAX_ID || '', buyer: employer.email, description: `Deployment ${deployment.id} at ${deployment.siteName} — ${billingPeriodMonth}`, currency: 'INR', subtotal: subtotalValue, tax: taxValue, total: totalAmount, terms: paymentTerms || 'Net 30' },
       billingPeriodMonth,
       invoiceDate,
       dueDate,
@@ -91,6 +99,9 @@ const createInvoice = async (req, res) => {
       paymentTerms: paymentTerms || 'Net 30',
       status: 'draft',
       remarks: remarks || null,
+    }, { transaction });
+    await audit(req, transaction, 'invoice.created', 'invoice', created.id, { invoiceNumber, totalAmount });
+    return created;
     });
 
     return res.status(201).json({
@@ -158,28 +169,17 @@ const updateInvoiceStatus = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    const allowedStatuses = ['draft', 'sent', 'paid', 'overdue', 'cancelled'];
-
-    if (!allowedStatuses.includes(status)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid invoice status.',
-      });
-    }
-
-    const invoice = await Invoice.findOne({
-      where: { id, employerId },
+    const invoice = await sequelize.transaction(async transaction => {
+      const record = await Invoice.findOne({ where: { id: require('../services/adminPolicy').id(id), employerId }, transaction, lock: transaction.LOCK.UPDATE });
+      if (!record) fail('Invoice record not found', 404);
+      validateTransition(record, status);
+      if (record.status !== status) {
+        const before = record.status;
+        await record.update({ status }, { transaction });
+        await audit(req, transaction, 'invoice.status', 'invoice', record.id, { before, status });
+      }
+      return record;
     });
-
-    if (!invoice) {
-      return res.status(404).json({
-        success: false,
-        message: 'Invoice record not found.',
-      });
-    }
-
-    invoice.status = status;
-    await invoice.save();
 
     return res.status(200).json({
       success: true,
@@ -194,7 +194,23 @@ const updateInvoiceStatus = async (req, res) => {
   }
 };
 
+const downloadInvoice = async (req, res) => {
+  try {
+    const invoice = await sequelize.transaction(async transaction => {
+      const record = await Invoice.findOne({ where: { id: id(req.params.id), ...(['admin','super_admin'].includes(req.user.role) ? {} : { employerId: req.user.id }) }, transaction, lock: transaction.LOCK.UPDATE });
+      if (!record) fail('Invoice record not found', 404);
+      if (!record.invoiceSnapshot) {
+        const employer = await User.findByPk(record.employerId, { attributes: ['id','email'], transaction });
+        await record.update({ invoiceSnapshot: { number: record.invoiceNumber, date: record.invoiceDate, dueDate: record.dueDate, seller: process.env.BILLING_SELLER_NAME || 'Insta-HR', buyer: employer?.email || record.employerId, description: `Deployment ${record.deploymentId} — ${record.billingPeriodMonth}`, currency: 'INR', subtotal: Number(record.subtotal), tax: Number(record.taxAmount), total: Number(record.totalAmount), terms: record.paymentTerms } }, { transaction });
+      }
+      return record;
+    });
+    renderInvoice(res, invoice.invoiceSnapshot, invoice.status);
+  } catch (error) { if (!res.headersSent) res.status(error.status || 500).json({ success: false, message: error.status ? error.message : 'Unable to download invoice' }); }
+};
+
 module.exports = {
+  downloadInvoice,
   createInvoice,
   getEmployerInvoices,
   updateInvoiceStatus,

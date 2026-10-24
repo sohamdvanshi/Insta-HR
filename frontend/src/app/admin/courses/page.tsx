@@ -274,7 +274,7 @@ export default function AdminCoursesPage() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <Link href="/admin" className="text-gray-400 hover:text-gray-600 text-sm">{tr("← Admin Panel")}</Link>
+              <Link href={isTrainer ? "/" : "/admin"} className="text-gray-400 hover:text-gray-600 text-sm">{tr(isTrainer ? "Back to home" : "← Admin Panel")}</Link>
             </div>
             <Link href={isTrainer ? '/trainer' : '/admin/training'} className="mr-5 text-blue-700 underline">{tr("Batches, classes & attendance")}</Link>
             <h1 className="text-3xl font-bold text-gray-900">{tr("Course Management")}</h1>

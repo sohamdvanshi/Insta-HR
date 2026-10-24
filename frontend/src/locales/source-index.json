@@ -1,4 +1,20 @@
 {
+  "0": {
+    "ns": "common",
+    "key": "0"
+  },
+  "5": {
+    "ns": "common",
+    "key": "5"
+  },
+  "30000": {
+    "ns": "common",
+    "key": "30000"
+  },
+  "80000": {
+    "ns": "common",
+    "key": "80000"
+  },
   "appName": {
     "ns": "common",
     "key": "appName"
@@ -2575,6 +2591,394 @@
     "ns": "common",
     "key": "Main navigation"
   },
+  "Available for new subscriptions": {
+    "ns": "common",
+    "key": " Available for new subscriptions"
+  },
+  "Payment History": {
+    "ns": "common",
+    "key": " Payment History"
+  },
+  "enrolled": {
+    "ns": "common",
+    "key": " enrolled"
+  },
+  "failed": {
+    "ns": "common",
+    "key": " failed"
+  },
+  "members": {
+    "ns": "common",
+    "key": " members"
+  },
+  "points": {
+    "ns": "common",
+    "key": " points"
+  },
+  "sent ·": {
+    "ns": "common",
+    "key": " sent · "
+  },
+  "video": {
+    "ns": "common",
+    "key": " video"
+  },
+  "· Absent:": {
+    "ns": "common",
+    "key": " · Absent: "
+  },
+  "· Excused:": {
+    "ns": "common",
+    "key": " · Excused: "
+  },
+  "— Expires": {
+    "ns": "common",
+    "key": " — Expires"
+  },
+  "Active Plan:": {
+    "ns": "common",
+    "key": "Active Plan: "
+  },
+  "Active admins": {
+    "ns": "common",
+    "key": "Active admins"
+  },
+  "Admin overview": {
+    "ns": "common",
+    "key": "Admin overview"
+  },
+  "Admins": {
+    "ns": "common",
+    "key": "Admins"
+  },
+  "Allow featured jobs": {
+    "ns": "common",
+    "key": "Allow featured jobs"
+  },
+  "An active subscription already exists. Renew the same plan or change plans after it expires.": {
+    "ns": "common",
+    "key": "An active subscription already exists. Renew the same plan or change plans after it expires."
+  },
+  "Attendance for": {
+    "ns": "common",
+    "key": "Attendance for "
+  },
+  "Audit recording failed; no changes were saved.": {
+    "ns": "common",
+    "key": "Audit recording failed; no changes were saved."
+  },
+  "Available points": {
+    "ns": "common",
+    "key": "Available points"
+  },
+  "Back to home": {
+    "ns": "common",
+    "key": "Back to home"
+  },
+  "Balance:": {
+    "ns": "common",
+    "key": "Balance: "
+  },
+  "Candidate account is unavailable": {
+    "ns": "common",
+    "key": "Candidate account is unavailable"
+  },
+  "Choose a redemption plan": {
+    "ns": "common",
+    "key": "Choose a redemption plan"
+  },
+  "Choose approve or return": {
+    "ns": "common",
+    "key": "Choose approve or return"
+  },
+  "Choose monthly or yearly billing": {
+    "ns": "common",
+    "key": "Choose monthly or yearly billing"
+  },
+  "Choose the plan that fits your hiring needs. Choose monthly or yearly access. Renewals extend your current plan.": {
+    "ns": "common",
+    "key": "Choose the plan that fits your hiring needs. Choose monthly or yearly access. Renewals extend your current plan."
+  },
+  "Configure monthly and yearly prices in rupees. Yearly access lasts 365 days. Featured jobs is an enforced benefit; other perk descriptions are informational. Zero loyalty points disables redemption. Deactivation stops purchases and redemptions, without cancelling existing access.": {
+    "ns": "common",
+    "key": "Configure monthly and yearly prices in rupees. Yearly access lasts 365 days. Featured jobs is an enforced benefit; other perk descriptions are informational. Zero loyalty points disables redemption. Deactivation stops purchases and redemptions, without cancelling existing access."
+  },
+  "Correct wage rates and attendance before approval": {
+    "ns": "common",
+    "key": "Correct wage rates and attendance before approval"
+  },
+  "Download invoice": {
+    "ns": "common",
+    "key": "Download invoice"
+  },
+  "Emails:": {
+    "ns": "common",
+    "key": "Emails: "
+  },
+  "Featured jobs must be a boolean": {
+    "ns": "common",
+    "key": "Featured jobs must be a boolean"
+  },
+  "Imported employee identities and attendance cannot be changed through wage entry": {
+    "ns": "common",
+    "key": "Imported employee identities and attendance cannot be changed through wage entry"
+  },
+  "Inactive admins": {
+    "ns": "common",
+    "key": "Inactive admins"
+  },
+  "Invalid employer ID": {
+    "ns": "common",
+    "key": "Invalid employer ID"
+  },
+  "Invalid loyalty redemption cost": {
+    "ns": "common",
+    "key": "Invalid loyalty redemption cost"
+  },
+  "Invalid month": {
+    "ns": "common",
+    "key": "Invalid month"
+  },
+  "Invalid register ID": {
+    "ns": "common",
+    "key": "Invalid register ID"
+  },
+  "Invalid register status": {
+    "ns": "common",
+    "key": "Invalid register status"
+  },
+  "Invalid yearly price in paise": {
+    "ns": "common",
+    "key": "Invalid yearly price in paise"
+  },
+  "Invoice record not found": {
+    "ns": "common",
+    "key": "Invoice record not found"
+  },
+  "Location:": {
+    "ns": "common",
+    "key": "Location: "
+  },
+  "Loyalty points per monthly subscription (0 disables)": {
+    "ns": "common",
+    "key": "Loyalty points per monthly subscription (0 disables)"
+  },
+  "Members of": {
+    "ns": "common",
+    "key": "Members of "
+  },
+  "Month and site must match the open register": {
+    "ns": "common",
+    "key": "Month and site must match the open register"
+  },
+  "No admins found.": {
+    "ns": "common",
+    "key": "No admins found."
+  },
+  "No rewards are available right now.": {
+    "ns": "common",
+    "key": "No rewards are available right now."
+  },
+  "Not enough loyalty points": {
+    "ns": "common",
+    "key": "Not enough loyalty points"
+  },
+  "Notes for": {
+    "ns": "common",
+    "key": "Notes for "
+  },
+  "Only drafts can be submitted": {
+    "ns": "common",
+    "key": "Only drafts can be submitted"
+  },
+  "Only submitted registers can be reviewed": {
+    "ns": "common",
+    "key": "Only submitted registers can be reviewed"
+  },
+  "Only superadmins can review registers": {
+    "ns": "common",
+    "key": "Only superadmins can review registers"
+  },
+  "Physical sessions include a venue. Online sessions use a Meet, Zoom, or other meeting link. Invitations go to enrolled candidates; times below use": {
+    "ns": "common",
+    "key": "Physical sessions include a venue. Online sessions use a Meet, Zoom, or other meeting link. Invitations go to enrolled candidates; times below use "
+  },
+  "Present:": {
+    "ns": "common",
+    "key": "Present: "
+  },
+  "Prices and durations apply to new orders. Featured-job permission changes apply immediately to subscribers. Existing orders keep their purchase price and duration.": {
+    "ns": "common",
+    "key": "Prices and durations apply to new orders. Featured-job permission changes apply immediately to subscribers. Existing orders keep their purchase price and duration."
+  },
+  "Provide a review note (5–2000 characters when returning)": {
+    "ns": "common",
+    "key": "Provide a review note (5–2000 characters when returning)"
+  },
+  "React, Node.js, PostgreSQL": {
+    "ns": "common",
+    "key": "React, Node.js, PostgreSQL"
+  },
+  "Redeem": {
+    "ns": "common",
+    "key": "Redeem"
+  },
+  "Redeem loyalty points": {
+    "ns": "common",
+    "key": "Redeem loyalty points"
+  },
+  "Redemption is unavailable for this plan": {
+    "ns": "common",
+    "key": "Redemption is unavailable for this plan"
+  },
+  "Register not found": {
+    "ns": "common",
+    "key": "Register not found"
+  },
+  "Register submitted for superadmin review.": {
+    "ns": "common",
+    "key": "Register submitted for superadmin review."
+  },
+  "Reload before replacing attendance": {
+    "ns": "common",
+    "key": "Reload before replacing attendance"
+  },
+  "Reload this register before submitting": {
+    "ns": "common",
+    "key": "Reload this register before submitting"
+  },
+  "Renew plan": {
+    "ns": "common",
+    "key": "Renew plan"
+  },
+  "Return for corrections": {
+    "ns": "common",
+    "key": "Return for corrections"
+  },
+  "Review notes": {
+    "ns": "common",
+    "key": "Review notes"
+  },
+  "Review saved.": {
+    "ns": "common",
+    "key": "Review saved."
+  },
+  "Review status": {
+    "ns": "common",
+    "key": "Review status"
+  },
+  "Review submitted wage registers, approve them or return them for corrections.": {
+    "ns": "common",
+    "key": "Review submitted wage registers, approve them or return them for corrections."
+  },
+  "Select an attendance .xlsx file": {
+    "ns": "common",
+    "key": "Select an attendance .xlsx file"
+  },
+  "Selected thumbnail:": {
+    "ns": "common",
+    "key": "Selected thumbnail: "
+  },
+  "Selected video:": {
+    "ns": "common",
+    "key": "Selected video: "
+  },
+  "Site / establishment is required (maximum 100 characters)": {
+    "ns": "common",
+    "key": "Site / establishment is required (maximum 100 characters)"
+  },
+  "Submission requires positive wage rates, nonnegative net wages and no blank daily attendance codes": {
+    "ns": "common",
+    "key": "Submission requires positive wage rates, nonnegative net wages and no blank daily attendance codes"
+  },
+  "Submit for review": {
+    "ns": "common",
+    "key": "Submit for review"
+  },
+  "Submitted and approved registers are locked": {
+    "ns": "common",
+    "key": "Submitted and approved registers are locked"
+  },
+  "Subscription activated until {{value0}}": {
+    "ns": "common",
+    "key": "Subscription activated until {{value0}}"
+  },
+  "The invoice is not overdue yet": {
+    "ns": "common",
+    "key": "The invoice is not overdue yet"
+  },
+  "This billing option is unavailable": {
+    "ns": "common",
+    "key": "This billing option is unavailable"
+  },
+  "This invoice status change is not allowed": {
+    "ns": "common",
+    "key": "This invoice status change is not allowed"
+  },
+  "This register changed in another tab. Reload before editing.": {
+    "ns": "common",
+    "key": "This register changed in another tab. Reload before editing."
+  },
+  "This register changed. Reload before reviewing.": {
+    "ns": "common",
+    "key": "This register changed. Reload before reviewing."
+  },
+  "This request was already used for another plan": {
+    "ns": "common",
+    "key": "This request was already used for another plan"
+  },
+  "Yearly": {
+    "ns": "common",
+    "key": "Yearly"
+  },
+  "Yearly price (₹)": {
+    "ns": "common",
+    "key": "Yearly price (₹)"
+  },
+  "admin.user_access": {
+    "ns": "common",
+    "key": "admin.user_access"
+  },
+  "e.g. 10 min, 2 hours, 8 weeks": {
+    "ns": "common",
+    "key": "e.g. 10 min, 2 hours, 8 weeks"
+  },
+  "e.g. Full Stack Web Development": {
+    "ns": "common",
+    "key": "e.g. Full Stack Web Development"
+  },
+  "e.g. Mumbai, Remote": {
+    "ns": "common",
+    "key": "e.g. Mumbai, Remote"
+  },
+  "e.g. React, Node.js, PostgreSQL": {
+    "ns": "common",
+    "key": "e.g. React, Node.js, PostgreSQL"
+  },
+  "e.g. Senior React Developer": {
+    "ns": "common",
+    "key": "e.g. Senior React Developer"
+  },
+  "submitted": {
+    "ns": "common",
+    "key": "submitted"
+  },
+  "{{value0}} points for {{value1}} days": {
+    "ns": "common",
+    "key": "{{value0}} points for {{value1}} days"
+  },
+  "🎉 Payment successful! Your": {
+    "ns": "common",
+    "key": "🎉 Payment successful! Your "
+  },
+  "Choose a plan that includes featured jobs to place this job above regular listings.": {
+    "ns": "common",
+    "key": "Choose a plan that includes featured jobs to place this job above regular listings."
+  },
+  "While your plan is active, you can renew it. You can switch plans after it expires.": {
+    "ns": "common",
+    "key": "While your plan is active, you can renew it. You can switch plans after it expires."
+  },
   "online": {
     "ns": "jobs",
     "key": "online"
@@ -4771,10 +5175,6 @@
     "ns": "dashboard",
     "key": "Unknown job"
   },
-  "points": {
-    "ns": "dashboard",
-    "key": "points"
-  },
   "Please login as an employer to view referral tracking.": {
     "ns": "dashboard",
     "key": "Please login as an employer to view referral tracking."
@@ -5026,10 +5426,6 @@
   "Loyalty transactions": {
     "ns": "dashboard",
     "key": "Loyalty transactions"
-  },
-  "Balance:": {
-    "ns": "dashboard",
-    "key": "Balance:"
   },
   "No loyalty transactions yet.": {
     "ns": "dashboard",
@@ -6467,10 +6863,6 @@
     "ns": "payroll",
     "key": "Unable to download attendance template"
   },
-  "failed": {
-    "ns": "training",
-    "key": "failed"
-  },
   "physical": {
     "ns": "training",
     "key": "physical"
@@ -6502,10 +6894,6 @@
   "inactive": {
     "ns": "training",
     "key": "inactive"
-  },
-  "Members of": {
-    "ns": "training",
-    "key": "Members of"
   },
   "Each candidate can belong to one batch per course. Selecting a candidate moves them from their previous batch.": {
     "ns": "training",
@@ -6594,10 +6982,6 @@
   "Attempted": {
     "ns": "training",
     "key": "Attempted"
-  },
-  "Attendance for": {
-    "ns": "training",
-    "key": "Attendance for"
   },
   "Attendance roster loaded.": {
     "ns": "training",
@@ -6859,10 +7243,6 @@
     "ns": "training",
     "key": "Edit schedule"
   },
-  "Emails:": {
-    "ns": "training",
-    "key": "Emails:"
-  },
   "End class": {
     "ns": "training",
     "key": "End class"
@@ -6987,10 +7367,6 @@
     "ns": "training",
     "key": "Learner Name"
   },
-  "Location:": {
-    "ns": "training",
-    "key": "Location:"
-  },
   "Manage courses": {
     "ns": "training",
     "key": "Manage courses"
@@ -7083,10 +7459,6 @@
     "ns": "training",
     "key": "Not marked"
   },
-  "Notes for": {
-    "ns": "training",
-    "key": "Notes for"
-  },
   "Notification retry finished.": {
     "ns": "training",
     "key": "Notification retry finished."
@@ -7135,10 +7507,6 @@
     "ns": "training",
     "key": "Physical class"
   },
-  "Physical sessions include a venue. Online sessions use a Meet, Zoom, or other meeting link. Invitations go to enrolled candidates; times below use": {
-    "ns": "training",
-    "key": "Physical sessions include a venue. Online sessions use a Meet, Zoom, or other meeting link. Invitations go to enrolled candidates; times below use"
-  },
   "Please answer all questions before submitting": {
     "ns": "training",
     "key": "Please answer all questions before submitting"
@@ -7146,10 +7514,6 @@
   "Present": {
     "ns": "training",
     "key": "Present"
-  },
-  "Present:": {
-    "ns": "training",
-    "key": "Present:"
   },
   "Progress": {
     "ns": "training",
@@ -7391,25 +7755,9 @@
     "ns": "training",
     "key": "for successfully completing the course"
   },
-  "members": {
-    "ns": "training",
-    "key": "members"
-  },
   "s watched": {
     "ns": "training",
     "key": "s watched"
-  },
-  "sent ·": {
-    "ns": "training",
-    "key": "sent ·"
-  },
-  "· Absent:": {
-    "ns": "training",
-    "key": "· Absent:"
-  },
-  "· Excused:": {
-    "ns": "training",
-    "key": "· Excused:"
   },
   "← Back to Course": {
     "ns": "training",
@@ -8095,10 +8443,6 @@
     "ns": "subscription",
     "key": "Only employers can subscribe to plans. Please login as an employer."
   },
-  "🎉 Payment successful! Your": {
-    "ns": "subscription",
-    "key": "🎉 Payment successful! Your"
-  },
   "plan is now active.": {
     "ns": "subscription",
     "key": "plan is now active."
@@ -8114,14 +8458,6 @@
   "Choose the plan that fits your hiring needs. Upgrade or cancel anytime.": {
     "ns": "subscription",
     "key": "Choose the plan that fits your hiring needs. Upgrade or cancel anytime."
-  },
-  "Active Plan:": {
-    "ns": "subscription",
-    "key": "Active Plan:"
-  },
-  "— Expires": {
-    "ns": "subscription",
-    "key": "— Expires"
   },
   "Loading current plans…": {
     "ns": "subscription",
@@ -8170,10 +8506,6 @@
   "View": {
     "ns": "subscription",
     "key": "View"
-  },
-  "Payment History": {
-    "ns": "subscription",
-    "key": "Payment History"
   },
   "No payments yet": {
     "ns": "subscription",
@@ -8386,10 +8718,6 @@
   "Audit logs": {
     "ns": "admin",
     "key": "Audit logs"
-  },
-  "Available for new subscriptions": {
-    "ns": "admin",
-    "key": "Available for new subscriptions"
   },
   "BI Analytics Dashboard": {
     "ns": "admin",
@@ -9099,14 +9427,6 @@
     "ns": "admin",
     "key": "Select a ticket to read messages and coordinate with staff."
   },
-  "Selected thumbnail:": {
-    "ns": "admin",
-    "key": "Selected thumbnail:"
-  },
-  "Selected video:": {
-    "ns": "admin",
-    "key": "Selected video:"
-  },
   "Settings saved and recorded in the audit log.": {
     "ns": "admin",
     "key": "Settings saved and recorded in the audit log."
@@ -9319,10 +9639,6 @@
     "ns": "admin",
     "key": "Yes"
   },
-  "enrolled": {
-    "ns": "admin",
-    "key": "enrolled"
-  },
   "of": {
     "ns": "admin",
     "key": "of"
@@ -9334,10 +9650,6 @@
   "revenue": {
     "ns": "admin",
     "key": "revenue"
-  },
-  "video": {
-    "ns": "admin",
-    "key": "video"
   },
   "· Created by": {
     "ns": "admin",
@@ -11544,8 +11856,8 @@
     "key": "success"
   },
   "FAILED": {
-    "ns": "training",
-    "key": "failed"
+    "ns": "common",
+    "key": " failed"
   },
   "PAID": {
     "ns": "common",
@@ -13518,6 +13830,374 @@
   "main navigation": {
     "ns": "common",
     "key": "Main navigation"
+  },
+  "available for new subscriptions": {
+    "ns": "common",
+    "key": " Available for new subscriptions"
+  },
+  "payment history": {
+    "ns": "common",
+    "key": " Payment History"
+  },
+  "ENROLLED": {
+    "ns": "common",
+    "key": " enrolled"
+  },
+  "MEMBERS": {
+    "ns": "common",
+    "key": " members"
+  },
+  "POINTS": {
+    "ns": "common",
+    "key": " points"
+  },
+  "VIDEO": {
+    "ns": "common",
+    "key": " video"
+  },
+  "· absent:": {
+    "ns": "common",
+    "key": " · Absent: "
+  },
+  "· excused:": {
+    "ns": "common",
+    "key": " · Excused: "
+  },
+  "— expires": {
+    "ns": "common",
+    "key": " — Expires"
+  },
+  "active plan:": {
+    "ns": "common",
+    "key": "Active Plan: "
+  },
+  "active admins": {
+    "ns": "common",
+    "key": "Active admins"
+  },
+  "admin overview": {
+    "ns": "common",
+    "key": "Admin overview"
+  },
+  "admins": {
+    "ns": "common",
+    "key": "Admins"
+  },
+  "allow featured jobs": {
+    "ns": "common",
+    "key": "Allow featured jobs"
+  },
+  "an active subscription already exists. renew the same plan or change plans after it expires.": {
+    "ns": "common",
+    "key": "An active subscription already exists. Renew the same plan or change plans after it expires."
+  },
+  "attendance for": {
+    "ns": "common",
+    "key": "Attendance for "
+  },
+  "audit recording failed; no changes were saved.": {
+    "ns": "common",
+    "key": "Audit recording failed; no changes were saved."
+  },
+  "available points": {
+    "ns": "common",
+    "key": "Available points"
+  },
+  "back to home": {
+    "ns": "common",
+    "key": "Back to home"
+  },
+  "balance:": {
+    "ns": "common",
+    "key": "Balance: "
+  },
+  "candidate account is unavailable": {
+    "ns": "common",
+    "key": "Candidate account is unavailable"
+  },
+  "choose a redemption plan": {
+    "ns": "common",
+    "key": "Choose a redemption plan"
+  },
+  "choose approve or return": {
+    "ns": "common",
+    "key": "Choose approve or return"
+  },
+  "choose monthly or yearly billing": {
+    "ns": "common",
+    "key": "Choose monthly or yearly billing"
+  },
+  "choose the plan that fits your hiring needs. choose monthly or yearly access. renewals extend your current plan.": {
+    "ns": "common",
+    "key": "Choose the plan that fits your hiring needs. Choose monthly or yearly access. Renewals extend your current plan."
+  },
+  "configure monthly and yearly prices in rupees. yearly access lasts 365 days. featured jobs is an enforced benefit; other perk descriptions are informational. zero loyalty points disables redemption. deactivation stops purchases and redemptions, without cancelling existing access.": {
+    "ns": "common",
+    "key": "Configure monthly and yearly prices in rupees. Yearly access lasts 365 days. Featured jobs is an enforced benefit; other perk descriptions are informational. Zero loyalty points disables redemption. Deactivation stops purchases and redemptions, without cancelling existing access."
+  },
+  "correct wage rates and attendance before approval": {
+    "ns": "common",
+    "key": "Correct wage rates and attendance before approval"
+  },
+  "download invoice": {
+    "ns": "common",
+    "key": "Download invoice"
+  },
+  "emails:": {
+    "ns": "common",
+    "key": "Emails: "
+  },
+  "featured jobs must be a boolean": {
+    "ns": "common",
+    "key": "Featured jobs must be a boolean"
+  },
+  "imported employee identities and attendance cannot be changed through wage entry": {
+    "ns": "common",
+    "key": "Imported employee identities and attendance cannot be changed through wage entry"
+  },
+  "inactive admins": {
+    "ns": "common",
+    "key": "Inactive admins"
+  },
+  "invalid employer id": {
+    "ns": "common",
+    "key": "Invalid employer ID"
+  },
+  "invalid loyalty redemption cost": {
+    "ns": "common",
+    "key": "Invalid loyalty redemption cost"
+  },
+  "invalid month": {
+    "ns": "common",
+    "key": "Invalid month"
+  },
+  "invalid register id": {
+    "ns": "common",
+    "key": "Invalid register ID"
+  },
+  "invalid register status": {
+    "ns": "common",
+    "key": "Invalid register status"
+  },
+  "invalid yearly price in paise": {
+    "ns": "common",
+    "key": "Invalid yearly price in paise"
+  },
+  "invoice record not found": {
+    "ns": "common",
+    "key": "Invoice record not found"
+  },
+  "location:": {
+    "ns": "common",
+    "key": "Location: "
+  },
+  "loyalty points per monthly subscription (0 disables)": {
+    "ns": "common",
+    "key": "Loyalty points per monthly subscription (0 disables)"
+  },
+  "members of": {
+    "ns": "common",
+    "key": "Members of "
+  },
+  "month and site must match the open register": {
+    "ns": "common",
+    "key": "Month and site must match the open register"
+  },
+  "no admins found.": {
+    "ns": "common",
+    "key": "No admins found."
+  },
+  "no rewards are available right now.": {
+    "ns": "common",
+    "key": "No rewards are available right now."
+  },
+  "not enough loyalty points": {
+    "ns": "common",
+    "key": "Not enough loyalty points"
+  },
+  "notes for": {
+    "ns": "common",
+    "key": "Notes for "
+  },
+  "only drafts can be submitted": {
+    "ns": "common",
+    "key": "Only drafts can be submitted"
+  },
+  "only submitted registers can be reviewed": {
+    "ns": "common",
+    "key": "Only submitted registers can be reviewed"
+  },
+  "only superadmins can review registers": {
+    "ns": "common",
+    "key": "Only superadmins can review registers"
+  },
+  "physical sessions include a venue. online sessions use a meet, zoom, or other meeting link. invitations go to enrolled candidates; times below use": {
+    "ns": "common",
+    "key": "Physical sessions include a venue. Online sessions use a Meet, Zoom, or other meeting link. Invitations go to enrolled candidates; times below use "
+  },
+  "present:": {
+    "ns": "common",
+    "key": "Present: "
+  },
+  "prices and durations apply to new orders. featured-job permission changes apply immediately to subscribers. existing orders keep their purchase price and duration.": {
+    "ns": "common",
+    "key": "Prices and durations apply to new orders. Featured-job permission changes apply immediately to subscribers. Existing orders keep their purchase price and duration."
+  },
+  "provide a review note (5–2000 characters when returning)": {
+    "ns": "common",
+    "key": "Provide a review note (5–2000 characters when returning)"
+  },
+  "react, node.js, postgresql": {
+    "ns": "common",
+    "key": "React, Node.js, PostgreSQL"
+  },
+  "redeem": {
+    "ns": "common",
+    "key": "Redeem"
+  },
+  "redeem loyalty points": {
+    "ns": "common",
+    "key": "Redeem loyalty points"
+  },
+  "redemption is unavailable for this plan": {
+    "ns": "common",
+    "key": "Redemption is unavailable for this plan"
+  },
+  "register not found": {
+    "ns": "common",
+    "key": "Register not found"
+  },
+  "register submitted for superadmin review.": {
+    "ns": "common",
+    "key": "Register submitted for superadmin review."
+  },
+  "reload before replacing attendance": {
+    "ns": "common",
+    "key": "Reload before replacing attendance"
+  },
+  "reload this register before submitting": {
+    "ns": "common",
+    "key": "Reload this register before submitting"
+  },
+  "renew plan": {
+    "ns": "common",
+    "key": "Renew plan"
+  },
+  "return for corrections": {
+    "ns": "common",
+    "key": "Return for corrections"
+  },
+  "review notes": {
+    "ns": "common",
+    "key": "Review notes"
+  },
+  "review saved.": {
+    "ns": "common",
+    "key": "Review saved."
+  },
+  "review status": {
+    "ns": "common",
+    "key": "Review status"
+  },
+  "review submitted wage registers, approve them or return them for corrections.": {
+    "ns": "common",
+    "key": "Review submitted wage registers, approve them or return them for corrections."
+  },
+  "select an attendance .xlsx file": {
+    "ns": "common",
+    "key": "Select an attendance .xlsx file"
+  },
+  "selected thumbnail:": {
+    "ns": "common",
+    "key": "Selected thumbnail: "
+  },
+  "selected video:": {
+    "ns": "common",
+    "key": "Selected video: "
+  },
+  "site / establishment is required (maximum 100 characters)": {
+    "ns": "common",
+    "key": "Site / establishment is required (maximum 100 characters)"
+  },
+  "submission requires positive wage rates, nonnegative net wages and no blank daily attendance codes": {
+    "ns": "common",
+    "key": "Submission requires positive wage rates, nonnegative net wages and no blank daily attendance codes"
+  },
+  "submit for review": {
+    "ns": "common",
+    "key": "Submit for review"
+  },
+  "submitted and approved registers are locked": {
+    "ns": "common",
+    "key": "Submitted and approved registers are locked"
+  },
+  "subscription activated until {{value0}}": {
+    "ns": "common",
+    "key": "Subscription activated until {{value0}}"
+  },
+  "the invoice is not overdue yet": {
+    "ns": "common",
+    "key": "The invoice is not overdue yet"
+  },
+  "this billing option is unavailable": {
+    "ns": "common",
+    "key": "This billing option is unavailable"
+  },
+  "this invoice status change is not allowed": {
+    "ns": "common",
+    "key": "This invoice status change is not allowed"
+  },
+  "this register changed in another tab. reload before editing.": {
+    "ns": "common",
+    "key": "This register changed in another tab. Reload before editing."
+  },
+  "this register changed. reload before reviewing.": {
+    "ns": "common",
+    "key": "This register changed. Reload before reviewing."
+  },
+  "this request was already used for another plan": {
+    "ns": "common",
+    "key": "This request was already used for another plan"
+  },
+  "yearly": {
+    "ns": "common",
+    "key": "Yearly"
+  },
+  "yearly price (₹)": {
+    "ns": "common",
+    "key": "Yearly price (₹)"
+  },
+  "e.g. full stack web development": {
+    "ns": "common",
+    "key": "e.g. Full Stack Web Development"
+  },
+  "e.g. mumbai, remote": {
+    "ns": "common",
+    "key": "e.g. Mumbai, Remote"
+  },
+  "e.g. react, node.js, postgresql": {
+    "ns": "common",
+    "key": "e.g. React, Node.js, PostgreSQL"
+  },
+  "e.g. senior react developer": {
+    "ns": "common",
+    "key": "e.g. Senior React Developer"
+  },
+  "SUBMITTED": {
+    "ns": "common",
+    "key": "submitted"
+  },
+  "🎉 payment successful! your": {
+    "ns": "common",
+    "key": "🎉 Payment successful! Your "
+  },
+  "choose a plan that includes featured jobs to place this job above regular listings.": {
+    "ns": "common",
+    "key": "Choose a plan that includes featured jobs to place this job above regular listings."
+  },
+  "while your plan is active, you can renew it. you can switch plans after it expires.": {
+    "ns": "common",
+    "key": "While your plan is active, you can renew it. You can switch plans after it expires."
   },
   "🤖 ai resume matching": {
     "ns": "jobs",
@@ -15559,10 +16239,6 @@
     "ns": "dashboard",
     "key": "Unknown job"
   },
-  "POINTS": {
-    "ns": "dashboard",
-    "key": "points"
-  },
   "please login as an employer to view referral tracking.": {
     "ns": "dashboard",
     "key": "Please login as an employer to view referral tracking."
@@ -15790,10 +16466,6 @@
   "candidate:": {
     "ns": "dashboard",
     "key": "Candidate:"
-  },
-  "balance:": {
-    "ns": "dashboard",
-    "key": "Balance:"
   },
   "no loyalty transactions yet.": {
     "ns": "dashboard",
@@ -17115,10 +17787,6 @@
     "ns": "training",
     "key": "inactive"
   },
-  "members of": {
-    "ns": "training",
-    "key": "Members of"
-  },
   "each candidate can belong to one batch per course. selecting a candidate moves them from their previous batch.": {
     "ns": "training",
     "key": "Each candidate can belong to one batch per course. Selecting a candidate moves them from their previous batch."
@@ -17186,10 +17854,6 @@
   "attempted": {
     "ns": "training",
     "key": "Attempted"
-  },
-  "attendance for": {
-    "ns": "training",
-    "key": "Attendance for"
   },
   "attendance roster loaded.": {
     "ns": "training",
@@ -17439,10 +18103,6 @@
     "ns": "training",
     "key": "Edit schedule"
   },
-  "emails:": {
-    "ns": "training",
-    "key": "Emails:"
-  },
   "end class": {
     "ns": "training",
     "key": "End class"
@@ -17551,10 +18211,6 @@
     "ns": "training",
     "key": "Learner Name"
   },
-  "location:": {
-    "ns": "training",
-    "key": "Location:"
-  },
   "manage courses": {
     "ns": "training",
     "key": "Manage courses"
@@ -17639,10 +18295,6 @@
     "ns": "training",
     "key": "Not marked"
   },
-  "notes for": {
-    "ns": "training",
-    "key": "Notes for"
-  },
   "notification retry finished.": {
     "ns": "training",
     "key": "Notification retry finished."
@@ -17691,17 +18343,9 @@
     "ns": "training",
     "key": "Physical class"
   },
-  "physical sessions include a venue. online sessions use a meet, zoom, or other meeting link. invitations go to enrolled candidates; times below use": {
-    "ns": "training",
-    "key": "Physical sessions include a venue. Online sessions use a Meet, Zoom, or other meeting link. Invitations go to enrolled candidates; times below use"
-  },
   "please answer all questions before submitting": {
     "ns": "training",
     "key": "Please answer all questions before submitting"
-  },
-  "present:": {
-    "ns": "training",
-    "key": "Present:"
   },
   "progress is available only for enrolled users.": {
     "ns": "training",
@@ -17922,18 +18566,6 @@
   "your browser does not support video playback.": {
     "ns": "training",
     "key": "Your browser does not support video playback."
-  },
-  "MEMBERS": {
-    "ns": "training",
-    "key": "members"
-  },
-  "· absent:": {
-    "ns": "training",
-    "key": "· Absent:"
-  },
-  "· excused:": {
-    "ns": "training",
-    "key": "· Excused:"
   },
   "← back to course": {
     "ns": "training",
@@ -18551,10 +19183,6 @@
     "ns": "subscription",
     "key": "Only employers can subscribe to plans. Please login as an employer."
   },
-  "🎉 payment successful! your": {
-    "ns": "subscription",
-    "key": "🎉 Payment successful! Your"
-  },
   "payment verification failed. please contact support.": {
     "ns": "subscription",
     "key": "Payment verification failed. Please contact support."
@@ -18566,14 +19194,6 @@
   "choose the plan that fits your hiring needs. upgrade or cancel anytime.": {
     "ns": "subscription",
     "key": "Choose the plan that fits your hiring needs. Upgrade or cancel anytime."
-  },
-  "active plan:": {
-    "ns": "subscription",
-    "key": "Active Plan:"
-  },
-  "— expires": {
-    "ns": "subscription",
-    "key": "— Expires"
   },
   "loading current plans…": {
     "ns": "subscription",
@@ -18606,10 +19226,6 @@
   "view": {
     "ns": "subscription",
     "key": "View"
-  },
-  "payment history": {
-    "ns": "subscription",
-    "key": "Payment History"
   },
   "no payments yet": {
     "ns": "subscription",
@@ -18806,10 +19422,6 @@
   "audit logs & fraud detection": {
     "ns": "admin",
     "key": "Audit Logs & Fraud Detection"
-  },
-  "available for new subscriptions": {
-    "ns": "admin",
-    "key": "Available for new subscriptions"
   },
   "bi analytics dashboard": {
     "ns": "admin",
@@ -19439,14 +20051,6 @@
     "ns": "admin",
     "key": "Select a ticket to read messages and coordinate with staff."
   },
-  "selected thumbnail:": {
-    "ns": "admin",
-    "key": "Selected thumbnail:"
-  },
-  "selected video:": {
-    "ns": "admin",
-    "key": "Selected video:"
-  },
   "settings saved and recorded in the audit log.": {
     "ns": "admin",
     "key": "Settings saved and recorded in the audit log."
@@ -19623,10 +20227,6 @@
     "ns": "admin",
     "key": "Yes"
   },
-  "ENROLLED": {
-    "ns": "admin",
-    "key": "enrolled"
-  },
   "OF": {
     "ns": "admin",
     "key": "of"
@@ -19638,10 +20238,6 @@
   "REVENUE": {
     "ns": "admin",
     "key": "revenue"
-  },
-  "VIDEO": {
-    "ns": "admin",
-    "key": "video"
   },
   "· created by": {
     "ns": "admin",

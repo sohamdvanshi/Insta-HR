@@ -2,7 +2,7 @@ const test = require('node:test'), assert = require('node:assert/strict')
 const fs = require('node:fs'), path = require('node:path'), Module = require('node:module')
 const ts = require('typescript'), React = require('react'), { renderToStaticMarkup } = require('react-dom/server')
 const src = path.resolve(__dirname, '../src'), namespaces = ['common', 'jobs', 'auth', 'dashboard', 'payroll', 'training', 'resume', 'subscription', 'admin', 'errors']
-const catalogs = Object.fromEntries(['en', 'hi', 'mr'].map(lang => [lang, Object.fromEntries(namespaces.map(ns => [ns, JSON.parse(fs.readFileSync(path.join(src, 'locales', lang, ns + '.json')))]))]))
+const catalogs = Object.fromEntries(['en', 'hi', 'mr', 'kn', 'ta'].map(lang => [lang, Object.fromEntries(namespaces.map(ns => [ns, JSON.parse(fs.readFileSync(path.join(src, 'locales', lang, ns + '.json')))]))]))
 const cache = new Map()
 function load(file) {
   if (!path.extname(file)) file = ['.ts', '.tsx', '.json'].map(ext => file + ext).find(fs.existsSync)
@@ -21,8 +21,8 @@ const unchanged = new Set(['InstaHire', 'Insta-HR', 'Google', 'LinkedIn', 'GitHu
 const looksTechnical = value => /^[A-Z]{1,5}$|^e\.g\.|^(?:https?:|[A-Za-z0-9._-]+@)/.test(value)
 function files(dir) { return fs.readdirSync(dir).flatMap(name => { const p = path.join(dir, name); return fs.statSync(p).isDirectory() ? files(p) : p.endsWith('.tsx') ? [p] : [] }) }
 
-test('ten namespaces have identical nonempty EN/HI/MR keys and interpolation variables', () => {
-  for (const ns of namespaces) for (const lang of ['hi', 'mr']) {
+test('ten namespaces have identical nonempty EN/HI/MR/KN/TA keys and interpolation variables', () => {
+  for (const ns of namespaces) for (const lang of ['hi', 'mr', 'kn', 'ta']) {
     assert.deepEqual(Object.keys(catalogs[lang][ns]).sort(), Object.keys(catalogs.en[ns]).sort(), `${lang}/${ns}`)
     for (const [key, en] of Object.entries(catalogs.en[ns])) {
       const value = catalogs[lang][ns][key]
@@ -35,7 +35,7 @@ test('ten namespaces have identical nonempty EN/HI/MR keys and interpolation var
 })
 
 test('catalog index resolves known messages, plural forms and safe interpolation in all languages', async () => {
-  for (const lang of ['en', 'hi', 'mr']) {
+  for (const lang of ['en', 'hi', 'mr', 'kn', 'ta']) {
     await i18n.changeLanguage(lang)
     assert.ok(tr('Create trainer account'))
     assert.ok(!tr('Provide a reason between 5 and 500 characters').includes('Provide') || lang === 'en')
@@ -64,7 +64,7 @@ test('dynamic validation, payment and notification messages retain values and tr
   assert.ok(tr('Class saved. Emails sent: 4. Failed: 2. Use Retry pending emails in Sessions.').includes('4'))
   assert.equal(tr('Question 3 is requiredX'), 'Question 3 is requiredX')
   assert.equal(tr(' Copy link '), ' दुवा कॉपी करा ')
-  assert.equal(validLanguage('kn'), false); assert.equal(validLanguage(null), false); assert.equal(validLanguage('hi'), true)
+  assert.equal(validLanguage('de'), false); assert.equal(validLanguage(null), false); assert.equal(validLanguage('hi'), true)
 })
 
 test('HTML browser validation maps required, email, pattern, length, range and step errors', () => {
@@ -78,7 +78,7 @@ test('HTML browser validation maps required, email, pattern, length, range and s
 test('every legacy navbar key resolves for each language', () => {
   const sf = ts.createSourceFile('Navbar.tsx', fs.readFileSync(path.join(src, 'components/Navbar.tsx'), 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
   const keys = []; const walk = n => { if (ts.isCallExpression(n) && n.expression.getText(sf) === 't' && ts.isStringLiteral(n.arguments[0])) keys.push(n.arguments[0].text); ts.forEachChild(n, walk) }; walk(sf)
-  for (const key of keys) for (const lang of ['en', 'hi', 'mr']) assert.ok(catalogs[lang].common[key], `${lang}/${key}`)
+  for (const key of keys) for (const lang of ['en', 'hi', 'mr', 'kn', 'ta']) assert.ok(catalogs[lang].common[key], `${lang}/${key}`)
 })
 
 test('source copy uses translations, translated options keep explicit raw values, and CSS stays outside translation', () => {
@@ -128,5 +128,18 @@ test('wage workspace renders localized import controls and preserves the read-on
     assert.ok(readonly.includes(tr('Saved registers')))
     assert.ok(!tr('Updated 3 selected employees. Save to persist changes.').includes('Updated'))
     assert.ok(tr('Select {{value0}}', { value0: 'Open' }).includes('Open'))
+  }
+})
+
+
+test('Kannada and Tamil render native navigation and preserve interpolation and authored data', async()=>{
+  const Switcher=load(path.join(src,'components/LanguageSwitcher.tsx')).default
+  for (const [lang,script] of [['kn',/[\u0C80-\u0CFF]/],['ta',/[\u0B80-\u0BFF]/]]) {
+    await i18n.changeLanguage(lang)
+    assert.equal(validLanguage(lang),true);assert.equal(locale(),lang+'-IN')
+    const html=renderToStaticMarkup(React.createElement(Switcher));assert.ok(html.includes(`value="${lang}" selected`))
+    for(const label of ['Login','Download attendance template','Redeem loyalty points','Yearly','Review notes']) assert.ok(script.test(tr(label)),lang+': '+label)
+    assert.ok(tr('Subscription activated until {{value0}}',{value0:'2099-12-31'}).includes('2099-12-31'))
+    assert.equal(tr('Soham Test Candidate 991'), 'Soham Test Candidate 991')
   }
 })

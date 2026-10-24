@@ -55,6 +55,7 @@ export default function EditJobPage() {
     isFeatured: false
   })
 
+  const [canFeatureJobs, setCanFeatureJobs] = useState(false)
   useEffect(() => {
     const user = readStoredUser()
 
@@ -76,6 +77,7 @@ export default function EditJobPage() {
           headers: { Authorization: 'Bearer ' + token }
         })
         const data = await res.json()
+        setCanFeatureJobs(Boolean(res.ok && data.data?.entitlements?.featuredJobs))
 
         if (data.success && data.data?.isActive) {
           setUserPlan(data.data.plan)
@@ -147,7 +149,7 @@ export default function EditJobPage() {
     fetchJob()
   }, [jobId, router])
 
-  const canFeatureJobs = ['premium', 'enterprise'].includes(String(userPlan).toLowerCase())
+
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -441,7 +443,7 @@ export default function EditJobPage() {
             ) : (
               <div className='rounded-xl border border-gray-200 bg-gray-50 p-4'>
                 <p className='font-semibold text-gray-900'>{tr("Feature this job")}</p>
-                <p className='text-sm text-gray-600 mt-1'>{tr("Upgrade to Premium or Enterprise to place this job above regular listings.")}</p>
+                <p className='text-sm text-gray-600 mt-1'>{tr("Choose a plan that includes featured jobs to place this job above regular listings.")}</p>
               </div>
             )}
           </div>

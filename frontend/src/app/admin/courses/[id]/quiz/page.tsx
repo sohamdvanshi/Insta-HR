@@ -517,7 +517,7 @@ export default function AdminCourseQuizPage() {
             >{tr("Delete Quiz")}</button>
 
             <button
-              onClick={() => router.push('/admin/courses')}
+              onClick={() => router.push(isTrainer ? '/trainer/courses' : '/admin/courses')}
               className="px-6 py-3 rounded-xl border border-gray-300 text-gray-700 font-semibold hover:bg-gray-50"
             >{tr("Back to Courses")}</button>
           </div>

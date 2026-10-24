@@ -4,10 +4,10 @@ import { useEffect } from 'react'
 import { I18nextProvider } from 'react-i18next'
 import { usePathname } from 'next/navigation'
 import i18n from '@/i18n'
-import { tr } from '@/lib/localization'
+import { tr, validLanguage } from '@/lib/localization'
 import { validationMessage, type ValidationControl } from '@/lib/formValidation'
 
-const supported = (value: string | null) => value && ['en', 'hi', 'mr'].includes(value) ? value : 'en'
+const supported = (value: string | null) => validLanguage(value) ? value : 'en'
 
 export default function I18nProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()

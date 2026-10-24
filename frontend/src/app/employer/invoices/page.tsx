@@ -1,4 +1,5 @@
 'use client';
+import { downloadInvoiceFile } from '@/lib/downloadInvoice'
 import { API_BASE } from '@/lib/api'
 import { tr, trError, useLocale } from '@/lib/localization'
 
@@ -530,16 +531,13 @@ export default function EmployerInvoicesPage() {
                           </td>
                           <td className="rounded-r-2xl px-3 py-4">
                             <select
+                              disabled={item.status === 'paid' || item.status === 'cancelled'}
                               value={item.status}
                               onChange={e => handleStatusChange(item.id, e.target.value)}
                               className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-medium outline-none focus:border-black"
                             >
-                              <option value="draft">{tr("Draft")}</option>
-                              <option value="sent">{tr("Sent")}</option>
-                              <option value="paid">{tr("Paid")}</option>
-                              <option value="overdue">{tr("Overdue")}</option>
-                              <option value="cancelled">{tr("Cancelled")}</option>
-                            </select>
+                              {[item.status, ...({draft:['sent','cancelled'],sent:['paid','overdue','cancelled'],overdue:['paid','cancelled'],paid:[],cancelled:[]} as Record<string,string[]>)[item.status]].map(status=><option value={status} key={status}>{tr(status)}</option>)}
+                            </select><button className="ml-3 text-blue-700 underline" onClick={()=>void downloadInvoiceFile(`/employer/invoices/${item.id}/pdf`, item.id).catch(e=>setError(e.message))}>{tr('Download invoice')}</button>
                           </td>
                         </tr>
                       ))

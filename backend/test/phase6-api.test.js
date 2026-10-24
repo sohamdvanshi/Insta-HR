@@ -85,7 +85,7 @@ models.sequelize = {
   transaction: fn => {
     const run = async () => {
       const snapshot = copy(rows);
-      try { return await fn({ LOCK: { UPDATE: 'UPDATE' } }); }
+      try { return await fn({ LOCK: { UPDATE: 'UPDATE', SHARE: 'SHARE' } }); }
       catch (error) { for (const name of Object.keys(rows)) rows[name] = snapshot[name]; throw error; }
     };
     const result = queue.then(run); queue = result.catch(() => {}); return result;
@@ -102,6 +102,8 @@ const app = express(); app.use(express.json());
 app.use('/api/v1/admin/workspace', require('../src/routes/adminWorkspace.routes'));
 app.use('/api/v1/admin', require('../src/routes/admin.routes'));
 app.use('/api/v1/internal', require('../src/routes/internalCommunication.routes'));
+app.use('/api/v1/referrals', require('../src/routes/referral.routes'));
+app.use('/api/v1/employer/invoices', require('../src/routes/invoice.routes'));
 app.use('/api/v1/payments', require('../src/routes/payment.routes'));
 app.get('/api/v1/test-feature', require('../src/services/featureControl').requireFeature('training'), (req, res) => res.json({ success: true }));
 let server, base;
@@ -250,4 +252,66 @@ test('infrastructure checks report status and omit secrets', async () => {
   process.env.SMTP_PASS = 'never-include-this-secret';
   const result = await request('/admin/workspace/infrastructure', 'super'); assert.equal(result.status, 200); assert.equal(result.data.data.database, 'connected');
   assert.ok(!JSON.stringify(result.data).includes('never-include-this-secret'));
+});
+
+test('superadmin overview and staff collection include only admins', async () => {
+  const summary = await request('/admin/workspace/summary','super');
+  assert.deepEqual(summary.data.data, { admins:2, activeAdmins:2, inactiveAdmins:0 });
+  const staff = await request('/admin/workspace/staff','super');
+  assert.equal(staff.data.pagination.total,2); assert.ok(staff.data.data.every(u => u.role==='admin'));
+});
+test('yearly prices and featured benefit are backend settings; checkout snapshots 365 days',async()=>{
+  const body={name:'Standard',amountPaise:199900,yearlyAmountPaise:1999900,durationDays:30,loyaltyPoints:1000,featuredJobs:true,features:['Featured jobs'],isActive:true,reason};
+  assert.equal((await request('/admin/workspace/plans/standard','admin','PATCH',body)).status,403);
+  assert.equal((await request('/admin/workspace/plans/standard','super','PATCH',{...body,yearlyAmountPaise:-1})).status,400);
+  assert.equal((await request('/admin/workspace/plans/standard','super','PATCH',body)).status,200);
+  const employer=await models.User.findByPk(ids.employer);await employer.update({subscriptionPlan:'standard',subscriptionExpiry:new Date(Date.now()+86400000)});
+  assert.equal((await request('/payments/subscription','employer')).data.data.entitlements.featuredJobs,true);
+  await request('/admin/workspace/plans/standard','super','PATCH',{...body,featuredJobs:false});
+  assert.equal((await request('/payments/subscription','employer')).data.data.entitlements.featuredJobs,false);
+  assert.equal((await request('/payments/create-order','employer','POST',{plan:'standard',billingCycle:'weekly'})).status,400);
+  const created=await request('/payments/create-order','employer','POST',{plan:'standard',billingCycle:'yearly',amount:1});
+  assert.equal(created.data.order.amount,1999900);assert.equal(rows.Payment[0].planDurationDays,365);assert.equal(rows.Payment[0].billingCycle,'yearly');
+  const orderId=created.data.order.id,paymentId='annual-payment';
+  providerPayment={order_id:orderId,status:'captured',amount:1999900,currency:'INR'};
+  const bodyVerify={razorpay_order_id:orderId,razorpay_payment_id:paymentId,razorpay_signature:crypto.createHmac('sha256',process.env.RAZORPAY_KEY_SECRET).update(`${orderId}|${paymentId}`).digest('hex')};
+  const verified=await request('/payments/verify','employer','POST',bodyVerify);assert.equal(verified.status,200);
+  assert.ok(Date.parse(verified.data.expiresAt)-Date.now()>365.9*86400000);
+  assert.equal(rows.Payment[0].invoiceSnapshot.total,19999);assert.equal(rows.Payment[0].invoiceSnapshot.buyer,'employer@example.com');
+  const snapshot=copy(rows.Payment[0].invoiceSnapshot);
+  await request('/admin/workspace/plans/standard','super','PATCH',{...body,amountPaise:100,yearlyAmountPaise:100});
+  await request('/payments/verify','employer','POST',bodyVerify);assert.deepEqual(rows.Payment[0].invoiceSnapshot,snapshot);
+  const auth = role => ({Authorization:`Bearer ${jwt.sign({id:ids[role]},process.env.JWT_SECRET)}`});
+  const url=base+'/payments/'+rows.Payment[0].id+'/invoice';
+  assert.equal((await fetch(url,{headers:auth('otherEmployer')})).status,404);
+  const pdf=await fetch(url,{headers:auth('super')});assert.equal(pdf.status,200);assert.equal(pdf.headers.get('content-type'),'application/pdf');assert.ok((await pdf.text()).startsWith('%PDF-'));
+});
+test('loyalty redemption is atomic, owner-scoped, retry-safe and does not overdraw',async()=>{
+  await models.SubscriptionPlan.create({id:'premium',name:'Premium',amountPaise:399900,durationDays:30,loyaltyPoints:20,isActive:true});
+  const body={plan:'premium',requestId:randomUUID()};
+  assert.equal((await request('/referrals/redeem','employer','POST',body)).status,403);
+  const [first,second]=await Promise.all([request('/referrals/redeem','candidate','POST',body),request('/referrals/redeem','candidate','POST',body)]);
+  assert.equal(first.status,200);assert.equal(second.status,200);assert.equal(first.data.data.expiresAt,second.data.data.expiresAt);
+  assert.equal(rows.LoyaltyPointTransaction.filter(x=>x.type==='redeemed').length,1);
+  assert.equal((await request('/referrals/redemption-options','candidate')).data.data.balance,0);
+  assert.equal((await request('/referrals/redeem','candidate','POST',{plan:'premium',requestId:randomUUID()})).status,409);
+  assert.equal((await request('/referrals/redeem','candidate','POST',{plan:'standard',requestId:body.requestId})).status,409);
+});
+test('failed redemption audit restores points and subscription; different plans cannot overwrite an active plan',async()=>{
+  await models.SubscriptionPlan.create({id:'premium',name:'Premium',durationDays:30,loyaltyPoints:20,isActive:true});
+  auditFails=true;
+  assert.equal((await request('/referrals/redeem','candidate','POST',{plan:'premium',requestId:randomUUID()})).status,500);
+  assert.equal(rows.LoyaltyPointTransaction.length,1);assert.equal(rows.User.find(u=>u.id===ids.candidate).subscriptionPlan,undefined);
+  auditFails=false;await (await models.User.findByPk(ids.candidate)).update({subscriptionPlan:'enterprise',subscriptionExpiry:new Date(Date.now()+86400000)});
+  assert.equal((await request('/referrals/redeem','candidate','POST',{plan:'premium',requestId:randomUUID()})).status,409);
+});
+test('invoice status transitions enforce ownership, terminal states and audited changes',async()=>{
+  const invoice=await models.Invoice.create({employerId:ids.employer,status:'draft',invoiceNumber:'INV-TEST',dueDate:'2020-01-01',totalAmount:100});
+  const url='/employer/invoices/'+invoice.id+'/status';
+  assert.equal((await request(url,'otherEmployer','PATCH',{status:'sent'})).status,404);
+  assert.equal((await request(url,'employer','PATCH',{status:'paid'})).status,409);
+  assert.equal((await request(url,'employer','PATCH',{status:'sent'})).status,200);
+  assert.equal((await request(url,'employer','PATCH',{status:'paid'})).status,200);
+  assert.equal((await request(url,'employer','PATCH',{status:'draft'})).status,409);
+  assert.equal(rows.AuditLog.filter(a=>a.action==='invoice.status').length,2);
 });

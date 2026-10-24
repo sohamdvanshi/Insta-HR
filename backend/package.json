@@ -16,7 +16,9 @@
     "test:audit": "node --test test/audit*.test.js",
     "migrate:phase7-audit": "node scripts/db/migrate-phase7-audit.js",
     "migrate:password-reset": "node scripts/db/migrate-password-reset.js",
-    "test:password-reset": "node --test test/password-reset*.test.js"
+    "test:password-reset": "node --test test/password-reset*.test.js",
+    "migrate:business": "node scripts/db/migrate-business.js",
+    "test:business": "node --test test/business*.test.js test/phase6-api.test.js test/wages-api.test.js"
   },
   "keywords": [],
   "author": "",

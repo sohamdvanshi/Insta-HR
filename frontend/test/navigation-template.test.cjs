@@ -32,14 +32,14 @@ test('all roles have working route targets and only appropriate private work too
   assert.equal(isNavActive('/employer/wage-register', employer.primary[0]), false);
   assert.equal(isNavActive('/trainer/courses/123/quiz', { href: '/trainer/courses' }), true);
 });
-test('each configured menu label resolves in English, Hindi and Marathi', async () => {
+test('each configured menu label resolves in all five supported languages', async () => {
   const load = loader(), { getNavigation } = load(path.join(src, 'lib/navigation.ts'));
   const i18n = load(path.join(src, 'i18n.ts')).default, { tr } = load(path.join(src, 'lib/localization.tsx'));
   const index = JSON.parse(fs.readFileSync(path.join(src, 'locales/source-index.json')));
   for (const role of [undefined, 'candidate', 'employer', 'admin', 'super_admin', 'trainer']) {
     const nav = getNavigation(role), labels = [...nav.primary, ...nav.groups, ...nav.groups.flatMap(g => g.items), ...nav.account].map(i => i.label);
     for (const label of labels) assert.ok(index[label] || index[label.toLowerCase()], label);
-    for (const lang of ['hi', 'mr']) { await i18n.changeLanguage(lang); for (const label of labels) assert.ok(tr(label).length > 0); }
+    for (const lang of ['hi', 'mr', 'kn', 'ta']) { await i18n.changeLanguage(lang); for (const label of labels) assert.ok(tr(label).length > 0); }
   }
 });
 test('desktop and mobile disclosures open and Escape closes menus and returns focus to a visible trigger', () => {

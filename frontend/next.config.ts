@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+ allowedDevOrigins: [
+  'lions-sbjct-campaigns-dry.trycloudflare.com',
+],
 };
 
 export default nextConfig;

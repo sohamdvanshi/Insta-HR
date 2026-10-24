@@ -32,6 +32,8 @@ const LoyaltyPointTransaction =
         allowNull: true
       },
 
+      redemptionKey: { type: DataTypes.UUID, allowNull: true },
+      redemptionDetails: { type: DataTypes.JSONB, allowNull: true },
       points: {
         type: DataTypes.INTEGER,
         allowNull: false,
@@ -88,6 +90,7 @@ const LoyaltyPointTransaction =
       timestamps: true,
 
       indexes: [
+        { name: 'loyalty_redemption_request_unique', unique: true, fields: ['userId', 'redemptionKey'] },
         {
           name:
             'loyalty_transactions_user_id_idx',

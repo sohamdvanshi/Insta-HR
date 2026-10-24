@@ -16,8 +16,13 @@ const search = value => {
   return `%${value.trim().replace(/[\\%_]/g, '\\$&')}%`;
 };
 exports.me = handle(async (req, res) => res.json({ success: true, data: safeUser(req.user) }));
-exports.staff = handle(async (req, res) => pageResult(User, req, res, { where: { role: ['admin', 'super_admin', 'trainer'] }, attributes: USER_FIELDS }));
+exports.staff = handle(async (req, res) => pageResult(User, req, res, { where: { role: 'admin' }, attributes: USER_FIELDS }));
 exports.summary = handle(async (req, res) => {
+  if (req.user.role === 'super_admin') {
+    const admins = await User.count({ where: { role: 'admin' } });
+    const activeAdmins = await User.count({ where: { role: 'admin', isActive: true } });
+    return res.json({ success: true, data: { admins, activeAdmins, inactiveAdmins: admins - activeAdmins } });
+  }
   const [candidates, employers, jobs, applications, revenue, openTickets] = await Promise.all([
     User.count({ where: { role: 'candidate' } }), User.count({ where: { role: 'employer' } }), Job.count(), Application.count(),
     Payment.sum('amount', { where: { status: 'success' } }), InternalThread.count({ where: { status: ['open', 'in_progress'] } })

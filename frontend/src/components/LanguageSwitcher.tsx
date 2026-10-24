@@ -6,7 +6,9 @@ import i18n from '@/i18n'
 const LANGUAGES = [
   { code: 'en', label: 'English' },
   { code: 'hi', label: 'हिंदी' },
-  { code: 'mr', label: 'मराठी' }
+  { code: 'mr', label: 'मराठी' },
+  { code: 'kn', label: 'ಕನ್ನಡ' },
+  { code: 'ta', label: 'தமிழ்' }
 ]
 
 export default function LanguageSwitcher() {

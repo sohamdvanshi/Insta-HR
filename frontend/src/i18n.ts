@@ -10,7 +10,7 @@ if (!i18n.isInitialized) {
     // Server output and the first browser render agree; saved selection is applied after hydration.
     lng: 'en',
     fallbackLng: 'en',
-    supportedLngs: ['en', 'hi', 'mr'],
+    supportedLngs: ['en', 'hi', 'mr', 'kn', 'ta'],
     defaultNS: 'common',
     ns: ['common', 'jobs', 'auth', 'dashboard', 'payroll', 'training', 'resume', 'subscription', 'admin', 'errors'],
     keySeparator: false,

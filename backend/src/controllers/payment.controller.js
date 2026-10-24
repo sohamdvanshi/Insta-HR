@@ -1,6 +1,8 @@
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
-const PDFDocument = require('pdfkit');
+const { subscriptionSnapshot, renderInvoice } = require('../services/invoiceDocument');
+const { purchaseTerms, expiryFor } = require('../services/subscriptionTerms');
+const { entitlementsFor } = require('../services/planEntitlements');
 const { User, Payment, SubscriptionPlan, sequelize } = require('../models/index');
 const { fail, USER_FIELDS } = require('../services/adminPolicy');
 const { audit } = require('../services/adminOperations');
@@ -11,30 +13,19 @@ const getRazorpay = () => {
   return razorpay ||= new Razorpay({ key_id: process.env.RAZORPAY_KEY_ID, key_secret: process.env.RAZORPAY_KEY_SECRET });
 };
 
-const formatCurrency = amount => {
-  return `₹${Number(amount || 0).toLocaleString('en-IN')}`;
-};
-
-const formatDate = date => {
-  if (!date) return '-';
-  return new Date(date).toLocaleDateString('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  });
-};
-
 exports.createOrder = async (req, res) => {
   try {
     if (typeof req.body?.plan !== 'string' || !['standard', 'premium', 'enterprise'].includes(req.body.plan)) fail('Choose an active paid plan');
     const details = await SubscriptionPlan.findByPk(req.body.plan);
     if (!details || !details.isActive || details.id === 'free') fail('Choose an active paid plan');
-    const order = await getRazorpay().orders.create({ amount: details.amountPaise, currency: details.currency,
+    const terms = purchaseTerms(details, req.body.billingCycle);
+    expiryFor(req.user, details.id, terms.durationDays);
+    const order = await getRazorpay().orders.create({ amount: terms.amountPaise, currency: details.currency,
       receipt: ('rcpt_' + req.user.id + '_' + Date.now()).substring(0, 40),
       notes: { userId: req.user.id, plan: details.id, planName: details.name } });
-    await Payment.create({ userId: req.user.id, orderId: order.id, amount: details.amountPaise / 100, currency: details.currency,
-      plan: details.id, planName: details.name, planDurationDays: details.durationDays, status: 'created' });
-    res.json({ success: true, order, key: process.env.RAZORPAY_KEY_ID, plan: { name: details.name, amount: details.amountPaise, currency: details.currency, duration: details.durationDays } });
+    await Payment.create({ userId: req.user.id, orderId: order.id, amount: terms.amountPaise / 100, currency: details.currency,
+      plan: details.id, planName: details.name, billingCycle: terms.billingCycle, planDurationDays: terms.durationDays, status: 'created' });
+    res.json({ success: true, order, key: process.env.RAZORPAY_KEY_ID, plan: { name: details.name, amount: terms.amountPaise, currency: details.currency, duration: terms.durationDays } });
   } catch (error) {
     console.error('Create payment order:', error.message);
     res.status(error.status || 500).json({ success: false, message: error.status ? error.message : 'Unable to create payment order' });
@@ -61,8 +52,10 @@ exports.verifyPayment = async (req, res) => {
         return record;
       }
       if (!record.planDurationDays) fail('Order predates plan settings. Contact support.', 409);
-      const expiresAt = new Date(Date.now() + record.planDurationDays * 86400000);
-      await record.update({ paymentId, status: 'success', expiresAt }, { transaction });
+      const buyer = await User.findByPk(req.user.id, { transaction, lock: transaction.LOCK.UPDATE });
+      const expiresAt = expiryFor(buyer, record.plan, record.planDurationDays);
+      const invoiceSnapshot = subscriptionSnapshot({ ...record.toJSON(), paymentId, expiresAt }, buyer);
+      await record.update({ paymentId, status: 'success', expiresAt, invoiceSnapshot }, { transaction });
       await User.update({ subscriptionPlan: record.plan, subscriptionExpiry: expiresAt,
         subscriptionReminder7Sent: false, subscriptionReminder1Sent: false, subscriptionExpiredMailSent: false }, { where: { id: req.user.id }, transaction });
       await audit(req, transaction, 'payment.subscription_activated', 'payment', record.id, { plan: record.plan, amount: record.amount, expiresAt });
@@ -110,6 +103,7 @@ exports.getSubscription = async (req, res) => {
         plan: isActive ? user.subscriptionPlan : 'free',
         expiresAt: user.subscriptionExpiry,
         isActive,
+        entitlements: await entitlementsFor(user),
       },
     });
   } catch (err) {
@@ -122,171 +116,18 @@ exports.getSubscription = async (req, res) => {
 
 exports.downloadInvoice = async (req, res) => {
   try {
-    const { id } = req.params;
-
-    const payment = await Payment.findOne({
-      where: {
-        id,
-        userId: req.user.id,
-        status: 'success',
-      },
+    const { id } = require('../services/adminPolicy');
+    const payment = await sequelize.transaction(async transaction => {
+      const record = await Payment.findOne({ where: { id: id(req.params.id), status: 'success', ...(['admin','super_admin'].includes(req.user.role) ? {} : { userId: req.user.id }) }, transaction, lock: transaction.LOCK.UPDATE });
+      if (!record) fail('Payment not found', 404);
+      if (!record.invoiceSnapshot) {
+        const user = await User.findByPk(record.userId, { transaction });
+        await record.update({ invoiceSnapshot: subscriptionSnapshot(record, user, new Date(record.updatedAt)) }, { transaction });
+      }
+      return record;
     });
-
-    if (!payment) {
-      return res.status(404).json({
-        success: false,
-        message: 'Payment not found',
-      });
-    }
-
-    const user = await User.findByPk(req.user.id, {
-      attributes: ['id', 'email'],
-    });
-
-    const invoiceNumber = `INV-${payment.id}-${new Date(payment.createdAt).getFullYear()}`;
-    const gstRate = 0.18;
-    const totalAmount = Number(payment.amount);
-    const taxableAmount = totalAmount / (1 + gstRate);
-    const gstAmount = totalAmount - taxableAmount;
-
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename=invoice-${payment.id}.pdf`
-    );
-
-    const doc = new PDFDocument({ margin: 50 });
-    doc.pipe(res);
-
-    doc
-      .fontSize(24)
-      .fillColor('#111827')
-      .text('InstaHire', 50, 45)
-      .fontSize(11)
-      .fillColor('#6B7280')
-      .text('Subscription Invoice', 50, 75);
-
-    doc
-      .fontSize(20)
-      .fillColor('#111827')
-      .text('INVOICE', 400, 45, { align: 'right' })
-      .fontSize(10)
-      .fillColor('#4B5563')
-      .text(`Invoice No: ${invoiceNumber}`, 340, 75, { align: 'right' })
-      .text(`Invoice Date: ${formatDate(payment.createdAt)}`, 340, 90, { align: 'right' });
-
-    doc
-      .moveTo(50, 120)
-      .lineTo(550, 120)
-      .strokeColor('#E5E7EB')
-      .stroke();
-
-    doc
-      .fontSize(12)
-      .fillColor('#111827')
-      .text('Billed To', 50, 140)
-      .fontSize(10)
-      .fillColor('#4B5563')
-      .text(user?.name || 'Employer', 50, 160)
-      .text(user?.email || '-', 50, 175);
-
-    doc
-      .fontSize(12)
-      .fillColor('#111827')
-      .text('Payment Details', 340, 140)
-      .fontSize(10)
-      .fillColor('#4B5563')
-      .text(`Plan: ${payment.planName}`, 340, 160)
-      .text(`Order ID: ${payment.orderId}`, 340, 175)
-      .text(`Payment ID: ${payment.paymentId}`, 340, 190)
-      .text(`Status: ${payment.status}`, 340, 205)
-      .text(`Valid Until: ${formatDate(payment.expiresAt)}`, 340, 220);
-
-    const tableTop = 280;
-
-    doc
-      .rect(50, tableTop, 500, 28)
-      .fill('#F3F4F6');
-
-    doc
-      .fillColor('#111827')
-      .fontSize(10)
-      .text('Description', 60, tableTop + 9)
-      .text('Qty', 300, tableTop + 9, { width: 40, align: 'center' })
-      .text('Unit Price', 370, tableTop + 9, { width: 70, align: 'right' })
-      .text('Amount', 460, tableTop + 9, { width: 70, align: 'right' });
-
-    const rowY = tableTop + 40;
-
-    doc
-      .fillColor('#374151')
-      .fontSize(10)
-      .text(`${payment.planName} Subscription`, 60, rowY)
-      .text('1', 300, rowY, { width: 40, align: 'center' })
-      .text(formatCurrency(taxableAmount.toFixed(2)), 370, rowY, { width: 70, align: 'right' })
-      .text(formatCurrency(taxableAmount.toFixed(2)), 460, rowY, { width: 70, align: 'right' });
-
-    doc
-      .moveTo(50, rowY + 25)
-      .lineTo(550, rowY + 25)
-      .strokeColor('#E5E7EB')
-      .stroke();
-
-    const totalsY = rowY + 60;
-
-    doc
-      .fontSize(10)
-      .fillColor('#4B5563')
-      .text('Subtotal', 380, totalsY, { width: 80, align: 'right' })
-      .text(formatCurrency(taxableAmount.toFixed(2)), 460, totalsY, {
-        width: 70,
-        align: 'right',
-      })
-      .text('GST (18%)', 380, totalsY + 20, { width: 80, align: 'right' })
-      .text(formatCurrency(gstAmount.toFixed(2)), 460, totalsY + 20, {
-        width: 70,
-        align: 'right',
-      });
-
-    doc
-      .moveTo(380, totalsY + 45)
-      .lineTo(530, totalsY + 45)
-      .strokeColor('#9CA3AF')
-      .stroke();
-
-    doc
-      .fontSize(12)
-      .fillColor('#111827')
-      .text('Total', 380, totalsY + 55, { width: 80, align: 'right' })
-      .text(formatCurrency(totalAmount.toFixed(2)), 460, totalsY + 55, {
-        width: 70,
-        align: 'right',
-      });
-
-    doc
-      .fontSize(10)
-      .fillColor('#6B7280')
-      .text(
-        'This is a system-generated invoice for your InstaHire subscription purchase.',
-        50,
-        700,
-        { align: 'center', width: 500 }
-      )
-      .text(
-        'For support, contact support@instahire.com',
-        50,
-        715,
-        { align: 'center', width: 500 }
-      );
-
-    doc.end();
-  } catch (err) {
-    console.error('downloadInvoice error:', err);
-    return res.status(500).json({
-      success: false,
-      message: err.message,
-    });
-  }
+    renderInvoice(res, payment.invoiceSnapshot, 'paid');
+  } catch (e) { if (!res.headersSent) res.status(e.status || 500).json({ success: false, message: e.status ? e.message : 'Unable to download invoice' }); }
 };
 
 exports.getAllPayments = async (req, res) => {

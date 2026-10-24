@@ -62,6 +62,7 @@ const Invoice = sequelize.define(
       allowNull: true,
       defaultValue: 'Net 30',
     },
+    invoiceSnapshot: { type: DataTypes.JSONB, allowNull: true },
     status: {
       type: DataTypes.ENUM('draft', 'sent', 'paid', 'overdue', 'cancelled'),
       allowNull: false,
