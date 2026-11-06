@@ -10,6 +10,8 @@ router.get('/template',authorize('employer'),c.template);
 router.get('/',c.list);
 router.post('/preview',authorize('employer'),file,c.preview);
 router.post('/',authorize('employer'),file,c.create);
+router.post('/:id/invoices',c.createInvoice);
+router.get('/:id/invoices/:employeeId/pdf',c.invoicePdf);
 router.get('/:id/export',c.export);
 router.get('/:id',c.get);
 router.post('/:id/attendance',authorize('employer'),file,c.replaceAttendance);

@@ -1,4 +1,6 @@
 'use client'
+import PlanComparison from '@/components/PlanComparison'
+import { attributeRows, type PlanAttributeDefinition } from '@/lib/planAttributes'
 import LoyaltyRedemption from '@/components/LoyaltyRedemption'
 import { readStoredUser } from '@/lib/storage'
 import { API_BASE } from '@/lib/api'
@@ -13,7 +15,7 @@ declare global {
   }
 }
 
-type Plan = { id: string; name: string; price: number; yearlyPrice: number; durationDays: number; priceLabel: string; period: string; color: string; badge: string; features: string[]; missing: string[]; cta: string; disabled: boolean }
+type Plan = { id: string; name: string; attributes: Record<string,unknown>; price: number; yearlyPrice: number; durationDays: number; priceLabel: string; period: string; color: string; badge: string; features: string[]; missing: string[]; cta: string; disabled: boolean }
 
 export default function SubscriptionPage() {
   useLocale()
@@ -30,6 +32,7 @@ export default function SubscriptionPage() {
   const [paymentHistory, setPaymentHistory] = useState<any[]>([])
   const [showHistory, setShowHistory] = useState(false)
   const [user, setUser] = useState<any>(null)
+  const [attributeDefinitions,setAttributeDefinitions]=useState<PlanAttributeDefinition[]>([])
 
   useEffect(() => {
     const userData = localStorage.getItem('user')
@@ -38,8 +41,9 @@ export default function SubscriptionPage() {
     fetch(`${API_BASE}/payments/plans`).then(async response => {
       const result = await response.json()
       if (!response.ok || !result.success) throw new Error(result.message || 'Unable to load plans')
+      setAttributeDefinitions(result.attributeDefinitions || [])
       const colors: Record<string, string> = { free: 'gray', standard: 'blue', premium: 'purple', enterprise: 'gold' }
-      setPlans(result.data.map((plan: any) => ({ id: plan.id, name: plan.name, price: plan.amountPaise / 100, yearlyPrice: plan.yearlyAmountPaise / 100, durationDays: plan.durationDays, priceLabel: `₹${(plan.amountPaise / 100).toLocaleString(locale())}`, period: plan.id === 'free' ? 'forever' : `/${plan.durationDays} days`, color: colors[plan.id] || 'blue', badge: '', features: plan.features, missing: [], cta: `Get ${plan.name}`, disabled: plan.id === 'free' })))
+      setPlans(result.data.map((plan: any) => ({ attributes: plan.attributes || {}, id: plan.id, name: plan.name, price: plan.amountPaise / 100, yearlyPrice: plan.yearlyAmountPaise / 100, durationDays: plan.durationDays, priceLabel: `₹${(plan.amountPaise / 100).toLocaleString(locale())}`, period: plan.id === 'free' ? 'forever' : `/${plan.durationDays} days`, color: colors[plan.id] || 'blue', badge: '', features: plan.features, missing: [], cta: `Get ${plan.name}`, disabled: plan.id === 'free' })))
     }).catch(error => setPlanError(error.message)).finally(() => setPlansLoading(false))
     fetchSubscription()
   }, [])
@@ -322,18 +326,7 @@ export default function SubscriptionPage() {
                 </div>
 
                 <ul className="space-y-2 mb-6 flex-1">
-                  {plan.features.map(f => (
-                    <li key={f} className="flex items-start gap-2 text-sm text-gray-700">
-                      <span className="text-green-500 mt-0.5 flex-shrink-0">✓</span>
-                      {tr(f)}
-                    </li>
-                  ))}
-                  {plan.missing.map(f => (
-                    <li key={f} className="flex items-start gap-2 text-sm text-gray-400 line-through">
-                      <span className="mt-0.5 flex-shrink-0">✗</span>
-                      {tr(f)}
-                    </li>
-                  ))}
+                  {attributeRows(plan.attributes,attributeDefinitions).map(d=><li key={d.key} className="flex justify-between gap-2 text-sm text-gray-700"><span>{d.system?tr(d.label):d.label}</span><span>{d.value===null?tr('Unlimited'):typeof d.value==='boolean'?tr(d.value?'Yes':'No'):typeof d.value==='number'?new Intl.NumberFormat(locale()).format(d.value):d.system?tr(String(d.value??'')):String(d.value??'')}{d.unit && d.value!==null && typeof d.value==='number'?' '+(d.system?tr(d.unit):d.unit):''}</span></li>)}
                 </ul>
 
                 <button
@@ -359,48 +352,7 @@ export default function SubscriptionPage() {
           })}
         </div>
 
-        <div className="mt-16 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-6 border-b border-gray-100">
-            <h2 className="text-xl font-bold text-gray-900">{tr("Full Feature Comparison")}</h2>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50">
-                  <th className="text-left p-4 font-semibold text-gray-700">{tr("Feature")}</th>
-                  <th className="text-center p-4 font-semibold text-gray-500">{tr("Free")}</th>
-                  <th className="text-center p-4 font-semibold text-blue-600">{tr("Standard")}</th>
-                  <th className="text-center p-4 font-semibold text-purple-600">{tr("Premium")}</th>
-                  <th className="text-center p-4 font-semibold text-yellow-600">{tr("Enterprise")}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {[
-                  ['Job Postings', '3/month', 'Unlimited', 'Unlimited', 'Unlimited'],
-                  ['Resume Views', '5/month', '100/month', 'Unlimited', 'Unlimited'],
-                  ['AI Screening', '✗', 'Basic', 'Advanced', 'Custom'],
-                  ['Featured Listings', '✗', '✗', '✓', '✓'],
-                  ['Social Promotion', '✗', '✗', '✓', '✓'],
-                  ['Dedicated Support', '✗', '✗', '✓', '✓'],
-                  ['Account Manager', '✗', '✗', '✗', '✓'],
-                  ['API Access', '✗', '✗', '✗', '✓'],
-                ].map(([feature, ...vals]) => (
-                  <tr key={feature} className="hover:bg-gray-50">
-                    <td className="p-4 text-gray-700 font-medium">{tr(feature)}</td>
-                    {vals.map((val, i) => (
-                      <td key={i} className="p-4 text-center">
-                        <span className={val === '✗' ? 'text-gray-300 text-lg' : val === '✓' ? 'text-green-500 text-lg font-bold' : 'text-gray-700'}>
-                          {tr(val)}
-                        </span>
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <PlanComparison plans={plans} definitions={attributeDefinitions}/>
 
         {user?.role === 'employer' && (
           <div className="mt-8 text-center">

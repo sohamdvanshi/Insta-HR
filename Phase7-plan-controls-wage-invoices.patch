@@ -1,0 +1,1375 @@
+diff --git a/backend/migrations/20261024000200-plan-comparison-wage-invoices.js b/backend/migrations/20261024000200-plan-comparison-wage-invoices.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..f79355e0bb6414f4eecaa7902890d133feded0e2
+--- /dev/null
++++ b/backend/migrations/20261024000200-plan-comparison-wage-invoices.js
+@@ -0,0 +1,11 @@
++'use strict';
++module.exports={async up(q,S){await q.sequelize.transaction(async transaction=>{
++ const o={transaction},columns=await q.describeTable('wage_registers',o);
++ if(!columns.invoices)await q.addColumn('wage_registers','invoices',{type:S.JSONB,allowNull:false,defaultValue:[]},o);
++ const defaults={jobPostingLimit:null,resumeViewLimit:null,aiScreening:true,aiScreeningLevel:'basic',socialPromotion:false,dedicatedSupport:false,accountManager:false,apiAccess:false};
++ for(const id of ['free','standard','premium','enterprise']){
++ const values={...defaults,jobPostingLimit:id==='free'?3:null,resumeViewLimit:id==='free'?5:id==='standard'?100:null,aiScreening:id!=='free',aiScreeningLevel:id==='enterprise'?'custom':id==='premium'?'advanced':'basic',socialPromotion:['premium','enterprise'].includes(id),dedicatedSupport:['premium','enterprise'].includes(id),accountManager:id==='enterprise',apiAccess:id==='enterprise'};
++ // Existing configured values win. Reruns only fill missing settings.
++ await q.sequelize.query('UPDATE subscription_plans SET "attributeValues" = CAST(:defaults AS jsonb) || "attributeValues" WHERE id = :id',{...o,replacements:{defaults:JSON.stringify(values),id}});
++ }
++ });},async down(){throw new Error('Preserve employee invoices; restore a backup for rollback.');}};
+diff --git a/backend/package.json b/backend/package.json
+index c57e4fbd6d4dcbcdf1faad8858b0282e763e853a..4b83a9d0a4d52e067961deb8c90be8d3a65d3d98 100644
+--- a/backend/package.json
++++ b/backend/package.json
+@@ -20,7 +20,8 @@
+     "migrate:business": "node scripts/db/migrate-business.js",
+     "test:business": "node --test test/business*.test.js test/phase6-api.test.js test/wages-api.test.js",
+     "migrate:plan-attributes": "node scripts/db/migrate-plan-attributes.js",
+-    "test:plan-attributes": "node --test test/plan-attributes*.test.js"
++    "test:plan-attributes": "node --test test/plan-attributes*.test.js",
++    "migrate:wage-invoices": "node scripts/db/migrate-wage-invoices.js"
+   },
+   "keywords": [],
+   "author": "",
+diff --git a/backend/scripts/db/migrate-wage-invoices.js b/backend/scripts/db/migrate-wage-invoices.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..507157d0e09517a06d492d4f902c83d6ec76faa0
+--- /dev/null
++++ b/backend/scripts/db/migrate-wage-invoices.js
+@@ -0,0 +1,2 @@
++const sequelize=require('../../src/config/database');
++(async()=>{try{await sequelize.authenticate();await require('../../migrations/20261024000200-plan-comparison-wage-invoices').up(sequelize.getQueryInterface(),require('sequelize'));console.log('Plan comparison and wage invoice schema is ready.');}finally{await sequelize.close();}})().catch(e=>{console.error(e.message);process.exitCode=1;});
+diff --git a/backend/src/controllers/wageRegister.controller.js b/backend/src/controllers/wageRegister.controller.js
+index 79121e48b0fb8593231e0c943a7536e66d202ae2..0ca4618616e6f3f0d81290b66a9e1f25bfa86e44 100644
+--- a/backend/src/controllers/wageRegister.controller.js
++++ b/backend/src/controllers/wageRegister.controller.js
+@@ -131,3 +131,24 @@ exports.review = run(async (req, res) => {
+   });
+   res.json({ data: result });
+ });
++
++exports.createInvoice = run(async(req,res)=>{
++  if(typeof req.body?.employeeId!=='string'||!req.body.employeeId||req.body.employeeId.length>80)throw fail('Choose an employee from this register');
++  const result=await sequelize.transaction(async transaction=>{
++    const r=await record(req,transaction);
++    if(r.status!=='approved')throw fail('Approve the wage register before creating invoices',409);
++    const existing=(r.invoices||[]).find(i=>i.employeeId===req.body.employeeId);
++    if(existing)return {created:false,invoice:existing};
++    if(req.body.version!==r.version)throw fail('Reload this register before creating an invoice',409);
++    const invoice=require('../services/wageInvoice').snapshot(r,req.body.employeeId);
++    await r.update({invoices:[...(r.invoices||[]),invoice]},{transaction});
++    await audit(req,r,'wage_register.invoice_created',{number:invoice.number,employeeId:invoice.employeeId,total:invoice.total},transaction);
++    return {created:true,invoice};
++  });res.status(result.created?201:200).json({data:result.invoice});
++});
++exports.invoicePdf = run(async(req,res)=>{
++  const r=await record(req);
++  const invoice=(r.invoices||[]).find(i=>i.employeeId===req.params.employeeId);
++  if(!invoice)throw fail('Create an invoice for this employee first',404);
++  require('../services/invoiceDocument').renderInvoice(res,invoice,'issued');
++});
+diff --git a/backend/src/models/WageRegister.js b/backend/src/models/WageRegister.js
+index f4f926d500087aad34a13e2c92fa1fe057cd5e14..825885a4fbcba7b00544dd7fb2b4f3e6be9e6b13 100644
+--- a/backend/src/models/WageRegister.js
++++ b/backend/src/models/WageRegister.js
+@@ -15,5 +15,6 @@ module.exports = sequelize.define('WageRegister', {
+   reviewedAt: { type: DataTypes.DATE, allowNull: true },
+   reviewedBy: { type: DataTypes.UUID, allowNull: true },
+   reviewNotes: { type: DataTypes.TEXT, allowNull: true },
++  invoices: { type: DataTypes.JSONB, allowNull: false, defaultValue: [] },
+   approvedAt: { type: DataTypes.DATE, allowNull: true }
+ }, { tableName: 'wage_registers', indexes: [{ unique: true, fields: ['employerId','period','site'] }] });
+diff --git a/backend/src/routes/wageRegister.routes.js b/backend/src/routes/wageRegister.routes.js
+index 920a6fe58a39e09f106d7de491a7c65ce29cc176..99a41b6569671f9576095d42dd5357d3ec27374a 100644
+--- a/backend/src/routes/wageRegister.routes.js
++++ b/backend/src/routes/wageRegister.routes.js
+@@ -10,6 +10,8 @@ router.get('/template',authorize('employer'),c.template);
+ router.get('/',c.list);
+ router.post('/preview',authorize('employer'),file,c.preview);
+ router.post('/',authorize('employer'),file,c.create);
++router.post('/:id/invoices',c.createInvoice);
++router.get('/:id/invoices/:employeeId/pdf',c.invoicePdf);
+ router.get('/:id/export',c.export);
+ router.get('/:id',c.get);
+ router.post('/:id/attendance',authorize('employer'),file,c.replaceAttendance);
+diff --git a/backend/src/services/planAttributes.js b/backend/src/services/planAttributes.js
+index fc97a83301ff96fdc5b18df29af6b66a2c24e034..db2bd3dd9916a3984d84af4bf4a5944b241ec392 100644
+--- a/backend/src/services/planAttributes.js
++++ b/backend/src/services/planAttributes.js
+@@ -5,12 +5,21 @@ const SYSTEM = [
+  {key:'durationDays',label:'Monthly duration',type:'integer',unit:'days',defaultValue:30,min:1,max:365},
+  {key:'loyaltyPoints',label:'Loyalty redemption cost',type:'integer',unit:'points',defaultValue:0},
+  {key:'featuredJobs',label:'Featured jobs',type:'boolean',unit:'',defaultValue:false},
++ {key:'jobPostingLimit',label:'Job Postings',type:'integer',unit:'per month',defaultValue:null,unlimited:true,storage:'json',enforced:false},
++ {key:'resumeViewLimit',label:'Resume Views',type:'integer',unit:'per month',defaultValue:null,unlimited:true,storage:'json',enforced:false},
++ {key:'aiScreening',label:'AI Screening',type:'boolean',unit:'',defaultValue:false,storage:'json',enforced:false},
++ {key:'aiScreeningLevel',label:'AI screening level',type:'choice',options:['basic','advanced','custom'],unit:'',defaultValue:'basic',storage:'json',enforced:false},
++ {key:'socialPromotion',label:'Social Promotion',type:'boolean',unit:'',defaultValue:false,storage:'json',enforced:false},
++ {key:'dedicatedSupport',label:'Dedicated Support',type:'boolean',unit:'',defaultValue:false,storage:'json',enforced:false},
++ {key:'accountManager',label:'Account Manager',type:'boolean',unit:'',defaultValue:false,storage:'json',enforced:false},
++ {key:'apiAccess',label:'API Access',type:'boolean',unit:'',defaultValue:false,storage:'json',enforced:false},
+  {key:'resumeLimit',label:'Number of resumes allowed',type:'integer',unit:'resumes',defaultValue:null,unlimited:true}
+-].map(d=>({...d,system:true,enforced:true}));
++].map(d=>({...d,system:true,enforced:d.enforced??true}));
+ const RESERVED = new Set([...SYSTEM.map(d=>d.key),'__proto__','prototype','constructor','id','name','features','isActive','currency','attributeValues']);
+ function validateValue(d,v) {
+  if (v===null && d.type==='integer' && (d.unlimited || !d.system)) return v;
+- if (d.type==='boolean') {if(typeof v!=='boolean')fail(`${d.label} must be true or false`);}
++ if(d.type==='choice'){if(!d.options.includes(v))fail(`${d.label} has an invalid option`);}
++ else if (d.type==='boolean') {if(typeof v!=='boolean')fail(`${d.label} must be true or false`);}
+  else if(d.type==='text') {if(typeof v!=='string'||v.length>200)fail(`${d.label} must be text up to 200 characters`);}
+  else if(!Number.isSafeInteger(v)||v<(d.min??0)||v>(d.max??100000000))fail(`${d.label} must be an integer within its allowed range`);
+  return v;
+@@ -30,12 +39,12 @@ function metadata(body) {
+ async function definitions(transaction) {
+  const { PlanAttribute }=require('../models');
+  const custom=await PlanAttribute.findAll({order:[['key','ASC']],transaction});
+- return [...SYSTEM,...custom.map(d=>({...d.toJSON(),system:false,enforced:false,unlimited:d.type==='integer'}))];
++ return [...SYSTEM,...custom.filter(d=>!SYSTEM.some(s=>s.key===d.key)).map(d=>({...d.toJSON(),system:false,enforced:false,unlimited:d.type==='integer'}))];
+ }
+ function valuesFor(plan,defs) {
+  const result={};
+  for(const d of defs) {
+- const stored=d.system && d.key!=='resumeLimit' ? plan[d.key] : plan.attributeValues?.[d.key];
++ const stored=d.system && d.storage!=='json' && d.key!=='resumeLimit' ? plan[d.key] : plan.attributeValues?.[d.key];
+  result[d.key]=validateValue(d,stored===undefined?d.defaultValue:stored);
+  }return result;
+ }
+@@ -44,7 +53,7 @@ function parseValues(values,defs,planId) {
+  const keys=defs.map(d=>d.key);
+  if(Object.keys(values).some(k=>!keys.includes(k))||keys.some(k=>!Object.hasOwn(values,k)))fail('Plan attributes changed. Reload and try again.',409);
+  const columns={},attributeValues={};
+- for(const d of defs){const v=validateValue(d,values[d.key]);if(d.system && d.key!=='resumeLimit')columns[d.key]=v;else attributeValues[d.key]=v;}
++ for(const d of defs){const v=validateValue(d,values[d.key]);if(d.system && d.storage!=='json' && d.key!=='resumeLimit')columns[d.key]=v;else attributeValues[d.key]=v;}
+  if(planId==='free'&&(columns.amountPaise!==0||columns.yearlyAmountPaise!==0||columns.loyaltyPoints!==0))fail('Free plan prices and redemption cost must be zero');
+  if(planId!=='free'&&(columns.amountPaise<100||columns.yearlyAmountPaise<100))fail('Paid plans must cost at least INR 1');
+  return {...columns,attributeValues};
+diff --git a/backend/src/services/planEntitlements.js b/backend/src/services/planEntitlements.js
+index 978cd7feeeccea99aa3fab8a6e21987177603d11..2cd300ad4b85058c2dec73886ccc3055bf3a3582 100644
+--- a/backend/src/services/planEntitlements.js
++++ b/backend/src/services/planEntitlements.js
+@@ -3,6 +3,7 @@ async function entitlementsFor(user) {
+   const active = user?.subscriptionExpiry && new Date(user.subscriptionExpiry).getTime() > Date.now();
+   const plan = await SubscriptionPlan.findByPk(active ? user.subscriptionPlan : 'free');
+   // isActive controls sales, not benefits already purchased. Benefit edits take effect immediately.
+-  return { featuredJobs: Boolean(plan?.featuredJobs), resumeLimit: require('./planAttributes').resumeLimitFor(plan) };
++  const attributes = require('./planAttributes');
++  return { ...attributes.valuesFor(plan || {}, attributes.SYSTEM), featuredJobs: Boolean(plan?.featuredJobs), resumeLimit: require('./planAttributes').resumeLimitFor(plan) };
+ }
+ module.exports = { entitlementsFor };
+diff --git a/backend/src/services/wageInvoice.js b/backend/src/services/wageInvoice.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..cf8032f427ae65142cded87d7ff63c2558ef18d0
+--- /dev/null
++++ b/backend/src/services/wageInvoice.js
+@@ -0,0 +1,10 @@
++const { randomUUID }=require('crypto');
++const { normalizeRows }=require('./wageCalculation');
++function snapshot(register,employeeId){
++ const employee=normalizeRows(register.rows).find(row=>row.employeeId===employeeId);
++ if(!employee)throw Object.assign(new Error('Employee not found in register'),{status:404});
++ if(employee.net<0)throw Object.assign(new Error('Net payable cannot be negative'),{status:400});
++ const number='WAGE-'+randomUUID();
++ return {number,employeeId:employee.employeeId,registerId:register.id,registerVersion:register.version,date:new Date().toISOString(),seller:register.site,buyer:employee.name,currency:'INR',subtotal:employee.net,tax:0,total:employee.net,employee,period:register.period,site:register.site,description:`Wages for ${register.period} at ${register.site}\nEmployee ID: ${employee.employeeId}\nDesignation: ${employee.designation || '-'}\nPayable days: ${employee.payableDays}\nDaily wage rate: INR ${Number(employee.rate).toFixed(2)}\nGross earnings: INR ${employee.earnings.toFixed(2)}\nTotal deductions: INR ${employee.deductions.toFixed(2)}\nNet payable: INR ${employee.net.toFixed(2)}`,terms:'Amount is the approved net payable. Creating this invoice does not record payment or transfer funds.'};
++}
++module.exports={snapshot};
+diff --git a/backend/test/plan-attributes.test.js b/backend/test/plan-attributes.test.js
+index 521f2f3d00bb786a63a473159b919c741bdad3da..2d8638dfbb8609b1c65097c43ed1a45a9d39f0be 100644
+--- a/backend/test/plan-attributes.test.js
++++ b/backend/test/plan-attributes.test.js
+@@ -64,3 +64,19 @@ test('migration is additive, repeatable and does not change existing limits',asy
+  const q={sequelize:{transaction:async fn=>fn({})},describeTable:async()=>columns,addColumn:async(t,k,d)=>{columns[k]=d;adds++},showAllTables:async()=>tables,createTable:async t=>{tables.push(t);creates++}};
+  await migration.up(q,S);await migration.up(q,S);assert.equal(creates,1);assert.equal(adds,1);
+ });
++
++test('comparison switches and limits persist in JSON while featured jobs uses its canonical column',async()=>{
++ const defs=await P.definitions(),values=P.valuesFor(state.plans.premium,defs);Object.assign(values,{socialPromotion:true,dedicatedSupport:true,accountManager:true,apiAccess:true,aiScreening:true,aiScreeningLevel:'advanced',jobPostingLimit:8,resumeViewLimit:75});
++ assert.equal((await call(C.save,req({name:'Premium',isActive:true,attributes:values,reason:'Configure comparison features'},{id:'premium'}))).status,200);
++ assert.equal(state.plans.premium.attributeValues.jobPostingLimit,8);assert.equal(state.plans.premium.attributeValues.socialPromotion,true);assert.equal(state.plans.premium.featuredJobs,true);
++ const listed=await call(C.list,req());assert.equal(listed.data.data[1].attributes.aiScreeningLevel,'advanced');
++ const entitlements=await require('../src/services/planEntitlements').entitlementsFor(state.user);assert.equal(entitlements.apiAccess,true);assert.equal(entitlements.aiScreeningLevel,'advanced');
++ assert.throws(()=>P.validateValue(defs.find(d=>d.key==='aiScreeningLevel'),'invalid'));
++ assert.throws(()=>P.validateValue(defs.find(d=>d.key==='apiAccess'),'true'));
++});
++test('wage invoice migration is rerunnable, preserves invoices and seeds settings without overwriting edits',async()=>{
++ const columns={},sql=[],q={sequelize:{transaction:async fn=>fn({}),query:async(s,o)=>sql.push([s,o.replacements])},describeTable:async()=>columns,addColumn:async(t,k,v)=>{assert.equal(t,'wage_registers');columns[k]=v}};
++ const migration=require('../migrations/20261024000200-plan-comparison-wage-invoices'),S=require('sequelize');await migration.up(q,S);await migration.up(q,S);
++ assert.ok(columns.invoices);assert.equal(sql.length,8);assert.ok(sql.every(([s])=>s.includes('|| "attributeValues"')));
++ assert.equal(JSON.parse(sql[0][1].defaults).jobPostingLimit,3);assert.equal(JSON.parse(sql[1][1].defaults).resumeViewLimit,100);
++});
+diff --git a/backend/test/wages-api.test.js b/backend/test/wages-api.test.js
+index e8cad6c0e0012a2ae6e44dd54c52bb8c5cffda6c..633cdd0f45ff844e168a5946621f8ad0ef84673a 100644
+--- a/backend/test/wages-api.test.js
++++ b/backend/test/wages-api.test.js
+@@ -77,3 +77,21 @@ test('JSONB property ordering does not reject unchanged attendance during wage e
+  r=saved.data.data;r.rows[0].days[0].code='A';
+  assert.equal((await req('employer','/'+r.id,'PUT',{version:2,rows:r.rows})).status,400);
+ });
++
++async function approvedRegister(){let r=await imported();r.rows[0].rate=595;r=(await req('employer','/'+r.id,'PUT',{version:1,rows:r.rows})).data.data;await req('employer','/'+r.id+'/submit','POST',{version:2});const approved=await req('super_admin','/'+r.id+'/review','POST',{version:3,decision:'approve',notes:'All figures checked'});assert.equal(approved.status,200);return approved.data.data;}
++test('individual wage invoice uses authoritative net payable and retries return one immutable invoice',async()=>{
++ const r=await approvedRegister();records[0].rows[0].net=999999; // Never trust a stored/client-derived total.
++ const created=await req('employer','/'+r.id+'/invoices','POST',{employeeId:'001',version:r.version,total:1,tax:99});assert.equal(created.status,201);assert.equal(created.data.data.total,13554);assert.equal(created.data.data.subtotal,13554);assert.equal(created.data.data.tax,0);assert.equal(created.data.data.buyer,'Employee');
++ const duplicate=await req('employer','/'+r.id+'/invoices','POST',{employeeId:'001',version:1});assert.equal(duplicate.status,200);assert.equal(duplicate.data.data.number,created.data.data.number);assert.equal(records[0].invoices.length,1);
++ assert.equal((await req('otherEmployer','/'+r.id+'/invoices/001/pdf')).status,404);
++ assert.equal((await req('admin','/'+r.id+'/invoices/001/pdf')).status,403);
++ const pdf=await req('super_admin','/'+r.id+'/invoices/001/pdf');assert.equal(pdf.status,200);assert.ok(Buffer.from(pdf.data).subarray(0,5).equals(Buffer.from('%PDF-')));
++});
++test('invoice creation requires approval, current version and membership; audit failure rolls it back',async()=>{
++ let r=await imported();assert.equal((await req('employer','/'+r.id+'/invoices','POST',{employeeId:'001',version:1})).status,409);
++ r=await req('employer','/'+r.id);records=[];audits=[];r=await approvedRegister();
++ assert.equal((await req('otherEmployer','/'+r.id+'/invoices','POST',{employeeId:'001',version:r.version})).status,404);
++ assert.equal((await req('employer','/'+r.id+'/invoices','POST',{employeeId:'001',version:1})).status,409);
++ assert.equal((await req('employer','/'+r.id+'/invoices','POST',{employeeId:'missing',version:r.version})).status,404);
++ auditFail=true;assert.equal((await req('employer','/'+r.id+'/invoices','POST',{employeeId:'001',version:r.version})).status,500);assert.equal(records[0].invoices?.length||0,0);
++});
+diff --git a/docs/PLAN-CONTROLS-WAGE-INVOICES.md b/docs/PLAN-CONTROLS-WAGE-INVOICES.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..c486bc5b024858ad394c735baa92651ae013484a
+--- /dev/null
++++ b/docs/PLAN-CONTROLS-WAGE-INVOICES.md
+@@ -0,0 +1,60 @@
++# Plan comparison controls and individual wage invoices
++
++This is a follow-up to `Phase7-plan-attributes.patch`. Apply that patch first. This patch does not repeat its changes. The local baseline is the tree produced by that patch on `phase7` commit `3d824c8`.
++
++## Plan controls
++
++Superadmin → Plans now uses real Yes/No switches for boolean values, including Featured jobs, AI Screening, Social Promotion, Dedicated Support, Account Manager and API Access. Job Postings and Resume Views have numeric monthly allowances and an Unlimited checkbox. AI screening level has validated Basic/Advanced/Custom options. The existing resume-builder limit remains separate from resume views.
++
++The Full Feature Comparison table no longer contains a hard-coded matrix. It uses the same active plans, labels and saved attribute values as the plan cards. Editing values in Plans and refreshing the pricing page updates both. Inactive plans disappear from both views. Disabling AI Screening shows a cross instead of its level; the level also disappears from that plan's card. Authenticated subscription responses expose the saved settings too.
++
++The migration initializes the former comparison values: Free has 3 job postings and 5 resume views per month; Standard has unlimited job postings and 100 resume views; Premium/Enterprise have unlimited values. AI is off for Free, Basic for Standard, Advanced for Premium, Custom for Enterprise. Social Promotion and Dedicated Support start enabled for Premium/Enterprise; Account Manager and API Access start enabled for Enterprise. Existing configured values win over these defaults, including on migration reruns. Featured-job settings are preserved.
++
++These new settings are stored plan/comparison details and entitlement metadata. This patch does not implement monthly job/view usage counters, a new API-key authentication product, social promotion automation or support fulfilment. AI level describes the plan; it does not install different AI engines. The existing backend-enforced resume-builder limit and featured-job permission continue to work. Enabling a service benefit requires that service to be provided. Do not treat comparison allowances as newly enforced quotas.
++
++## Wage invoices
++
++Each employee row in an **approved** wage register now offers **Create invoice**. After creation, the action becomes **Download invoice**. Employers can create/download only in their own registers; superadmins can do so across employers. Other roles cannot use these wage-register endpoints.
++
++The server takes the employee from the saved register and recalculates earnings, deductions and net payable using the existing wage formulas. It never accepts a client-provided invoice amount. Invoice subtotal and total are exactly net payable, with zero additional tax. The PDF includes the employee name/ID, designation, site, payroll month, payable days, daily rate, gross earnings, deductions and net payable.
++
++Invoice snapshots are saved on the register with a stable number and the register version. Repeating creation for the same employee returns the same invoice; row locking prevents concurrent duplicate creation. Amounts are immutable after creation. A failed audit rolls back invoice creation. Draft/submitted registers must complete the existing review/approval workflow first. Unsaved wage edits cannot be used to create an invoice.
++
++The invoice is marked **Issued**, not Paid. Creation neither transfers money nor records settlement. It is not a tax-reporting or statutory filing feature. PDF labels remain English.
++
++## Invoice navigation
++
++The separate Invoices entries are removed from employer/admin/superadmin navigation and admin user-detail tabs. Old employer invoice pages redirect to the employer wage register; old superadmin invoice pages redirect to the superadmin wage register. The old internal-admin invoice page redirects to the admin overview, because internal admins do not have wage-register access.
++
++Historical invoice database records and APIs are retained. Subscription payment invoices remain available through payment history; they are separate from employee wage invoices.
++
++## Installation — PowerShell from project root
++
++Apply this **after** `Phase7-plan-attributes.patch`:
++
++```powershell
++Set-Location D:\college\TY-Project\Insta-HR-main
++git status
++git apply --check .\Phase7-plan-controls-wage-invoices.patch
++git apply .\Phase7-plan-controls-wage-invoices.patch
++npm --prefix backend run migrate:plan-attributes
++npm --prefix backend run migrate:wage-invoices
++npm --prefix frontend run build
++```
++
++Back up the database before migration. Both migrations are rerunnable. The new migration adds a JSONB invoice-snapshot field to wage registers and seeds missing comparison values without replacing existing values. Restart both servers afterwards. No new runtime dependencies are required. If the patch check fails, stop and reconcile the base instead of forcing application.
++
++## Verification
++
++Verified on 24 October 2026: 137 backend tests passed, 40 frontend tests passed, and the production build/TypeScript passed. A generated sample PDF was rendered and checked; the example gross wage of INR 15,470 minus INR 1,916 deductions produced an invoice of INR 13,554.
++
++Tests cover plan-setting persistence/types, dynamic comparison rendering, switch booleans, removed navigation, per-employee UI actions, authenticated invoice ownership, approval/version checks, amount tampering, repeat creation, PDF output, audit rollback and migration reruns. Database tests use isolated ORM doubles; no production database or payment provider was modified.
++
++Manual checks:
++
++1. Toggle Social Promotion/API Access on one plan and save with a reason. Refresh Subscription and confirm both its card and comparison table change.
++2. Change a monthly allowance, toggle Unlimited, and change AI level. Disable AI Screening and verify its comparison cell becomes a cross.
++3. Approve a populated wage register. Create an invoice beside one employee, then download it. Compare its total with that employee's Net column.
++4. Repeat creation, including from two tabs. Confirm the invoice number stays the same and only one snapshot exists for that employee.
++5. Confirm a draft/submitted register cannot create invoices. Try an old version and another employer's register; both must be rejected appropriately.
++6. Check that invoice menu entries and user-detail invoice tabs are gone. Check the legacy URL redirects and confirm subscription payment invoices still download.
+diff --git a/frontend/src/app/admin/invoices/page.tsx b/frontend/src/app/admin/invoices/page.tsx
+index fb069676c4d03216865d762ecb8a58d67582d440..d66a0bdc11478828462d2ca947af874289e0de8c 100644
+--- a/frontend/src/app/admin/invoices/page.tsx
++++ b/frontend/src/app/admin/invoices/page.tsx
+@@ -1,2 +1,2 @@
+-import AdminCollection from '@/components/admin/AdminCollection'
+-export default function Page() { return <AdminCollection kind="invoices" title="Invoices" fixedRole="" /> }
++import { redirect } from 'next/navigation'
++export default function Page(){redirect('/admin')}
+diff --git a/frontend/src/app/employer/invoices/page.tsx b/frontend/src/app/employer/invoices/page.tsx
+index 77e2c1e20555b94000e5e63ec0e04bf5dc03ff50..fa253307a4af63cacd9838737308e4649af7b894 100644
+--- a/frontend/src/app/employer/invoices/page.tsx
++++ b/frontend/src/app/employer/invoices/page.tsx
+@@ -1,554 +1,2 @@
+-'use client';
+-import { downloadInvoiceFile } from '@/lib/downloadInvoice'
+-import { API_BASE } from '@/lib/api'
+-import { tr, trError, useLocale } from '@/lib/localization'
+-
+-
+-import { useEffect, useState } from 'react';
+-
+-
+-type PayrollOption = {
+-  id: string;
+-  payPeriodMonth: string;
+-  netSalary: string;
+-  deploymentId?: string;
+-};
+-
+-type InvoiceRecord = {
+-  id: string;
+-  invoiceNumber: string;
+-  billingPeriodMonth: string;
+-  invoiceDate: string;
+-  dueDate: string;
+-  subtotal: string;
+-  taxAmount: string;
+-  totalAmount: string;
+-  paymentTerms?: string;
+-  status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
+-  remarks?: string | null;
+-  deployment?: {
+-    id: string;
+-    siteName: string;
+-    location?: string;
+-    candidate?: {
+-      id: string;
+-      email: string;
+-    };
+-  };
+-  payroll?: {
+-    id: string;
+-    payPeriodMonth: string;
+-    netSalary: string;
+-    status: string;
+-  };
+-  candidate?: {
+-    id: string;
+-    email: string;
+-  };
+-};
+-
+-type DeploymentOption = {
+-  id: string;
+-  siteName: string;
+-  location?: string;
+-  candidate?: {
+-    id: string;
+-    email: string;
+-  };
+-};
+-
+-export default function EmployerInvoicesPage() {
+-  useLocale()
+-
+-  const [token, setToken] = useState('');
+-  const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
+-  const [deployments, setDeployments] = useState<DeploymentOption[]>([]);
+-  const [payrolls, setPayrolls] = useState<PayrollOption[]>([]);
+-  const [loading, setLoading] = useState(false);
+-  const [submitting, setSubmitting] = useState(false);
+-  const [error, setError] = useState('');
+-  const [success, setSuccess] = useState('');
+-
+-  const [form, setForm] = useState({
+-    deploymentId: '',
+-    payrollId: '',
+-    billingPeriodMonth: '',
+-    invoiceDate: '',
+-    dueDate: '',
+-    subtotal: '',
+-    taxAmount: '',
+-    paymentTerms: 'Net 30',
+-    remarks: '',
+-  });
+-
+-  useEffect(() => {
+-    const storedToken = localStorage.getItem('token') || localStorage.getItem('accessToken') || '';
+-    setToken(storedToken);
+-  }, []);
+-
+-  useEffect(() => {
+-    if (token) {
+-      fetchInvoices();
+-      fetchDeployments();
+-      fetchPayrolls();
+-    }
+-  }, [token]);
+-
+-  const authHeaders = (json = true) => ({
+-    ...(json ? { 'Content-Type': 'application/json' } : {}),
+-    Authorization: `Bearer ${token}`,
+-  });
+-
+-  const fetchInvoices = async () => {
+-    try {
+-      setLoading(true);
+-      setError('');
+-
+-      const res = await fetch(`${API_BASE}/employer/invoices`, {
+-        headers: authHeaders(false),
+-      });
+-
+-      const data = await res.json();
+-
+-      if (!res.ok) throw new Error(data.message || 'Failed to fetch invoices');
+-
+-      setInvoices(data.data || []);
+-    } catch (err: any) {
+-      setError(err.message || 'Failed to fetch invoices');
+-    } finally {
+-      setLoading(false);
+-    }
+-  };
+-
+-  const fetchDeployments = async () => {
+-    try {
+-      const res = await fetch(`${API_BASE}/employer/deployments`, {
+-        headers: authHeaders(false),
+-      });
+-
+-      const data = await res.json();
+-
+-      if (!res.ok) throw new Error(data.message || 'Failed to fetch deployments');
+-
+-      setDeployments(data.data || []);
+-    } catch (err: any) {
+-      setError(err.message || 'Failed to fetch deployments');
+-    }
+-  };
+-
+-  const fetchPayrolls = async () => {
+-    try {
+-      const res = await fetch(`${API_BASE}/employer/payrolls`, {
+-        headers: authHeaders(false),
+-      });
+-
+-      const data = await res.json();
+-
+-      if (!res.ok) throw new Error(data.message || 'Failed to fetch payrolls');
+-
+-      setPayrolls(data.data || []);
+-    } catch (err: any) {
+-      setError(err.message || 'Failed to fetch payrolls');
+-    }
+-  };
+-
+-  const handleChange = (
+-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+-  ) => {
+-    setForm(prev => ({
+-      ...prev,
+-      [e.target.name]: e.target.value,
+-    }));
+-  };
+-
+-  const getDeploymentLabel = (deployment: DeploymentOption) => {
+-    return deployment.candidate?.email
+-      ? `${deployment.siteName} - ${deployment.candidate.email}`
+-      : deployment.siteName;
+-  };
+-
+-  const formatCurrency = (value?: string | number) => {
+-    const amount = Number(value || 0);
+-    return new Intl.NumberFormat('en-IN', {
+-      style: 'currency',
+-      currency: 'INR',
+-      maximumFractionDigits: 2,
+-    }).format(amount);
+-  };
+-
+-  const totalPreview = Number(form.subtotal || 0) + Number(form.taxAmount || 0);
+-
+-  const filteredPayrolls = form.deploymentId
+-    ? payrolls.filter(item => item.deploymentId === form.deploymentId)
+-    : payrolls;
+-
+-  const handleSubmit = async (e: React.FormEvent) => {
+-    e.preventDefault();
+-
+-    if (
+-      !form.deploymentId ||
+-      !form.billingPeriodMonth ||
+-      !form.invoiceDate ||
+-      !form.dueDate ||
+-      !form.subtotal
+-    ) {
+-      setError('Deployment, billing month, invoice date, due date, and subtotal are required.');
+-      return;
+-    }
+-
+-    try {
+-      setSubmitting(true);
+-      setError('');
+-      setSuccess('');
+-
+-      const payload = {
+-        deploymentId: form.deploymentId,
+-        payrollId: form.payrollId || null,
+-        billingPeriodMonth: form.billingPeriodMonth,
+-        invoiceDate: form.invoiceDate,
+-        dueDate: form.dueDate,
+-        subtotal: Number(form.subtotal),
+-        taxAmount: Number(form.taxAmount || 0),
+-        paymentTerms: form.paymentTerms || 'Net 30',
+-        remarks: form.remarks || null,
+-      };
+-
+-      const res = await fetch(`${API_BASE}/employer/invoices`, {
+-        method: 'POST',
+-        headers: authHeaders(),
+-        body: JSON.stringify(payload),
+-      });
+-
+-      const data = await res.json();
+-
+-      if (!res.ok) throw new Error(data.message || 'Failed to create invoice');
+-
+-      setSuccess('Invoice created successfully.');
+-      setForm({
+-        deploymentId: '',
+-        payrollId: '',
+-        billingPeriodMonth: '',
+-        invoiceDate: '',
+-        dueDate: '',
+-        subtotal: '',
+-        taxAmount: '',
+-        paymentTerms: 'Net 30',
+-        remarks: '',
+-      });
+-
+-      await fetchInvoices();
+-    } catch (err: any) {
+-      setError(err.message || 'Failed to create invoice');
+-    } finally {
+-      setSubmitting(false);
+-    }
+-  };
+-
+-  const handleStatusChange = async (id: string, status: string) => {
+-    try {
+-      setError('');
+-      setSuccess('');
+-
+-      const res = await fetch(`${API_BASE}/employer/invoices/${id}/status`, {
+-        method: 'PATCH',
+-        headers: authHeaders(),
+-        body: JSON.stringify({ status }),
+-      });
+-
+-      const data = await res.json();
+-
+-      if (!res.ok) throw new Error(data.message || 'Failed to update invoice status');
+-
+-      setSuccess('Invoice status updated successfully.');
+-      await fetchInvoices();
+-    } catch (err: any) {
+-      setError(err.message || 'Failed to update invoice status');
+-    }
+-  };
+-
+-  return (
+-    <div className="min-h-screen bg-gray-50 px-4 py-8 md:px-8">
+-      <div className="mx-auto max-w-7xl">
+-        <div className="mb-8">
+-          <h1 className="text-3xl font-bold text-gray-900">{tr("Invoice & Billing")}</h1>
+-          <p className="mt-2 text-sm text-gray-600">{tr("Generate deployment-linked invoices and track billing lifecycle status.")}</p>
+-        </div>
+-
+-        {!token && (
+-          <div className="mb-6 rounded-xl border border-yellow-300 bg-yellow-50 p-4 text-sm text-yellow-800">{tr("JWT token not found in localStorage. Please login again as employer.")}</div>
+-        )}
+-
+-        {error && (
+-          <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+-            {trError(error)}
+-          </div>
+-        )}
+-
+-        {success && (
+-          <div className="mb-6 rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-700">
+-            {tr(success)}
+-          </div>
+-        )}
+-
+-        <div className="grid gap-8 lg:grid-cols-5">
+-          <div className="lg:col-span-2">
+-            <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
+-              <h2 className="text-xl font-semibold text-gray-900">{tr("Create Invoice")}</h2>
+-              <p className="mt-1 text-sm text-gray-500">{tr("Create a billing record for a deployment and billing period.")}</p>
+-
+-              <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+-                <div>
+-                  <label
+-                    htmlFor="deploymentId"
+-                    className="mb-2 block text-sm font-medium text-gray-700"
+-                  >{tr("Deployment")}</label>
+-                  <select
+-                    id="deploymentId"
+-                    name="deploymentId"
+-                    value={form.deploymentId}
+-                    onChange={handleChange}
+-                    className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
+-                  >
+-                    <option value="">{tr("Select Deployment")}</option>
+-                    {deployments.map(deployment => (
+-                      <option key={deployment.id} value={deployment.id}>
+-                        {getDeploymentLabel(deployment)}
+-                      </option>
+-                    ))}
+-                  </select>
+-                </div>
+-
+-                <div>
+-                  <label
+-                    htmlFor="payrollId"
+-                    className="mb-2 block text-sm font-medium text-gray-700"
+-                  >{tr("Linked Payroll")}</label>
+-                  <select
+-                    id="payrollId"
+-                    name="payrollId"
+-                    value={form.payrollId}
+-                    onChange={handleChange}
+-                    className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
+-                  >
+-                    <option value="">{tr("Select Payroll (Optional)")}</option>
+-                    {filteredPayrolls.map(payroll => (
+-                      <option key={payroll.id} value={payroll.id}>
+-                        {tr(payroll.payPeriodMonth)} - {tr(formatCurrency(payroll.netSalary))}
+-                      </option>
+-                    ))}
+-                  </select>
+-                </div>
+-
+-                <div>
+-                  <label
+-                    htmlFor="billingPeriodMonth"
+-                    className="mb-2 block text-sm font-medium text-gray-700"
+-                  >{tr("Billing Month")}</label>
+-                  <input
+-                    id="billingPeriodMonth"
+-                    name="billingPeriodMonth"
+-                    type="month"
+-                    value={form.billingPeriodMonth}
+-                    onChange={handleChange}
+-                    className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
+-                  />
+-                </div>
+-
+-                <div>
+-                  <label
+-                    htmlFor="invoiceDate"
+-                    className="mb-2 block text-sm font-medium text-gray-700"
+-                  >{tr("Invoice Date")}</label>
+-                  <input
+-                    id="invoiceDate"
+-                    name="invoiceDate"
+-                    type="date"
+-                    value={form.invoiceDate}
+-                    onChange={handleChange}
+-                    className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
+-                  />
+-                </div>
+-
+-                <div>
+-                  <label
+-                    htmlFor="dueDate"
+-                    className="mb-2 block text-sm font-medium text-gray-700"
+-                  >{tr("Due Date")}</label>
+-                  <input
+-                    id="dueDate"
+-                    name="dueDate"
+-                    type="date"
+-                    value={form.dueDate}
+-                    onChange={handleChange}
+-                    className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
+-                  />
+-                </div>
+-
+-                <div>
+-                  <label
+-                    htmlFor="subtotal"
+-                    className="mb-2 block text-sm font-medium text-gray-700"
+-                  >{tr("Subtotal")}</label>
+-                  <input
+-                    id="subtotal"
+-                    name="subtotal"
+-                    type="number"
+-                    step="0.01"
+-                    value={form.subtotal}
+-                    onChange={handleChange}
+-                    placeholder={tr("Enter subtotal")}
+-                    className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
+-                  />
+-                </div>
+-
+-                <div>
+-                  <label
+-                    htmlFor="taxAmount"
+-                    className="mb-2 block text-sm font-medium text-gray-700"
+-                  >{tr("Tax Amount")}</label>
+-                  <input
+-                    id="taxAmount"
+-                    name="taxAmount"
+-                    type="number"
+-                    step="0.01"
+-                    value={form.taxAmount}
+-                    onChange={handleChange}
+-                    placeholder={tr("Enter tax amount")}
+-                    className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
+-                  />
+-                </div>
+-
+-                <div>
+-                  <label
+-                    htmlFor="paymentTerms"
+-                    className="mb-2 block text-sm font-medium text-gray-700"
+-                  >{tr("Payment Terms")}</label>
+-                  <select
+-                    id="paymentTerms"
+-                    name="paymentTerms"
+-                    value={form.paymentTerms}
+-                    onChange={handleChange}
+-                    className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
+-                  >
+-                    <option value="Net 7">{tr("Net 7")}</option>
+-                    <option value="Net 15">{tr("Net 15")}</option>
+-                    <option value="Net 30">{tr("Net 30")}</option>
+-                    <option value="Net 45">{tr("Net 45")}</option>
+-                  </select>
+-                </div>
+-
+-                <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+-                  <p className="text-xs font-medium uppercase tracking-wide text-gray-500">{tr("Total Preview")}</p>
+-                  <p className="mt-1 text-lg font-semibold text-gray-900">
+-                    {tr(formatCurrency(totalPreview))}
+-                  </p>
+-                </div>
+-
+-                <div>
+-                  <label
+-                    htmlFor="remarks"
+-                    className="mb-2 block text-sm font-medium text-gray-700"
+-                  >{tr("Remarks")}</label>
+-                  <textarea
+-                    id="remarks"
+-                    name="remarks"
+-                    value={form.remarks}
+-                    onChange={handleChange}
+-                    rows={4}
+-                    placeholder={tr("Optional invoice notes")}
+-                    className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-black"
+-                  />
+-                </div>
+-
+-                <button
+-                  type="submit"
+-                  disabled={submitting || !token}
+-                  className="w-full rounded-xl bg-black px-4 py-3 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-400"
+-                >
+-                  {tr(submitting ? 'Submitting...' : 'Create Invoice')}
+-                </button>
+-              </form>
+-            </div>
+-          </div>
+-
+-          <div className="lg:col-span-3">
+-            <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
+-              <div className="flex items-center justify-between gap-4">
+-                <div>
+-                  <h2 className="text-xl font-semibold text-gray-900">{tr("Invoice History")}</h2>
+-                  <p className="mt-1 text-sm text-gray-500">{tr("Track invoice values, dates, linked payroll, and payment status.")}</p>
+-                </div>
+-
+-                <button
+-                  onClick={fetchInvoices}
+-                  className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+-                >{tr("Refresh")}</button>
+-              </div>
+-
+-              <div className="mt-6 overflow-x-auto">
+-                <table className="min-w-full border-separate border-spacing-y-3">
+-                  <thead>
+-                    <tr className="text-left text-xs uppercase tracking-wide text-gray-500">
+-                      <th className="px-3 py-2">{tr("Invoice No.")}</th>
+-                      <th className="px-3 py-2">{tr("Candidate")}</th>
+-                      <th className="px-3 py-2">{tr("Deployment")}</th>
+-                      <th className="px-3 py-2">{tr("Billing Month")}</th>
+-                      <th className="px-3 py-2">{tr("Invoice Date")}</th>
+-                      <th className="px-3 py-2">{tr("Due Date")}</th>
+-                      <th className="px-3 py-2">{tr("Total")}</th>
+-                      <th className="px-3 py-2">{tr("Payroll")}</th>
+-                      <th className="px-3 py-2">{tr("Status")}</th>
+-                    </tr>
+-                  </thead>
+-
+-                  <tbody>
+-                    {loading ? (
+-                      <tr>
+-                        <td colSpan={9} className="px-3 py-8 text-center text-sm text-gray-500">{tr("Loading invoices...")}</td>
+-                      </tr>
+-                    ) : invoices.length === 0 ? (
+-                      <tr>
+-                        <td colSpan={9} className="px-3 py-8 text-center text-sm text-gray-500">{tr("No invoices found.")}</td>
+-                      </tr>
+-                    ) : (
+-                      invoices.map(item => (
+-                        <tr key={item.id} className="rounded-2xl bg-gray-50 text-sm text-gray-800">
+-                          <td className="rounded-l-2xl px-3 py-4 font-medium">{tr(item.invoiceNumber)}</td>
+-                          <td className="px-3 py-4">
+-                            {tr(item.candidate?.email || item.deployment?.candidate?.email || '—')}
+-                          </td>
+-                          <td className="px-3 py-4">{item.deployment?.siteName || '—'}</td>
+-                          <td className="px-3 py-4">{tr(item.billingPeriodMonth)}</td>
+-                          <td className="px-3 py-4">{tr(item.invoiceDate)}</td>
+-                          <td className="px-3 py-4">{tr(item.dueDate)}</td>
+-                          <td className="px-3 py-4 font-semibold">
+-                            {tr(formatCurrency(item.totalAmount))}
+-                          </td>
+-                          <td className="px-3 py-4">
+-                            {tr(item.payroll
+-                              ? `${item.payroll.payPeriodMonth} - ${formatCurrency(item.payroll.netSalary)}`
+-                              : '—')}
+-                          </td>
+-                          <td className="rounded-r-2xl px-3 py-4">
+-                            <select
+-                              disabled={item.status === 'paid' || item.status === 'cancelled'}
+-                              value={item.status}
+-                              onChange={e => handleStatusChange(item.id, e.target.value)}
+-                              className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-medium outline-none focus:border-black"
+-                            >
+-                              {[item.status, ...({draft:['sent','cancelled'],sent:['paid','overdue','cancelled'],overdue:['paid','cancelled'],paid:[],cancelled:[]} as Record<string,string[]>)[item.status]].map(status=><option value={status} key={status}>{tr(status)}</option>)}
+-                            </select><button className="ml-3 text-blue-700 underline" onClick={()=>void downloadInvoiceFile(`/employer/invoices/${item.id}/pdf`, item.id).catch(e=>setError(e.message))}>{tr('Download invoice')}</button>
+-                          </td>
+-                        </tr>
+-                      ))
+-                    )}
+-                  </tbody>
+-                </table>
+-              </div>
+-            </div>
+-          </div>
+-        </div>
+-      </div>
+-    </div>
+-  );
+-}
+\ No newline at end of file
++import { redirect } from 'next/navigation'
++export default function Page(){redirect('/employer/wage-register')}
+diff --git a/frontend/src/app/subscription/page.tsx b/frontend/src/app/subscription/page.tsx
+index 013046837e50697c93940e88a29daac9bea6fb4b..c8a85ffa5ad0030f54ba748496a575269ba6a5b1 100644
+--- a/frontend/src/app/subscription/page.tsx
++++ b/frontend/src/app/subscription/page.tsx
+@@ -1,4 +1,5 @@
+ 'use client'
++import PlanComparison from '@/components/PlanComparison'
+ import { attributeRows, type PlanAttributeDefinition } from '@/lib/planAttributes'
+ import LoyaltyRedemption from '@/components/LoyaltyRedemption'
+ import { readStoredUser } from '@/lib/storage'
+@@ -325,7 +326,7 @@ export default function SubscriptionPage() {
+                 </div>
+ 
+                 <ul className="space-y-2 mb-6 flex-1">
+-                  {attributeRows(plan.attributes,attributeDefinitions).map(d=><li key={d.key} className="flex justify-between gap-2 text-sm text-gray-700"><span>{d.system?tr(d.label):d.label}</span><span>{d.value===null?tr('Unlimited'):typeof d.value==='boolean'?tr(d.value?'Yes':'No'):typeof d.value==='number'?new Intl.NumberFormat(locale()).format(d.value):String(d.value??'')}{d.unit && d.value!==null && typeof d.value==='number'?' '+d.unit:''}</span></li>)}
++                  {attributeRows(plan.attributes,attributeDefinitions).map(d=><li key={d.key} className="flex justify-between gap-2 text-sm text-gray-700"><span>{d.system?tr(d.label):d.label}</span><span>{d.value===null?tr('Unlimited'):typeof d.value==='boolean'?tr(d.value?'Yes':'No'):typeof d.value==='number'?new Intl.NumberFormat(locale()).format(d.value):d.system?tr(String(d.value??'')):String(d.value??'')}{d.unit && d.value!==null && typeof d.value==='number'?' '+(d.system?tr(d.unit):d.unit):''}</span></li>)}
+                 </ul>
+ 
+                 <button
+@@ -351,48 +352,7 @@ export default function SubscriptionPage() {
+           })}
+         </div>
+ 
+-        <div className="mt-16 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+-          <div className="p-6 border-b border-gray-100">
+-            <h2 className="text-xl font-bold text-gray-900">{tr("Full Feature Comparison")}</h2>
+-          </div>
+-
+-          <div className="overflow-x-auto">
+-            <table className="w-full text-sm">
+-              <thead>
+-                <tr className="bg-gray-50">
+-                  <th className="text-left p-4 font-semibold text-gray-700">{tr("Feature")}</th>
+-                  <th className="text-center p-4 font-semibold text-gray-500">{tr("Free")}</th>
+-                  <th className="text-center p-4 font-semibold text-blue-600">{tr("Standard")}</th>
+-                  <th className="text-center p-4 font-semibold text-purple-600">{tr("Premium")}</th>
+-                  <th className="text-center p-4 font-semibold text-yellow-600">{tr("Enterprise")}</th>
+-                </tr>
+-              </thead>
+-              <tbody className="divide-y divide-gray-100">
+-                {[
+-                  ['Job Postings', '3/month', 'Unlimited', 'Unlimited', 'Unlimited'],
+-                  ['Resume Views', '5/month', '100/month', 'Unlimited', 'Unlimited'],
+-                  ['AI Screening', '✗', 'Basic', 'Advanced', 'Custom'],
+-                  ['Featured Listings', '✗', '✗', '✓', '✓'],
+-                  ['Social Promotion', '✗', '✗', '✓', '✓'],
+-                  ['Dedicated Support', '✗', '✗', '✓', '✓'],
+-                  ['Account Manager', '✗', '✗', '✗', '✓'],
+-                  ['API Access', '✗', '✗', '✗', '✓'],
+-                ].map(([feature, ...vals]) => (
+-                  <tr key={feature} className="hover:bg-gray-50">
+-                    <td className="p-4 text-gray-700 font-medium">{tr(feature)}</td>
+-                    {vals.map((val, i) => (
+-                      <td key={i} className="p-4 text-center">
+-                        <span className={val === '✗' ? 'text-gray-300 text-lg' : val === '✓' ? 'text-green-500 text-lg font-bold' : 'text-gray-700'}>
+-                          {tr(val)}
+-                        </span>
+-                      </td>
+-                    ))}
+-                  </tr>
+-                ))}
+-              </tbody>
+-            </table>
+-          </div>
+-        </div>
++        <PlanComparison plans={plans} definitions={attributeDefinitions}/>
+ 
+         {user?.role === 'employer' && (
+           <div className="mt-8 text-center">
+diff --git a/frontend/src/app/super-admin/invoices/page.tsx b/frontend/src/app/super-admin/invoices/page.tsx
+index fb069676c4d03216865d762ecb8a58d67582d440..f74b780b2766719b84bf52bfea3350181c9edcf2 100644
+--- a/frontend/src/app/super-admin/invoices/page.tsx
++++ b/frontend/src/app/super-admin/invoices/page.tsx
+@@ -1,2 +1,2 @@
+-import AdminCollection from '@/components/admin/AdminCollection'
+-export default function Page() { return <AdminCollection kind="invoices" title="Invoices" fixedRole="" /> }
++import { redirect } from 'next/navigation'
++export default function Page(){redirect('/super-admin/wage-register')}
+diff --git a/frontend/src/components/PlanComparison.tsx b/frontend/src/components/PlanComparison.tsx
+new file mode 100644
+index 0000000000000000000000000000000000000000..ee6b54032b4c983a4aafe3368647e6fb5dba1c0d
+--- /dev/null
++++ b/frontend/src/components/PlanComparison.tsx
+@@ -0,0 +1,10 @@
++'use client'
++import { tr,useLocale,locale } from '@/lib/localization'
++import type { PlanAttributeDefinition } from '@/lib/planAttributes'
++export default function PlanComparison({plans,definitions}:{plans:{id:string;name:string;attributes:Record<string,unknown>}[];definitions:PlanAttributeDefinition[]}){
++ useLocale()
++ const keys=['jobPostingLimit','resumeViewLimit','aiScreening','featuredJobs','socialPromotion','dedicatedSupport','accountManager','apiAccess']
++ const rows=keys.map(key=>definitions.find(d=>d.key===key)).filter((d):d is PlanAttributeDefinition=>Boolean(d))
++ function value(plan:typeof plans[number],key:string){const v=plan.attributes[key];if(key==='aiScreening')return v?tr(String(plan.attributes.aiScreeningLevel)):'✗';if(typeof v==='boolean')return v?'✓':'✗';if(v===null)return tr('Unlimited');if(typeof v==='number')return new Intl.NumberFormat(locale()).format(v)+' / '+tr('month');return String(v??'—')}
++ return <div className="mt-16 overflow-hidden rounded-2xl border bg-white"><h2 className="border-b p-6 text-xl font-bold">{tr('Full Feature Comparison')}</h2><div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr><th className="p-4 text-left">{tr('Feature')}</th>{plans.map(p=><th key={p.id} className="p-4 text-center">{p.name}</th>)}</tr></thead><tbody>{rows.map(d=><tr key={d.key} className="border-t"><th className="p-4 text-left font-medium">{tr(d.label)}</th>{plans.map(p=><td className="p-4 text-center" key={p.id}>{value(p,d.key)}</td>)}</tr>)}</tbody></table></div></div>
++}
+diff --git a/frontend/src/components/admin/AdminShell.tsx b/frontend/src/components/admin/AdminShell.tsx
+index 24dc46c2ac3c4832c7a52a2de7936e72d9353298..236cc2aec51e4e7bd2ca81d8f36aa0d721c84982 100644
+--- a/frontend/src/components/admin/AdminShell.tsx
++++ b/frontend/src/components/admin/AdminShell.tsx
+@@ -32,7 +32,7 @@ export function AdminFrame({ title, description, children }: { title: string; de
+   useLocale()
+ 
+   const staff = useStaff(), root = staff.role === 'super_admin' ? '/super-admin' : '/admin'
+-  const links = [['Overview', root], ['Candidates', '/admin/candidates'], ['Employers', '/admin/employers'], ['Jobs', '/admin/jobs'], ['Applications', '/admin/applications'], ['Payments', '/admin/payments'], ['Invoices', '/admin/invoices'], ['Support & notes', `${root}/communication`], ['Audit logs', `${root}/audit-logs`], ['Training', '/admin/training']]
++  const links = [['Overview', root], ['Candidates', '/admin/candidates'], ['Employers', '/admin/employers'], ['Jobs', '/admin/jobs'], ['Applications', '/admin/applications'], ['Payments', '/admin/payments'], ['Support & notes', `${root}/communication`], ['Audit logs', `${root}/audit-logs`], ['Training', '/admin/training']]
+   if (staff.role === 'admin') links.push(['Plans','/admin/plans'])
+   if (staff.role === 'super_admin') links.push(['Wage registers', '/super-admin/wage-register'], ['Staff & roles', '/super-admin/staff'], ['Plans', '/super-admin/plans'], ['Feature flags', '/super-admin/feature-flags'], ['Infrastructure', '/super-admin/infrastructure'])
+   return <main className="min-h-screen bg-slate-50 px-4 pb-16 pt-24 text-slate-900 sm:px-6"><div className="mx-auto max-w-7xl"><p className="text-sm text-blue-700">{tr(staff.role === 'super_admin' ? 'System control' : 'Insta-HR team')}</p><h1 className="mt-1 text-3xl font-bold">{tr(title)}</h1>{description && <p className="mt-2 text-slate-600">{tr(description)}</p>}<nav aria-label={tr("Admin tools")} className="my-6 flex flex-wrap gap-2">{links.map(([label, href]) => <Link key={label} href={href} className="rounded-lg border bg-white px-3 py-2 text-sm text-blue-800 hover:bg-blue-50">{tr(label)}</Link>)}</nav>{children}</div></main>
+diff --git a/frontend/src/components/admin/AdminUserDetail.tsx b/frontend/src/components/admin/AdminUserDetail.tsx
+index a379b99437ca3e2f54a1bf0e3b4f071a2754106b..a274c8803cab2d17c703dd11ce5c2b8c1734ab30 100644
+--- a/frontend/src/components/admin/AdminUserDetail.tsx
++++ b/frontend/src/components/admin/AdminUserDetail.tsx
+@@ -20,7 +20,7 @@ export default function AdminUserDetail() {
+   async function change(path: string, body: unknown) { setBusy(true); setError(''); setSuccess(''); try { await adminRequest(path, mutation(path.endsWith('adjustments') ? 'POST' : 'PATCH', body)); await load(); setWhy(''); setSuccess('Change saved and recorded in the audit log.') } catch (err) { setError((err as Error).message) } finally { setBusy(false) } }
+   if (!record) return <AdminFrame title={tr("User details")}><Notice error={error} />{!error && <p>{tr("Loading profile…")}</p>}</AdminFrame>
+   const { user, profile, loyaltyBalance } = record, candidate = user.role === 'candidate', employer = user.role === 'employer'
+-  const tabs = candidate ? ['applications', 'resumes', 'training', 'classes', 'deployments', 'attendance', 'payrolls', 'invoices', 'loyalty', 'payments'] : employer ? ['jobs', 'applications', 'payments', 'invoices', 'deployments', 'attendance', 'payrolls', 'contracts', 'manpower', 'campaigns'] : ['payments']
++  const tabs = candidate ? ['applications', 'resumes', 'training', 'classes', 'deployments', 'attendance', 'payrolls', 'loyalty', 'payments'] : employer ? ['jobs', 'applications', 'payments', 'deployments', 'attendance', 'payrolls', 'contracts', 'manpower', 'campaigns'] : ['payments']
+   const canAccess = staff.role === 'super_admin' || ['candidate', 'employer', 'trainer'].includes(user.role)
+   return <AdminFrame title={user.email} description={tr("Review the profile, related activity and private staff notes.")}><Notice error={error} success={success} /><div className="grid items-start gap-5 lg:grid-cols-3"><div className="space-y-5 lg:col-span-2"><section className="rounded-xl border bg-white p-5"><h2 className="mb-4 text-xl font-semibold">{tr("Account")}</h2><RecordFields data={user} /></section><section className="rounded-xl border bg-white p-5"><h2 className="mb-4 text-xl font-semibold">{tr(employer ? 'Company profile' : candidate ? 'Candidate profile' : 'Profile')}</h2>{profile ? <RecordFields data={profile} /> : <p>{tr("No profile has been created.")}</p>}{candidate && <p className="mt-4 font-semibold">{tr("Loyalty balance: ")}{loyaltyBalance}</p>}</section>
+       <section className="rounded-xl border bg-white p-5"><h2 className="text-xl font-semibold">{tr("Activity history")}</h2><div className="my-4 flex flex-wrap gap-2">{tabs.map(value => <button key={value} onClick={() => { setTab(value); setPage(1) }} className={value === tab ? primaryStyle : secondaryStyle}>{tr(label(value))}</button>)}</div><Pages pagination={pagination} onPage={setPage} />{!activity.length && <p className="text-slate-500">{tr("No records on this page.")}</p>}<div className="space-y-3">{activity.map(item => <details key={item.id} className="rounded-lg border p-4"><summary className="cursor-pointer font-medium">{item.title || item.training?.title || item.job?.title || item.invoiceNumber || item.planName || item.reason || item.id} {item.status && `· ${item.status}`}</summary><div className="mt-4"><RecordFields data={item} /></div></details>)}</div></section>
+diff --git a/frontend/src/components/admin/PlanCatalog.tsx b/frontend/src/components/admin/PlanCatalog.tsx
+index 5b9f58cedc8bf8f5bcb534eb25f5f60f8e45fd3e..d0ab666b3a972ef20f4a7df5f5006126196c2718 100644
+--- a/frontend/src/components/admin/PlanCatalog.tsx
++++ b/frontend/src/components/admin/PlanCatalog.tsx
+@@ -3,9 +3,10 @@ import { useEffect,useState } from 'react'
+ import { tr,useLocale } from '@/lib/localization'
+ import { adminRequest,mutation } from '@/lib/adminApi'
+ import { AdminFrame,Notice,fieldStyle,primaryStyle } from './AdminShell'
+-type Definition={key:string;label:string;type:'money'|'integer'|'boolean'|'text';unit:string;defaultValue:unknown;system:boolean;enforced:boolean;unlimited?:boolean;min?:number;max?:number}
+-function ValueInput({definition:d,value,onChange}:{definition:Definition;value:any;onChange:(v:any)=>void}) {
+- if(d.type==='boolean')return <select className={fieldStyle} value={String(value)} onChange={e=>onChange(e.target.value==='true')}><option value="true">{tr('Yes')}</option><option value="false">{tr('No')}</option></select>
++type Definition={key:string;label:string;type:'money'|'integer'|'boolean'|'text'|'choice';options?:string[];unit:string;defaultValue:unknown;system:boolean;enforced:boolean;unlimited?:boolean;min?:number;max?:number}
++export function ValueInput({definition:d,value,onChange}:{definition:Definition;value:any;onChange:(v:any)=>void}) {
++ if(d.type==='boolean')return <span className="relative ml-3 inline-flex h-6 w-11 align-middle"><input type="checkbox" role="switch" aria-label={d.system?tr(d.label):d.label} checked={value===true} onChange={e=>onChange(e.target.checked)} className="peer absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"/><span aria-hidden="true" className="pointer-events-none absolute inset-0 rounded-full bg-slate-300 transition-colors peer-checked:bg-blue-700 peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500 peer-focus-visible:ring-offset-2"/><span aria-hidden="true" className="pointer-events-none absolute left-1 top-1 h-4 w-4 rounded-full bg-white shadow transition-transform peer-checked:translate-x-5"/></span>
++ if(d.type==='choice')return <select className={fieldStyle} value={value} onChange={e=>onChange(e.target.value)}>{d.options?.map(option=><option key={option} value={option}>{tr(option)}</option>)}</select>
+  const unlimited=d.type==='integer' && d.unlimited
+  return <div>{unlimited && <label className="block"><input type="checkbox" checked={value===null} onChange={e=>onChange(e.target.checked?null:0)}/>{tr('Unlimited')}</label>}<input required={value!==null} disabled={value===null} className={fieldStyle} type={d.type==='text'?'text':'number'} min={d.min??0} max={d.type==='money'?1000000:d.max??100000000} step={d.type==='money'?'0.01':'1'} maxLength={200} value={value===null?'':d.type==='money'?value/100:value} onChange={e=>onChange(d.type==='text'?e.target.value:d.type==='money'?Math.round(Number(e.target.value)*100):e.target.value===''?'':Number(e.target.value))}/></div>
+ }
+@@ -17,7 +18,7 @@ export default function PlanCatalog(){
+  useEffect(()=>{void load().catch(e=>setError(e.message))},[])
+  async function run(fn:()=>Promise<void>){setBusy(true);setError('');setSuccess('');try{await fn();await load();setSuccess('Settings saved and recorded in the audit log.')}catch(e){setError((e as Error).message)}finally{setBusy(false)}}
+  return <AdminFrame title={tr('Plans & attributes')} description={tr('Manage shared attribute definitions and set a value for each plan.')}><Notice error={error} success={success}/>
+- <p className="mb-5 rounded bg-blue-50 p-4">{tr('Built-in attributes control application behavior. Custom attributes are validated plan details; adding one does not create a new backend feature.')}</p>
++ <p className="mb-5 rounded bg-blue-50 p-4">{tr('Switches and values update the plan and its comparison. Custom features and service benefits require their own implementation or fulfilment.')}</p>
+  <section className="mb-6 rounded-xl border bg-white p-5"><h2 className="text-xl font-semibold">{tr('Add attribute')}</h2><form className="mt-4 grid gap-3 md:grid-cols-2" onSubmit={e=>{e.preventDefault();void run(async()=>{await adminRequest('/admin/workspace/plan-attributes',mutation('POST',{key:form.key,label:form.label,type:form.type,unit:form.unit,defaultValue:form.type==='boolean'?form.defaultValue==='true':form.type==='text'?form.defaultValue:form.unlimited?null:Number(form.defaultValue),reason:form.reason}));setForm({key:'',label:'',type:'integer',unit:'',defaultValue:'0',unlimited:false,reason:''})})}}>
+  <label>{tr('Attribute key')}<input required pattern="[a-z][a-zA-Z0-9_]{1,49}" className={fieldStyle} value={form.key} onChange={e=>setForm({...form,key:e.target.value})}/></label><label>{tr('Label')}<input required maxLength={100} className={fieldStyle} value={form.label} onChange={e=>setForm({...form,label:e.target.value})}/></label>
+  <label>{tr('Type')}<select className={fieldStyle} value={form.type} onChange={e=>setForm({...form,type:e.target.value,defaultValue:e.target.value==='boolean'?'false':e.target.value==='text'?'':'0',unlimited:false})}><option value="integer">{tr('Whole number')}</option><option value="boolean">{tr('Yes / No')}</option><option value="text">{tr('Text')}</option></select></label>
+@@ -28,6 +29,6 @@ export default function PlanCatalog(){
+  <p className="my-4 text-sm">{tr('Keys and types stay fixed after creation. Edit labels and units below; set plan values in each plan card.')}</p>
+  {defs.filter(d=>!d.system).map(d=><div key={d.key} className="border-t py-3"><span>{d.label} · {d.key} · {d.type}</span><button className="ml-4 underline" disabled={busy} onClick={()=>{setEditing(d.key);setMetadata({label:d.label,unit:d.unit,reason:''})}}>{tr('Edit')}</button></div>)}
+  {editing&&<form className="mt-4 space-y-3" onSubmit={e=>{e.preventDefault();void run(async()=>{await adminRequest('/admin/workspace/plan-attributes/'+editing,mutation('PATCH',metadata));setEditing('')})}}><label>{tr('Label')}<input required maxLength={100} className={fieldStyle} value={metadata.label} onChange={e=>setMetadata({...metadata,label:e.target.value})}/></label><label>{tr('Unit')}<input maxLength={30} className={fieldStyle} value={metadata.unit} onChange={e=>setMetadata({...metadata,unit:e.target.value})}/></label><label>{tr('Reason')}<input required minLength={5} maxLength={500} className={fieldStyle} value={metadata.reason} onChange={e=>setMetadata({...metadata,reason:e.target.value})}/></label><button disabled={busy} className={primaryStyle}>{tr('Save changes')}</button></form>}</section>
+- <div className="grid gap-5 md:grid-cols-2">{plans.map((p,i)=><form key={p.id} className="rounded-xl border bg-white p-5 space-y-3" onSubmit={e=>{e.preventDefault();void run(async()=>{await adminRequest('/admin/workspace/plan-catalog/'+p.id,mutation('PATCH',{name:p.name,isActive:p.isActive,attributes:p.attributes,expectedUpdatedAt:p.updatedAt,reason:reasons[p.id]}));setReasons({...reasons,[p.id]:''})})}}><h2 className="text-xl font-semibold">{p.name}</h2><label className="block">{tr('Name')}<input required maxLength={100} className={fieldStyle} value={p.name} onChange={e=>setPlans(plans.map((row,j)=>j===i?{...row,name:e.target.value}:row))}/></label>{defs.map(d=><label className="block" key={d.key}>{d.system?tr(d.label):d.label}{d.unit?' ('+d.unit+')':''}<ValueInput definition={d} value={p.attributes[d.key]} onChange={v=>setPlans(plans.map((row,j)=>j===i?{...row,attributes:{...row.attributes,[d.key]:v}}:row))}/></label>)}<label className="block"><input type="checkbox" checked={p.isActive} onChange={e=>setPlans(plans.map((row,j)=>j===i?{...row,isActive:e.target.checked}:row))}/>{tr('Available for new subscriptions')}</label><label className="block">{tr('Reason')}<input required minLength={5} maxLength={500} className={fieldStyle} value={reasons[p.id]||''} onChange={e=>setReasons({...reasons,[p.id]:e.target.value})}/></label><button disabled={busy} className={primaryStyle}>{tr('Save plan')}</button></form>)}</div>
++ <div className="grid gap-5 md:grid-cols-2">{plans.map((p,i)=><form key={p.id} className="rounded-xl border bg-white p-5 space-y-3" onSubmit={e=>{e.preventDefault();void run(async()=>{await adminRequest('/admin/workspace/plan-catalog/'+p.id,mutation('PATCH',{name:p.name,isActive:p.isActive,attributes:p.attributes,expectedUpdatedAt:p.updatedAt,reason:reasons[p.id]}));setReasons({...reasons,[p.id]:''})})}}><h2 className="text-xl font-semibold">{p.name}</h2><label className="block">{tr('Name')}<input required maxLength={100} className={fieldStyle} value={p.name} onChange={e=>setPlans(plans.map((row,j)=>j===i?{...row,name:e.target.value}:row))}/></label>{defs.map(d=><label className="block" key={d.key}>{d.system?tr(d.label):d.label}{d.unit?' ('+(d.system?tr(d.unit):d.unit)+')':''}<ValueInput definition={d} value={p.attributes[d.key]} onChange={v=>setPlans(plans.map((row,j)=>j===i?{...row,attributes:{...row.attributes,[d.key]:v}}:row))}/></label>)}<label className="block"><input type="checkbox" checked={p.isActive} onChange={e=>setPlans(plans.map((row,j)=>j===i?{...row,isActive:e.target.checked}:row))}/>{tr('Available for new subscriptions')}</label><label className="block">{tr('Reason')}<input required minLength={5} maxLength={500} className={fieldStyle} value={reasons[p.id]||''} onChange={e=>setReasons({...reasons,[p.id]:e.target.value})}/></label><button disabled={busy} className={primaryStyle}>{tr('Save plan')}</button></form>)}</div>
+  </AdminFrame>
+ }
+diff --git a/frontend/src/components/payroll/WageRegisterWorkspace.tsx b/frontend/src/components/payroll/WageRegisterWorkspace.tsx
+index fc0afe8d47bcb7b084de8fbcde8768ffb8027001..39bef38cb3c31c106c02677d3a57dd1d727df49d 100644
+--- a/frontend/src/components/payroll/WageRegisterWorkspace.tsx
++++ b/frontend/src/components/payroll/WageRegisterWorkspace.tsx
+@@ -6,7 +6,7 @@ import Link from 'next/link';
+ const fields = [ ['rate','Daily wage rate'], ['overtimeHours','Overtime hours'], ['specialBasic','Special Basic'], ['da','DA'], ['hra','HRA'], ['otherEarnings','Other earnings'], ['society','Society'], ['incomeTax','Income Tax'], ['insurance','Insurance'], ['otherDeductions','Other deductions'], ['recoveries','Recoveries'], ['employerContribution','Employer PF / welfare contribution'] ] as const;
+ type Day = { date: string; code: string };
+ type Employee = { employeeId: string; name: string; group: string; designation: string; location: string; days: Day[]; payableDays: number; presentDays: number; holidayDays: number; weeklyOffs: number; uan: string; transactionId: string; paymentDate: string; remarks: string } & Record<typeof fields[number][0], number | string>;
+-type Register = { id: string; employerId: string; period: string; site: string; status: string; version: number; rows: Employee[]; warnings: string[]; sourceName: string; reviewNotes?: string; reviewedAt?: string };
++type Register = { id: string; employerId: string; period: string; site: string; status: string; version: number; rows: Employee[]; warnings: string[]; sourceName: string; invoices?: {employeeId:string;number:string;total:number}[]; reviewNotes?: string; reviewedAt?: string };
+ type Summary = Pick<Register,'id'|'employerId'|'period'|'site'|'status'>;
+ const input = 'w-full rounded border border-slate-300 bg-white p-2 text-slate-900 disabled:bg-slate-100';
+ const button = 'rounded bg-blue-700 px-4 py-2 text-white disabled:opacity-50';
+@@ -65,6 +65,12 @@ export default function WageRegisterWorkspace({ readOnly=false }: { readOnly?: b
+     if(!res.ok){const d=await res.json();throw new Error(d.message||'Export failed');}
+     const url=URL.createObjectURL(await res.blob());const a=document.createElement('a');a.href=url;a.download=`wage-register-${register.period}.xlsx`;a.click();URL.revokeObjectURL(url);
+   }
++  async function downloadInvoice(employeeId:string) {
++    if(!register)return;
++    const response=await fetch(`${API}/wage-registers/${register.id}/invoices/${encodeURIComponent(employeeId)}/pdf`,{headers:{Authorization:`Bearer ${token}`}});
++    if(!response.ok){const d=await response.json();throw new Error(d.message||'Unable to download invoice');}
++    const url=URL.createObjectURL(await response.blob()),a=document.createElement('a');a.href=url;a.download=`wage-invoice-${register.period}.pdf`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
++  }
+   return <div className="space-y-6 text-slate-900">
+     <p className="rounded bg-blue-50 p-4">{tr("Workbook policy: payable days = P + PH (H is mapped to PH). Weekly offs and leave codes are excluded. Basic = daily rate × payable days; overtime = daily rate ÷ 4 × hours. PF = 12% of Basic capped at ₹15,000; ESIC = 0.75% of total earnings rounded to a rupee. Employer contributions are separate.")}</p>
+     {error&&<p role="alert" className="rounded bg-red-50 p-4 text-red-800">{trError(error)}</p>}{success&&<p role="status" className="rounded bg-green-50 p-4">{tr(success)}</p>}
+@@ -86,10 +92,11 @@ export default function WageRegisterWorkspace({ readOnly=false }: { readOnly?: b
+       {readOnly && register.status === 'submitted' && <div className="rounded border p-4 space-y-3"><label className="block">{tr('Review notes')}<textarea className={input} maxLength={2000} value={reviewNotes} onChange={e=>setReviewNotes(e.target.value)}/></label>{(['approve','return'] as const).map(decision=><button key={decision} className={button+' mr-3'} disabled={busy || (decision==='return' && reviewNotes.trim().length<5)} onClick={()=>void perform(async()=>{setRegister((await request('/'+register.id+'/review','POST',{version:register.version,decision,notes:reviewNotes})).data);setReviewNotes('');await refresh();setSuccess('Review saved.');})}>{tr(decision==='approve'?'Approve and lock':'Return for corrections')}</button>)}</div>}
+       <div className="flex flex-wrap gap-3">{writable&&<><button className={button} disabled={busy||!dirty} onClick={()=>void perform(async()=>{setRegister((await request('/'+register.id,'PUT',{version:register.version,rows:register.rows})).data);setDirty(false);setSuccess('Wages saved.');})}>{tr("Save wages")}</button><button className={button} disabled={busy||dirty} onClick={()=>void perform(async()=>{setRegister((await request('/'+register.id+'/submit','POST',{version:register.version})).data);await refresh();setSuccess('Register submitted for superadmin review.');})}>{tr("Submit for review")}</button><button disabled={busy||!dirty} className="underline" onClick={()=>void perform(async()=>{setRegister((await request('/'+register.id)).data);setDirty(false);setSuccess('Unsaved edits discarded.');})}>{tr("Discard unsaved edits")}</button></>}
+       <button className={button} disabled={busy||dirty} onClick={()=>void perform(download)}>{tr("Export Excel with formulas")}</button></div>
++      {register.status!=='approved'&&<p>{tr('Approve the register before invoicing')}</p>}
+       {register.status==='draft'&&<p>{tr("Approval locks this register. Verify wages, attendance and deductions first. This does not transfer money or mark an employee paid.")}</p>}
+       <label className="block max-w-xs">{tr("Filter wage group")}<select className={input} value={filter} onChange={e=>setFilter(e.target.value)}><option value="">{tr("All employees")}</option>{Array.from(new Set(register.rows.map(r=>r.group).filter(Boolean))).map(g=><option key={g}>{g}</option>)}</select></label>
+       {writable&&<details className="rounded border p-3"><summary className="cursor-pointer font-semibold">{tr("Apply values to selected employees ({{value0}})", {value0:selected.length})}</summary><p className="my-2">{tr("Blank fields keep each employee’s value. Enter 0 to clear an amount. Attendance and payable days remain individual.")}</p><div className="grid gap-3 sm:grid-cols-3"><label>{tr("Group name")}<input className={input} maxLength={200} value={group} onChange={e=>setGroup(e.target.value)}/></label>{fields.map(([k,label])=><label key={k}>{tr(label)}<input className={input} type="number" min="0" step="0.01" value={bulk[k]||''} onChange={e=>setBulk({...bulk,[k]:e.target.value})}/></label>)}</div><button className={button+' mt-3'} disabled={busy} onClick={applyGroup}>{tr("Apply to selected")}</button></details>}
+-      <div className="overflow-x-auto"><table className="w-full whitespace-nowrap text-left text-sm"><thead><tr>{writable&&<th><input aria-label={tr("Select visible employees")} type="checkbox" checked={shown.length>0&&shown.every(r=>selected.includes(r.employeeId))} onChange={e=>setSelected(e.target.checked?Array.from(new Set([...selected,...shown.map(r=>r.employeeId)])):selected.filter(id=>!shown.some(r=>r.employeeId===id)))}/></th>}{['Employee','Group','Payable days','Rate','Basic','OT','Total earnings','PF','ESIC','Deductions','Net','Details'].map(h=><th className="p-2" key={h}>{tr(h)}</th>)}</tr></thead><tbody>{shown.map(r=>{const a=amounts(r);return <tr key={r.employeeId} className="border-t">{writable&&<td><input aria-label={tr("Select {{value0}}", {value0:r.name})} type="checkbox" checked={selected.includes(r.employeeId)} onChange={e=>setSelected(e.target.checked?[...selected,r.employeeId]:selected.filter(id=>id!==r.employeeId))}/></td>}<td className="p-2">{r.name} ({r.employeeId})</td><td>{r.group||'—'}</td><td>{r.payableDays}</td><td>{money(Number(r.rate))}</td>{[a.basic,a.overtime,a.earnings,a.pf,a.esic,a.deductions,a.net].map((v,i)=><td className={'p-2 '+(i===6&&v<0?'text-red-700':'')} key={i}>{money(v)}</td>)}<td><button className="text-blue-700 underline" onClick={()=>setEditing(r.employeeId)}>{tr("View / edit")}</button></td></tr>;})}</tbody></table></div>
++      <div className="overflow-x-auto"><table className="w-full whitespace-nowrap text-left text-sm"><thead><tr>{writable&&<th><input aria-label={tr("Select visible employees")} type="checkbox" checked={shown.length>0&&shown.every(r=>selected.includes(r.employeeId))} onChange={e=>setSelected(e.target.checked?Array.from(new Set([...selected,...shown.map(r=>r.employeeId)])):selected.filter(id=>!shown.some(r=>r.employeeId===id)))}/></th>}{['Employee','Group','Payable days','Rate','Basic','OT','Total earnings','PF','ESIC','Deductions','Net','Invoice','Details'].map(h=><th className="p-2" key={h}>{tr(h)}</th>)}</tr></thead><tbody>{shown.map(r=>{const a=amounts(r);return <tr key={r.employeeId} className="border-t">{writable&&<td><input aria-label={tr("Select {{value0}}", {value0:r.name})} type="checkbox" checked={selected.includes(r.employeeId)} onChange={e=>setSelected(e.target.checked?[...selected,r.employeeId]:selected.filter(id=>id!==r.employeeId))}/></td>}<td className="p-2">{r.name} ({r.employeeId})</td><td>{r.group||'—'}</td><td>{r.payableDays}</td><td>{money(Number(r.rate))}</td>{[a.basic,a.overtime,a.earnings,a.pf,a.esic,a.deductions,a.net].map((v,i)=><td className={'p-2 '+(i===6&&v<0?'text-red-700':'')} key={i}>{money(v)}</td>)}<td className="p-2">{register.invoices?.some(i=>i.employeeId===r.employeeId)?<button className="text-blue-700 underline" disabled={busy||dirty} onClick={()=>void perform(()=>downloadInvoice(r.employeeId))}>{tr('Download invoice')}</button>:<button className="text-blue-700 underline disabled:opacity-50" disabled={busy||dirty||register.status!=='approved'} title={register.status!=='approved'?tr('Approve the register before invoicing'):undefined} onClick={()=>void perform(async()=>{await request('/'+register.id+'/invoices','POST',{employeeId:r.employeeId,version:register.version});setRegister((await request('/'+register.id)).data);setSuccess('Invoice created.');})}>{tr('Create invoice')}</button>}</td><td><button className="text-blue-700 underline" onClick={()=>setEditing(r.employeeId)}>{tr("View / edit")}</button></td></tr>;})}</tbody></table></div>
+       {total&&<p className="font-semibold">{tr("All employees: Earnings {{value0}} · Deductions {{value1}} · Net {{value2}}", {value0:money(total.earnings),value1:money(total.deductions),value2:money(total.net)})}</p>}
+       {current&&<div className="rounded border bg-slate-50 p-4 space-y-3"><h3 className="font-semibold">{current.name} ({current.employeeId})</h3><p>{tr("Present {{value0}} + public holidays {{value1}} = {{value2}} payable days; weekly offs {{value3}} excluded.", {value0:current.presentDays,value1:current.holidayDays,value2:current.payableDays,value3:current.weeklyOffs})}</p><div className="grid gap-3 sm:grid-cols-3">{fields.map(([k,label])=><label key={k}>{tr(label)}<input className={input} disabled={!writable||busy} type="number" min="0" step="0.01" value={current[k]} onChange={e=>edit(current.employeeId,k,e.target.value)}/></label>)}{[['uan','UAN (12 digits)'],['group','Wage group'],['transactionId','Bank transaction / receipt ID'],['paymentDate','Payment date'],['remarks','Remarks']].map(([k,label])=><label key={k}>{tr(label)}<input className={input} disabled={!writable||busy} type={k==='paymentDate'?'date':'text'} value={String(current[k as keyof Employee]||'')} onChange={e=>edit(current.employeeId,k,e.target.value)}/></label>)}</div><details><summary>{tr("Daily attendance")}</summary><div className="flex flex-wrap gap-2">{current.days.map(d=><span className="rounded border p-2" key={d.date}>{d.date}: {d.code||'BLANK'}</span>)}</div></details></div>}
+     </section>}
+diff --git a/frontend/src/lib/navigation.ts b/frontend/src/lib/navigation.ts
+index e6cd39ce0acdc4b14e79f647d06ac0007b733d96..35398d9ff1378762b3c0196eab92d02b34f6caf9 100644
+--- a/frontend/src/lib/navigation.ts
++++ b/frontend/src/lib/navigation.ts
+@@ -15,7 +15,7 @@ export function getNavigation(role?: string): Navigation {
+     groups: [
+       group('hiring', 'Hiring', [item('Resume Databank', '/employer/candidates'), item('AI Screening', '/ai-screening'), item('AI Match', '/ai-match'), item('Email Campaigns', '/employer/campaigns'), item('Referral Tracking', '/employer/referrals'), item('Analytics', '/employer/analytics')]),
+       group('operations', 'Operations', [item('Manpower Requests', '/employer/manpower-requests'), item('Deployments', '/employer/deployments'), item('Contracts', '/employer/contracts'), item('Attendance', '/employer/attendance')]),
+-      group('finance', 'Finance', [item('Wage registers', '/employer/wage-register'), item('Payroll', '/employer/payrolls'), item('Invoices', '/employer/invoices')]),
++      group('finance', 'Finance', [item('Wage registers', '/employer/wage-register'), item('Payroll', '/employer/payrolls')]),
+       group('resources', 'Resources', [item('Find Jobs', '/jobs'), item('Training', '/training'), verification])
+     ], account: [item('Company profile', '/employer/profile'), item('Upgrade Plan', '/subscription')]
+   }
+@@ -24,7 +24,7 @@ export function getNavigation(role?: string): Navigation {
+     return { home: root, primary: [item('Dashboard', root, true)], groups: [
+       group('people', 'People', [item('Candidates', `${root}/candidates`), item('Employers', `${root}/employers`), item('Users', `${root}/users`)]),
+       group('hiring', 'Hiring', [item('Jobs', '/admin/jobs'), item('Applications', `${root}/applications`), item('Analytics', '/admin/analytics')]),
+-      group('finance', 'Finance', [item('Payments', `${root}/payments`), item('Invoices', `${root}/invoices`), ...(superAdmin ? [item('Wage registers', '/super-admin/wage-register')] : [])]),
++      group('finance', 'Finance', [item('Payments', `${root}/payments`), ...(superAdmin ? [item('Wage registers', '/super-admin/wage-register')] : [])]),
+       group('training', 'Training', [item('Courses', '/admin/courses'), item('Training & Classes', '/admin/training'), verification]),
+       group('system', superAdmin ? 'System Control' : 'Team tools', [item('Internal Communication', `${root}/communication`), item('Audit Logs', `${root}/audit-logs`), item('Audit & Fraud', '/admin/audit'), item('Support', '/admin/support'), ...(!superAdmin ? [item('Plans & Perks', '/admin/plans')] : []), ...(superAdmin ? [item('Staff & Roles', '/super-admin/staff'), item('Plans & Perks', '/super-admin/plans'), item('Feature Flags', '/super-admin/feature-flags'), item('Infrastructure', '/super-admin/infrastructure')] : [])])
+     ], account: [] }
+diff --git a/frontend/src/lib/planAttributes.ts b/frontend/src/lib/planAttributes.ts
+index fb76df0b116633bf778158671461c27bab6c438a..c8d39ed1a95a79c55ae159e2efb5e31d980a8eee 100644
+--- a/frontend/src/lib/planAttributes.ts
++++ b/frontend/src/lib/planAttributes.ts
+@@ -1,4 +1,4 @@
+ export type PlanAttributeDefinition={key:string;label:string;type:string;unit:string;system:boolean;enforced:boolean}
+ export function attributeRows(values:Record<string,unknown>,definitions:PlanAttributeDefinition[]) {
+- return definitions.filter(d=>!['amountPaise','yearlyAmountPaise','durationDays'].includes(d.key)).map(d=>({...d,value:values[d.key]}))
++ return definitions.filter(d=>!['amountPaise','yearlyAmountPaise','durationDays'].includes(d.key) && (d.key!=='aiScreeningLevel'||values.aiScreening===true)).map(d=>({...d,value:values[d.key]}))
+ }
+diff --git a/frontend/src/locales/en/common.json b/frontend/src/locales/en/common.json
+index 92534e4b39deb8b7cc87754eac649cd41fa983be..af4915ce58f6345900ad12c250b3fa6610efe241 100644
+--- a/frontend/src/locales/en/common.json
++++ b/frontend/src/locales/en/common.json
+@@ -661,5 +661,15 @@
+   "Manage shared attribute definitions and set a value for each plan.": "Manage shared attribute definitions and set a value for each plan.",
+   "Built-in attributes control application behavior. Custom attributes are validated plan details; adding one does not create a new backend feature.": "Built-in attributes control application behavior. Custom attributes are validated plan details; adding one does not create a new backend feature.",
+   "Keys and types stay fixed after creation. Edit labels and units below; set plan values in each plan card.": "Keys and types stay fixed after creation. Edit labels and units below; set plan values in each plan card.",
+-  "Your plan resume limit has been reached. Delete a resume or change your plan.": "Your plan resume limit has been reached. Delete a resume or change your plan."
++  "Your plan resume limit has been reached. Delete a resume or change your plan.": "Your plan resume limit has been reached. Delete a resume or change your plan.",
++  "Create invoice": "Create invoice",
++  "Invoice created.": "Invoice created.",
++  "Approve the register before invoicing": "Approve the register before invoicing",
++  "AI screening level": "AI screening level",
++  "per month": "per month",
++  "month": "month",
++  "basic": "basic",
++  "advanced": "advanced",
++  "custom": "custom",
++  "Switches and values update the plan and its comparison. Custom features and service benefits require their own implementation or fulfilment.": "Switches and values update the plan and its comparison. Custom features and service benefits require their own implementation or fulfilment."
+ }
+diff --git a/frontend/src/locales/hi/common.json b/frontend/src/locales/hi/common.json
+index a8afe48632adf09d5ed98dd9cda39861cf644669..7bdf8a8108083936a8763cf31f5c0189690e9fc1 100644
+--- a/frontend/src/locales/hi/common.json
++++ b/frontend/src/locales/hi/common.json
+@@ -661,5 +661,15 @@
+   "Manage shared attribute definitions and set a value for each plan.": "साझा विशेषताएँ प्रबंधित करें और हर योजना का मान तय करें।",
+   "Built-in attributes control application behavior. Custom attributes are validated plan details; adding one does not create a new backend feature.": "अंतर्निहित विशेषताएँ ऐप का व्यवहार नियंत्रित करती हैं। नई विशेषताएँ सत्यापित योजना विवरण हैं; उन्हें जोड़ने से नई बैकएंड सुविधा नहीं बनती।",
+   "Keys and types stay fixed after creation. Edit labels and units below; set plan values in each plan card.": "बनाने के बाद कुंजी और प्रकार स्थिर रहते हैं। नीचे लेबल और इकाई बदलें; हर योजना के कार्ड में मान तय करें।",
+-  "Your plan resume limit has been reached. Delete a resume or change your plan.": "आपकी योजना की रिज्यूमे सीमा पूरी हो गई है। एक रिज्यूमे हटाएँ या योजना बदलें।"
++  "Your plan resume limit has been reached. Delete a resume or change your plan.": "आपकी योजना की रिज्यूमे सीमा पूरी हो गई है। एक रिज्यूमे हटाएँ या योजना बदलें।",
++  "Create invoice": "चालान बनाएँ",
++  "Invoice created.": "चालान बन गया।",
++  "Approve the register before invoicing": "चालान बनाने से पहले रजिस्टर स्वीकृत करें",
++  "AI screening level": "एआई स्क्रीनिंग स्तर",
++  "per month": "प्रति माह",
++  "month": "महीना",
++  "basic": "बुनियादी",
++  "advanced": "उन्नत",
++  "custom": "अनुकूलित",
++  "Switches and values update the plan and its comparison. Custom features and service benefits require their own implementation or fulfilment.": "स्विच और मान योजना तथा उसकी तुलना को अपडेट करते हैं। नई सुविधाओं और सेवाओं को अलग से लागू या पूरा करना होगा।"
+ }
+diff --git a/frontend/src/locales/kn/common.json b/frontend/src/locales/kn/common.json
+index 7fe69d8376b8f7513c711d4a86b05865d503b1fc..68d4135c0987f8de25dadc05b7abe87ce2271d2a 100644
+--- a/frontend/src/locales/kn/common.json
++++ b/frontend/src/locales/kn/common.json
+@@ -661,5 +661,15 @@
+   "Manage shared attribute definitions and set a value for each plan.": "ಹಂಚಿದ ಗುಣಲಕ್ಷಣಗಳನ್ನು ನಿರ್ವಹಿಸಿ ಮತ್ತು ಪ್ರತಿ ಯೋಜನೆಯ ಮೌಲ್ಯ ನಿಗದಿಪಡಿಸಿ.",
+   "Built-in attributes control application behavior. Custom attributes are validated plan details; adding one does not create a new backend feature.": "ಅಂತರ್ನಿರ್ಮಿತ ಗುಣಲಕ್ಷಣಗಳು ಅಪ್ಲಿಕೇಶನ್ ವರ್ತನೆಯನ್ನು ನಿಯಂತ್ರಿಸುತ್ತವೆ. ಹೊಸ ಗುಣಲಕ್ಷಣಗಳು ಮೌಲ್ಯೀಕರಿಸಿದ ಯೋಜನೆಯ ವಿವರಗಳಾಗಿವೆ; ಅವು ಹೊಸ ಬ್ಯಾಕೆಂಡ್ ಸೌಲಭ್ಯ ಸೃಷ್ಟಿಸುವುದಿಲ್ಲ.",
+   "Keys and types stay fixed after creation. Edit labels and units below; set plan values in each plan card.": "ಸೇರಿಸಿದ ನಂತರ ಕೀ ಮತ್ತು ಪ್ರಕಾರ ಬದಲಾಗುವುದಿಲ್ಲ. ಕೆಳಗೆ ಲೇಬಲ್ ಮತ್ತು ಘಟಕ ಬದಲಿಸಿ; ಪ್ರತಿ ಯೋಜನೆಯ ಕಾರ್ಡ್‌ನಲ್ಲಿ ಮೌಲ್ಯ ನಿಗದಿಪಡಿಸಿ.",
+-  "Your plan resume limit has been reached. Delete a resume or change your plan.": "ನಿಮ್ಮ ಯೋಜನೆಯ ರೆಸ್ಯೂಮ್ ಮಿತಿ ತಲುಪಿದೆ. ಒಂದು ರೆಸ್ಯೂಮ್ ಅಳಿಸಿ ಅಥವಾ ಯೋಜನೆ ಬದಲಿಸಿ."
++  "Your plan resume limit has been reached. Delete a resume or change your plan.": "ನಿಮ್ಮ ಯೋಜನೆಯ ರೆಸ್ಯೂಮ್ ಮಿತಿ ತಲುಪಿದೆ. ಒಂದು ರೆಸ್ಯೂಮ್ ಅಳಿಸಿ ಅಥವಾ ಯೋಜನೆ ಬದಲಿಸಿ.",
++  "Create invoice": "ಬಿಲ್ ರಚಿಸಿ",
++  "Invoice created.": "ಬಿಲ್ ರಚಿಸಲಾಗಿದೆ.",
++  "Approve the register before invoicing": "ಬಿಲ್ ರಚಿಸುವ ಮೊದಲು ನೋಂದಣಿಯನ್ನು ಅನುಮೋದಿಸಿ",
++  "AI screening level": "ಎಐ ಪರಿಶೀಲನಾ ಹಂತ",
++  "per month": "ಪ್ರತಿ ತಿಂಗಳು",
++  "month": "ತಿಂಗಳು",
++  "basic": "ಮೂಲ",
++  "advanced": "ಸುಧಾರಿತ",
++  "custom": "ಕಸ್ಟಮ್",
++  "Switches and values update the plan and its comparison. Custom features and service benefits require their own implementation or fulfilment.": "ಸ್ವಿಚ್‌ಗಳು ಮತ್ತು ಮೌಲ್ಯಗಳು ಯೋಜನೆ ಹಾಗೂ ಹೋಲಿಕೆಯನ್ನು ನವೀಕರಿಸುತ್ತವೆ. ಹೊಸ ಸೌಲಭ್ಯಗಳು ಮತ್ತು ಸೇವೆಗಳನ್ನು ಪ್ರತ್ಯೇಕವಾಗಿ ಜಾರಿಗೊಳಿಸಬೇಕು ಅಥವಾ ಒದಗಿಸಬೇಕು."
+ }
+diff --git a/frontend/src/locales/mr/common.json b/frontend/src/locales/mr/common.json
+index 88525290ded1eecbe1ec2f7b4b44d913f5584ec7..caa05bb8fd8747ac05a10b6e166cd10a9d46b7c4 100644
+--- a/frontend/src/locales/mr/common.json
++++ b/frontend/src/locales/mr/common.json
+@@ -661,5 +661,15 @@
+   "Manage shared attribute definitions and set a value for each plan.": "सामायिक गुणधर्म व्यवस्थापित करा आणि प्रत्येक योजनेचे मूल्य ठरवा.",
+   "Built-in attributes control application behavior. Custom attributes are validated plan details; adding one does not create a new backend feature.": "अंगभूत गुणधर्म अॅपचे वर्तन नियंत्रित करतात. नवीन गुणधर्म पडताळलेले योजना तपशील आहेत; ते जोडल्याने नवीन बॅकएंड सुविधा तयार होत नाही.",
+   "Keys and types stay fixed after creation. Edit labels and units below; set plan values in each plan card.": "तयार केल्यानंतर कळ आणि प्रकार कायम राहतात. खाली लेबल आणि एकक बदला; प्रत्येक योजनेच्या कार्डमध्ये मूल्ये ठरवा.",
+-  "Your plan resume limit has been reached. Delete a resume or change your plan.": "तुमच्या योजनेची रेझ्युमे मर्यादा गाठली आहे. एक रेझ्युमे हटवा किंवा योजना बदला."
++  "Your plan resume limit has been reached. Delete a resume or change your plan.": "तुमच्या योजनेची रेझ्युमे मर्यादा गाठली आहे. एक रेझ्युमे हटवा किंवा योजना बदला.",
++  "Create invoice": "चलन तयार करा",
++  "Invoice created.": "चलन तयार झाले.",
++  "Approve the register before invoicing": "चलन तयार करण्यापूर्वी नोंदवही मंजूर करा",
++  "AI screening level": "एआय तपासणी स्तर",
++  "per month": "दरमहा",
++  "month": "महिना",
++  "basic": "मूलभूत",
++  "advanced": "प्रगत",
++  "custom": "सानुकूल",
++  "Switches and values update the plan and its comparison. Custom features and service benefits require their own implementation or fulfilment.": "स्विच आणि मूल्ये योजना व तुलना अद्ययावत करतात. नवीन सुविधा व सेवा स्वतंत्रपणे लागू किंवा पूर्ण कराव्या लागतात."
+ }
+diff --git a/frontend/src/locales/source-index.json b/frontend/src/locales/source-index.json
+index c4599542d1df6c7fadfe1744342810c86cd42923..b2667d1a4b9f8c073dfd1954735de3bbe8ccd206 100644
+--- a/frontend/src/locales/source-index.json
++++ b/frontend/src/locales/source-index.json
+@@ -3059,6 +3059,46 @@
+     "ns": "common",
+     "key": "Your plan resume limit has been reached. Delete a resume or change your plan."
+   },
++  "Create invoice": {
++    "ns": "common",
++    "key": "Create invoice"
++  },
++  "Invoice created.": {
++    "ns": "common",
++    "key": "Invoice created."
++  },
++  "Approve the register before invoicing": {
++    "ns": "common",
++    "key": "Approve the register before invoicing"
++  },
++  "AI screening level": {
++    "ns": "common",
++    "key": "AI screening level"
++  },
++  "per month": {
++    "ns": "common",
++    "key": "per month"
++  },
++  "month": {
++    "ns": "common",
++    "key": "month"
++  },
++  "basic": {
++    "ns": "common",
++    "key": "basic"
++  },
++  "advanced": {
++    "ns": "common",
++    "key": "advanced"
++  },
++  "custom": {
++    "ns": "common",
++    "key": "custom"
++  },
++  "Switches and values update the plan and its comparison. Custom features and service benefits require their own implementation or fulfilment.": {
++    "ns": "common",
++    "key": "Switches and values update the plan and its comparison. Custom features and service benefits require their own implementation or fulfilment."
++  },
+   "online": {
+     "ns": "jobs",
+     "key": "online"
+@@ -3575,10 +3615,6 @@
+     "ns": "jobs",
+     "key": "• Remote"
+   },
+-  "per month": {
+-    "ns": "jobs",
+-    "key": "per month"
+-  },
+   "Deadline:": {
+     "ns": "jobs",
+     "key": "Deadline:"
+@@ -14355,6 +14391,42 @@
+     "ns": "common",
+     "key": "Your plan resume limit has been reached. Delete a resume or change your plan."
+   },
++  "create invoice": {
++    "ns": "common",
++    "key": "Create invoice"
++  },
++  "invoice created.": {
++    "ns": "common",
++    "key": "Invoice created."
++  },
++  "approve the register before invoicing": {
++    "ns": "common",
++    "key": "Approve the register before invoicing"
++  },
++  "ai screening level": {
++    "ns": "common",
++    "key": "AI screening level"
++  },
++  "MONTH": {
++    "ns": "common",
++    "key": "month"
++  },
++  "BASIC": {
++    "ns": "common",
++    "key": "basic"
++  },
++  "ADVANCED": {
++    "ns": "common",
++    "key": "advanced"
++  },
++  "CUSTOM": {
++    "ns": "common",
++    "key": "custom"
++  },
++  "switches and values update the plan and its comparison. custom features and service benefits require their own implementation or fulfilment.": {
++    "ns": "common",
++    "key": "Switches and values update the plan and its comparison. Custom features and service benefits require their own implementation or fulfilment."
++  },
+   "🤖 ai resume matching": {
+     "ns": "jobs",
+     "key": "🤖 AI Resume Matching"
+@@ -17231,10 +17303,6 @@
+     "ns": "payroll",
+     "key": "Generate deployment-linked invoices and track billing lifecycle status."
+   },
+-  "create invoice": {
+-    "ns": "payroll",
+-    "key": "Create Invoice"
+-  },
+   "create a billing record for a deployment and billing period.": {
+     "ns": "payroll",
+     "key": "Create a billing record for a deployment and billing period."
+@@ -17443,10 +17511,6 @@
+     "ns": "payroll",
+     "key": "Review attendance summary, payroll values, and payout status."
+   },
+-  "month": {
+-    "ns": "payroll",
+-    "key": "Month"
+-  },
+   "gross": {
+     "ns": "payroll",
+     "key": "Gross"
+@@ -17811,10 +17875,6 @@
+     "ns": "payroll",
+     "key": "Rate"
+   },
+-  "basic": {
+-    "ns": "payroll",
+-    "key": "Basic"
+-  },
+   "ot": {
+     "ns": "payroll",
+     "key": "OT"
+@@ -19319,14 +19379,6 @@
+     "ns": "subscription",
+     "key": "AI Screening"
+   },
+-  "advanced": {
+-    "ns": "subscription",
+-    "key": "Advanced"
+-  },
+-  "custom": {
+-    "ns": "subscription",
+-    "key": "Custom"
+-  },
+   "featured listings": {
+     "ns": "subscription",
+     "key": "Featured Listings"
+diff --git a/frontend/src/locales/ta/common.json b/frontend/src/locales/ta/common.json
+index 80b8d64f7649eb80053abc05afc814b793be3ef1..7fb4ac10900ce006f2fc60d5872f48e9c4f8f76c 100644
+--- a/frontend/src/locales/ta/common.json
++++ b/frontend/src/locales/ta/common.json
+@@ -661,5 +661,15 @@
+   "Manage shared attribute definitions and set a value for each plan.": "பொதுவான பண்புகளை நிர்வகித்து ஒவ்வொரு திட்டத்திற்கும் மதிப்பை அமைக்கவும்.",
+   "Built-in attributes control application behavior. Custom attributes are validated plan details; adding one does not create a new backend feature.": "உள்ளமைந்த பண்புகள் செயலியின் செயல்பாட்டைக் கட்டுப்படுத்தும். புதிய பண்புகள் சரிபார்க்கப்பட்ட திட்ட விவரங்கள்; அவற்றைச் சேர்ப்பதால் புதிய பின்தள வசதி உருவாகாது.",
+   "Keys and types stay fixed after creation. Edit labels and units below; set plan values in each plan card.": "உருவாக்கிய பிறகு விசையும் வகையும் மாறாது. கீழே பெயரையும் அலகையும் திருத்தி, ஒவ்வொரு திட்ட அட்டையிலும் மதிப்புகளை அமைக்கவும்.",
+-  "Your plan resume limit has been reached. Delete a resume or change your plan.": "உங்கள் திட்டத்தின் சுயவிவர வரம்பை எட்டிவிட்டீர்கள். ஒரு சுயவிவரத்தை நீக்கவும் அல்லது திட்டத்தை மாற்றவும்."
++  "Your plan resume limit has been reached. Delete a resume or change your plan.": "உங்கள் திட்டத்தின் சுயவிவர வரம்பை எட்டிவிட்டீர்கள். ஒரு சுயவிவரத்தை நீக்கவும் அல்லது திட்டத்தை மாற்றவும்.",
++  "Create invoice": "விலைப்பட்டியலை உருவாக்கவும்",
++  "Invoice created.": "விலைப்பட்டியல் உருவாக்கப்பட்டது.",
++  "Approve the register before invoicing": "விலைப்பட்டியல் உருவாக்கும் முன் பதிவேட்டை அங்கீகரிக்கவும்",
++  "AI screening level": "செயற்கை நுண்ணறிவுத் தேர்வு நிலை",
++  "per month": "மாதத்திற்கு",
++  "month": "மாதம்",
++  "basic": "அடிப்படை",
++  "advanced": "மேம்பட்ட",
++  "custom": "தனிப்பயன்",
++  "Switches and values update the plan and its comparison. Custom features and service benefits require their own implementation or fulfilment.": "மாற்றிகளும் மதிப்புகளும் திட்டத்தையும் ஒப்பீட்டையும் புதுப்பிக்கும். புதிய வசதிகளையும் சேவைகளையும் தனியாகச் செயல்படுத்த அல்லது வழங்க வேண்டும்."
+ }
+diff --git a/frontend/test/business.test.cjs b/frontend/test/business.test.cjs
+index b5e3ce076ecb6755e247efa37782de44e789c38d..467454886b583eed9af7b6fda81985e57263a929 100644
+--- a/frontend/test/business.test.cjs
++++ b/frontend/test/business.test.cjs
+@@ -65,3 +65,26 @@ test('pricing cards show structured limits and flags and preserve authored custo
+  const tree=harness('app/subscription/page.tsx',seed)();
+  assert.ok(text(tree).includes('Number of resumes allowed'));assert.match(text(tree),/3\s+resumes/);assert.ok(text(tree).includes('No'));assert.ok(text(tree).includes('Open'));assert.ok(!text(tree).includes('Obsolete prose'));
+ });
++
++test('plan boolean controls are real switches that emit booleans',()=>{
++ const {ValueInput}=loader({'@/lib/localization':copy})(path.join(src,'components/admin/PlanCatalog.tsx'));let updated;
++ const control=nodes(ValueInput({definition:{key:'apiAccess',label:'API Access',type:'boolean',system:true},value:false,onChange:v=>updated=v})).find(n=>n.props.role==='switch');
++ assert.equal(control.props.role,'switch');assert.equal(control.props.checked,false);control.props.onChange({target:{checked:true}});assert.equal(updated,true);
++});
++test('comparison table follows live limits, screening level and toggles instead of a static matrix',()=>{
++ const Component=loader({'@/lib/localization':copy})(path.join(src,'components/PlanComparison.tsx')).default;
++ const definitions=[{key:'jobPostingLimit',label:'Job Postings'},{key:'aiScreening',label:'AI Screening'},{key:'socialPromotion',label:'Social Promotion'}];
++ const plans=[{id:'premium',name:'Revised plan',attributes:{jobPostingLimit:7,aiScreening:true,aiScreeningLevel:'advanced',socialPromotion:true}}];
++ let html=text(Component({plans,definitions}));assert.ok(html.includes('Revised plan'));assert.match(html,/7\s*\/\s*month/);assert.ok(html.includes('advanced'));assert.ok(html.includes('✓'));assert.ok(!html.includes('3/month'));
++ plans[0].attributes.aiScreening=false;plans[0].attributes.socialPromotion=false;html=text(Component({plans,definitions}));assert.ok(!html.includes('advanced'));assert.ok(html.includes('✗'));
++});
++test('invoice navigation is removed for every role',()=>{
++ const {getNavigation}=loader()(path.join(src,'lib/navigation.ts'));
++ for(const role of ['employer','admin','super_admin','candidate','trainer']){const n=getNavigation(role),links=[...n.primary,...n.groups.flatMap(g=>g.items),...n.account];assert.ok(!links.some(l=>/\/invoices$/.test(l.href)));}
++});
++test('approved wage rows offer creation, then download per individual; drafts cannot invoice',()=>{
++ const seed=[];seed[0]='token';seed[11]={id:'register',period:'2026-10',site:'Site',status:'approved',version:4,warnings:[],rows:[{employeeId:'001',name:'Employee',days:[],rate:595,payableDays:26}],invoices:[]};
++ let tree=harness('components/payroll/WageRegisterWorkspace.tsx',seed)({readOnly:false});let create=nodes(tree).find(n=>n.type==='button'&&text(n)==='Create invoice');assert.ok(create);assert.equal(create.props.disabled,false);
++ seed[11].invoices=[{employeeId:'001',number:'WAGE-test',total:13554}];tree=harness('components/payroll/WageRegisterWorkspace.tsx',seed)({readOnly:false});assert.ok(nodes(tree).some(n=>n.type==='button'&&text(n)==='Download invoice'));assert.ok(!nodes(tree).some(n=>n.type==='button'&&text(n)==='Create invoice'));
++ seed[11]={...seed[11],invoices:[],status:'draft'};tree=harness('components/payroll/WageRegisterWorkspace.tsx',seed)({readOnly:false});create=nodes(tree).find(n=>n.type==='button'&&text(n)==='Create invoice');assert.equal(create.props.disabled,true);
++});

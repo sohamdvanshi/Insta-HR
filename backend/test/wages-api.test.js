@@ -77,3 +77,21 @@ test('JSONB property ordering does not reject unchanged attendance during wage e
  r=saved.data.data;r.rows[0].days[0].code='A';
  assert.equal((await req('employer','/'+r.id,'PUT',{version:2,rows:r.rows})).status,400);
 });
+
+async function approvedRegister(){let r=await imported();r.rows[0].rate=595;r=(await req('employer','/'+r.id,'PUT',{version:1,rows:r.rows})).data.data;await req('employer','/'+r.id+'/submit','POST',{version:2});const approved=await req('super_admin','/'+r.id+'/review','POST',{version:3,decision:'approve',notes:'All figures checked'});assert.equal(approved.status,200);return approved.data.data;}
+test('individual wage invoice uses authoritative net payable and retries return one immutable invoice',async()=>{
+ const r=await approvedRegister();records[0].rows[0].net=999999; // Never trust a stored/client-derived total.
+ const created=await req('employer','/'+r.id+'/invoices','POST',{employeeId:'001',version:r.version,total:1,tax:99});assert.equal(created.status,201);assert.equal(created.data.data.total,13554);assert.equal(created.data.data.subtotal,13554);assert.equal(created.data.data.tax,0);assert.equal(created.data.data.buyer,'Employee');
+ const duplicate=await req('employer','/'+r.id+'/invoices','POST',{employeeId:'001',version:1});assert.equal(duplicate.status,200);assert.equal(duplicate.data.data.number,created.data.data.number);assert.equal(records[0].invoices.length,1);
+ assert.equal((await req('otherEmployer','/'+r.id+'/invoices/001/pdf')).status,404);
+ assert.equal((await req('admin','/'+r.id+'/invoices/001/pdf')).status,403);
+ const pdf=await req('super_admin','/'+r.id+'/invoices/001/pdf');assert.equal(pdf.status,200);assert.ok(Buffer.from(pdf.data).subarray(0,5).equals(Buffer.from('%PDF-')));
+});
+test('invoice creation requires approval, current version and membership; audit failure rolls it back',async()=>{
+ let r=await imported();assert.equal((await req('employer','/'+r.id+'/invoices','POST',{employeeId:'001',version:1})).status,409);
+ r=await req('employer','/'+r.id);records=[];audits=[];r=await approvedRegister();
+ assert.equal((await req('otherEmployer','/'+r.id+'/invoices','POST',{employeeId:'001',version:r.version})).status,404);
+ assert.equal((await req('employer','/'+r.id+'/invoices','POST',{employeeId:'001',version:1})).status,409);
+ assert.equal((await req('employer','/'+r.id+'/invoices','POST',{employeeId:'missing',version:r.version})).status,404);
+ auditFail=true;assert.equal((await req('employer','/'+r.id+'/invoices','POST',{employeeId:'001',version:r.version})).status,500);assert.equal(records[0].invoices?.length||0,0);
+});

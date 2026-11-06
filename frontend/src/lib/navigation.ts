@@ -15,7 +15,7 @@ export function getNavigation(role?: string): Navigation {
     groups: [
       group('hiring', 'Hiring', [item('Resume Databank', '/employer/candidates'), item('AI Screening', '/ai-screening'), item('AI Match', '/ai-match'), item('Email Campaigns', '/employer/campaigns'), item('Referral Tracking', '/employer/referrals'), item('Analytics', '/employer/analytics')]),
       group('operations', 'Operations', [item('Manpower Requests', '/employer/manpower-requests'), item('Deployments', '/employer/deployments'), item('Contracts', '/employer/contracts'), item('Attendance', '/employer/attendance')]),
-      group('finance', 'Finance', [item('Wage registers', '/employer/wage-register'), item('Payroll', '/employer/payrolls'), item('Invoices', '/employer/invoices')]),
+      group('finance', 'Finance', [item('Wage registers', '/employer/wage-register'), item('Payroll', '/employer/payrolls')]),
       group('resources', 'Resources', [item('Find Jobs', '/jobs'), item('Training', '/training'), verification])
     ], account: [item('Company profile', '/employer/profile'), item('Upgrade Plan', '/subscription')]
   }
@@ -24,9 +24,9 @@ export function getNavigation(role?: string): Navigation {
     return { home: root, primary: [item('Dashboard', root, true)], groups: [
       group('people', 'People', [item('Candidates', `${root}/candidates`), item('Employers', `${root}/employers`), item('Users', `${root}/users`)]),
       group('hiring', 'Hiring', [item('Jobs', '/admin/jobs'), item('Applications', `${root}/applications`), item('Analytics', '/admin/analytics')]),
-      group('finance', 'Finance', [item('Payments', `${root}/payments`), item('Invoices', `${root}/invoices`), ...(superAdmin ? [item('Wage registers', '/super-admin/wage-register')] : [])]),
+      group('finance', 'Finance', [item('Payments', `${root}/payments`), ...(superAdmin ? [item('Wage registers', '/super-admin/wage-register')] : [])]),
       group('training', 'Training', [item('Courses', '/admin/courses'), item('Training & Classes', '/admin/training'), verification]),
-      group('system', superAdmin ? 'System Control' : 'Team tools', [item('Internal Communication', `${root}/communication`), item('Audit Logs', `${root}/audit-logs`), item('Audit & Fraud', '/admin/audit'), item('Support', '/admin/support'), ...(superAdmin ? [item('Staff & Roles', '/super-admin/staff'), item('Plans & Perks', '/super-admin/plans'), item('Feature Flags', '/super-admin/feature-flags'), item('Infrastructure', '/super-admin/infrastructure')] : [])])
+      group('system', superAdmin ? 'System Control' : 'Team tools', [item('Internal Communication', `${root}/communication`), item('Audit Logs', `${root}/audit-logs`), item('Audit & Fraud', '/admin/audit'), item('Support', '/admin/support'), ...(!superAdmin ? [item('Plans & Perks', '/admin/plans')] : []), ...(superAdmin ? [item('Staff & Roles', '/super-admin/staff'), item('Plans & Perks', '/super-admin/plans'), item('Feature Flags', '/super-admin/feature-flags'), item('Infrastructure', '/super-admin/infrastructure')] : [])])
     ], account: [] }
   }
   if (role === 'trainer') return { home: '/trainer', primary: [item('Dashboard', '/trainer', true)], groups: [group('training', 'Training', [item('Courses', '/trainer/courses'), item('Batches, classes & attendance', '/trainer', true), verification])], account: [] }

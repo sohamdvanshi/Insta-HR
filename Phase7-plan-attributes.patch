@@ -1,0 +1,1051 @@
+diff --git a/backend/migrations/20261024000100-plan-attributes.js b/backend/migrations/20261024000100-plan-attributes.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..d465299a96253f82c1854926059c92fc1a4d1445
+--- /dev/null
++++ b/backend/migrations/20261024000100-plan-attributes.js
+@@ -0,0 +1,9 @@
++'use strict';
++module.exports={async up(q,S){await q.sequelize.transaction(async transaction=>{
++ const o={transaction};const cols=await q.describeTable('subscription_plans',o);
++ if(!cols.attributeValues)await q.addColumn('subscription_plans','attributeValues',{type:S.JSONB,allowNull:false,defaultValue:{}},o);
++ const tables=await q.showAllTables(o);if(!tables.some(t=>(typeof t==='string'?t:t.tableName)==='plan_attributes'))await q.createTable('plan_attributes',{
++ key:{type:S.STRING(50),primaryKey:true},label:{type:S.STRING(100),allowNull:false},type:{type:S.STRING(10),allowNull:false},unit:{type:S.STRING(30),allowNull:false,defaultValue:''},defaultValue:{type:S.JSONB,allowNull:true},createdAt:{type:S.DATE,allowNull:false},updatedAt:{type:S.DATE,allowNull:false}
++ },o);
++ // Missing resumeLimit means unlimited, preserving existing accounts on rollout.
++ });},async down(){throw new Error('Preserve plan attribute data; restore a backup to roll back.');}};
+diff --git a/backend/package.json b/backend/package.json
+index 7c642a7c3ec3319e512a27085392c70dd9e597eb..c57e4fbd6d4dcbcdf1faad8858b0282e763e853a 100644
+--- a/backend/package.json
++++ b/backend/package.json
+@@ -18,7 +18,9 @@
+     "migrate:password-reset": "node scripts/db/migrate-password-reset.js",
+     "test:password-reset": "node --test test/password-reset*.test.js",
+     "migrate:business": "node scripts/db/migrate-business.js",
+-    "test:business": "node --test test/business*.test.js test/phase6-api.test.js test/wages-api.test.js"
++    "test:business": "node --test test/business*.test.js test/phase6-api.test.js test/wages-api.test.js",
++    "migrate:plan-attributes": "node scripts/db/migrate-plan-attributes.js",
++    "test:plan-attributes": "node --test test/plan-attributes*.test.js"
+   },
+   "keywords": [],
+   "author": "",
+diff --git a/backend/scripts/db/migrate-plan-attributes.js b/backend/scripts/db/migrate-plan-attributes.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..d993c2d051777e4ed810e823db384982b2ef6287
+--- /dev/null
++++ b/backend/scripts/db/migrate-plan-attributes.js
+@@ -0,0 +1,2 @@
++const sequelize=require('../../src/config/database');
++(async()=>{try{await sequelize.authenticate();await require('../../migrations/20261024000100-plan-attributes').up(sequelize.getQueryInterface(),require('sequelize'));console.log('Plan attribute schema is ready.');}finally{await sequelize.close();}})().catch(e=>{console.error(e.message);process.exitCode=1;});
+diff --git a/backend/src/controllers/adminWorkspace.controller.js b/backend/src/controllers/adminWorkspace.controller.js
+index 897ecac3db6bd7c768b892b884048479f48f3258..fe620da341cc161bbcef781a9538e0fb3d22b07e 100644
+--- a/backend/src/controllers/adminWorkspace.controller.js
++++ b/backend/src/controllers/adminWorkspace.controller.js
+@@ -204,4 +204,4 @@ exports.infrastructure = handle(async (req, res) => {
+   res.json({ success: true, data: { checkedAt: new Date(), uptimeSeconds: Math.floor(process.uptime()), nodeVersion: process.version, memoryMB: Math.round(process.memoryUsage().rss / 1048576), database, redis: redis?.isReady ? 'connected' : 'unavailable', search: searchStatus,
+     integrations: { smtp: Boolean(process.env.SMTP_USER && process.env.SMTP_PASS), payments: Boolean(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET), cloudinary: Boolean(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) } } });
+ });
+-exports.publicPlans = handle(async (req, res) => res.json({ success: true, data: await SubscriptionPlan.findAll({ where: { isActive: true }, order: [['amountPaise', 'ASC']] }) }));
++exports.publicPlans = handle(async (req, res) => { const P=require('../services/planAttributes'), defs=await P.definitions(); const plans=await SubscriptionPlan.findAll({where:{isActive:true},order:[['amountPaise','ASC']]}); return res.json({success:true,data:plans.map(p=>({...p.toJSON(),attributes:P.valuesFor(p,defs)})),attributeDefinitions:defs}); });
+diff --git a/backend/src/controllers/planCatalog.controller.js b/backend/src/controllers/planCatalog.controller.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..1a3adcf92a92aca23a27bde3d71c6249d465c1c3
+--- /dev/null
++++ b/backend/src/controllers/planCatalog.controller.js
+@@ -0,0 +1,44 @@
++const { SubscriptionPlan, PlanAttribute, sequelize }=require('../models');
++const { handle,audit }=require('../services/adminOperations');
++const { fail,reason,text }=require('../services/adminPolicy');
++const P=require('../services/planAttributes');
++exports.list=handle(async(req,res)=>{
++ const defs=await P.definitions();
++ const plans=await SubscriptionPlan.findAll({order:[['amountPaise','ASC']]});
++ res.json({success:true,data:plans.map(p=>({...p.toJSON(),attributes:P.valuesFor(p,defs)})),attributeDefinitions:defs});
++});
++exports.save=handle(async(req,res)=>{
++ if(!['free','standard','premium','enterprise'].includes(req.params.id))fail('Unknown plan');
++ const why=reason(req.body.reason);
++ const data=await sequelize.transaction(async transaction=>{
++ await P.lockCatalog(transaction);
++ const defs=await P.definitions(transaction);
++ const plan=await SubscriptionPlan.findByPk(req.params.id,{transaction,lock:transaction.LOCK.UPDATE});if(!plan)fail('Plan not found',404);
++ if(req.body.expectedUpdatedAt && new Date(req.body.expectedUpdatedAt).getTime()!==new Date(plan.updatedAt).getTime())fail('This plan changed. Reload before saving.',409);
++ const name=text(req.body.name,'Plan name',100);if(typeof req.body.isActive!=='boolean')fail('Plan active status must be a boolean');
++ const changes={...P.parseValues(req.body.attributes,defs,plan.id),name,isActive:req.body.isActive};
++ const before=plan.toJSON();await plan.update(changes,{transaction});
++ await audit(req,transaction,'admin.plan_updated','subscription_plan',null,{reason:why,planId:plan.id,before,after:plan.toJSON()});
++ return {...plan.toJSON(),attributes:P.valuesFor(plan,defs)};
++ });res.json({success:true,data});
++});
++exports.createAttribute=handle(async(req,res)=>{
++ const d=P.parseDefinition(req.body),why=reason(req.body.reason);
++ const data=await sequelize.transaction(async transaction=>{
++ await P.lockCatalog(transaction);
++ if(await PlanAttribute.findByPk(d.key,{transaction}))fail('Attribute key already exists',409);
++ const attribute=await PlanAttribute.create(d,{transaction});
++ const plans=await SubscriptionPlan.findAll({transaction,lock:transaction.LOCK.UPDATE,order:[['id','ASC']]});
++ for(const p of plans)await p.update({attributeValues:{...p.attributeValues,[d.key]:d.defaultValue}},{transaction});
++ await audit(req,transaction,'admin.plan_attribute_created','plan_attribute',null,{reason:why,definition:d});return attribute;
++ });res.status(201).json({success:true,data});
++});
++exports.editAttribute=handle(async(req,res)=>{
++ const why=reason(req.body.reason),changes=P.metadata(req.body);
++ // Keys, types and defaults are immutable once assigned to plans.
++ if(['key','type','defaultValue','system','enforced'].some(k=>Object.hasOwn(req.body,k)))fail('Attribute keys, types and defaults cannot be changed');
++ const data=await sequelize.transaction(async transaction=>{
++ await P.lockCatalog(transaction);const d=await PlanAttribute.findByPk(req.params.key,{transaction,lock:transaction.LOCK.UPDATE});if(!d)fail('Custom attribute not found',404);
++ const before=d.toJSON();await d.update(changes,{transaction});await audit(req,transaction,'admin.plan_attribute_updated','plan_attribute',null,{reason:why,before,after:d.toJSON()});return d;
++ });res.json({success:true,data});
++});
+diff --git a/backend/src/controllers/resume.controller.js b/backend/src/controllers/resume.controller.js
+index 28a995b228430066e26901c43144cec0723ac2c1..07b5e0dbab15afd2aea46e0345d8097c88d49d31 100644
+--- a/backend/src/controllers/resume.controller.js
++++ b/backend/src/controllers/resume.controller.js
+@@ -1,5 +1,5 @@
+ const { Op } = require('sequelize');
+-const { Resume } = require('../models');
++const { Resume, User, SubscriptionPlan, sequelize } = require('../models');
+ 
+ const VALID_SECTORS = [
+   'general',
+@@ -16,7 +16,7 @@ const VALID_SECTORS = [
+ const VALID_VISIBILITIES = ['private', 'link'];
+ const VALID_STATUSES = ['draft', 'published'];
+ 
+-const clearOtherDefaultResumes = async (userId, resumeId = null) => {
++const clearOtherDefaultResumes = async (userId, resumeId = null, transaction) => {
+   const where = {
+     userId,
+     isDefault: true
+@@ -30,7 +30,7 @@ const clearOtherDefaultResumes = async (userId, resumeId = null) => {
+ 
+   await Resume.update(
+     { isDefault: false },
+-    { where }
++    { where, transaction }
+   );
+ };
+ 
+@@ -61,37 +61,43 @@ exports.createResume = async (req, res) => {
+       });
+     }
+ 
+-    if (req.body.isDefault === true) {
+-      await clearOtherDefaultResumes(req.user.id);
+-    }
+-
+-    const resume = await Resume.create({
+-      userId: req.user.id,
+-      title: req.body.title || 'My Resume',
+-      template: req.body.template || 'classic',
+-      sector: req.body.sector || 'general',
+-      visibility: req.body.visibility || 'private',
+-      isDefault: req.body.isDefault === true,
+-      targetJobTitle: req.body.targetJobTitle || '',
+-      targetJobDescription: req.body.targetJobDescription || '',
+-      personalInfo: req.body.personalInfo || {
+-        fullName: '',
+-        email: '',
+-        phone: '',
+-        location: '',
+-        jobTitle: '',
+-        linkedin: '',
+-        github: '',
+-        website: ''
+-      },
+-      summary: req.body.summary || '',
+-      experience: req.body.experience || [],
+-      education: req.body.education || [],
+-      projects: req.body.projects || [],
+-      skills: req.body.skills || [],
+-      certifications: req.body.certifications || [],
+-      languages: req.body.languages || [],
+-      status: req.body.status || 'draft'
++    const resume = await sequelize.transaction(async transaction => {
++      const user=await User.findByPk(req.user.id,{transaction,lock:transaction.LOCK.UPDATE});
++      if(!user)throw Object.assign(new Error('Account not found'),{status:404});
++      const active=user.subscriptionExpiry && new Date(user.subscriptionExpiry)>new Date();
++      const plan=await SubscriptionPlan.findByPk(active?user.subscriptionPlan:'free',{transaction});
++      if(!plan)throw Object.assign(new Error('Subscription plan is unavailable'),{status:503});
++      const limit = require('../services/planAttributes').resumeLimitFor(plan);
++      if(limit!==null && await Resume.count({where:{userId:user.id},transaction})>=limit)throw Object.assign(new Error('Your plan resume limit has been reached. Delete a resume or change your plan.'),{status:403});
++      if(req.body.isDefault===true)await clearOtherDefaultResumes(user.id,null,transaction);
++      return Resume.create({
++        userId: req.user.id,
++        title: req.body.title || 'My Resume',
++        template: req.body.template || 'classic',
++        sector: req.body.sector || 'general',
++        visibility: req.body.visibility || 'private',
++        isDefault: req.body.isDefault === true,
++        targetJobTitle: req.body.targetJobTitle || '',
++        targetJobDescription: req.body.targetJobDescription || '',
++        personalInfo: req.body.personalInfo || {
++          fullName: '',
++          email: '',
++          phone: '',
++          location: '',
++          jobTitle: '',
++          linkedin: '',
++          github: '',
++          website: ''
++        },
++        summary: req.body.summary || '',
++        experience: req.body.experience || [],
++        education: req.body.education || [],
++        projects: req.body.projects || [],
++        skills: req.body.skills || [],
++        certifications: req.body.certifications || [],
++        languages: req.body.languages || [],
++        status: req.body.status || 'draft'
++      }, { transaction });
+     });
+ 
+     return res.status(201).json({
+@@ -100,10 +106,9 @@ exports.createResume = async (req, res) => {
+       data: resume
+     });
+   } catch (error) {
+-    return res.status(500).json({
++    return res.status(error.status || 500).json({
+       success: false,
+-      message: 'Failed to create resume',
+-      error: error.message
++      message: error.status ? error.message : 'Failed to create resume'
+     });
+   }
+ };
+diff --git a/backend/src/models/PlanAttribute.js b/backend/src/models/PlanAttribute.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..4d1e4ce98c39f19434bdcc521403c07b74cdc962
+--- /dev/null
++++ b/backend/src/models/PlanAttribute.js
+@@ -0,0 +1,9 @@
++const { DataTypes } = require('sequelize');
++const sequelize = require('../config/database');
++module.exports = sequelize.define('PlanAttribute', {
++ key: { type: DataTypes.STRING(50), primaryKey: true },
++ label: { type: DataTypes.STRING(100), allowNull: false },
++ type: { type: DataTypes.STRING(10), allowNull: false },
++ unit: { type: DataTypes.STRING(30), allowNull: false, defaultValue: '' },
++ defaultValue: { type: DataTypes.JSONB, allowNull: true }
++}, { tableName: 'plan_attributes', timestamps: true });
+diff --git a/backend/src/models/SubscriptionPlan.js b/backend/src/models/SubscriptionPlan.js
+index 302f28dbf4dd2f63c4b88131b3b4c062044baee0..167a26c5c44a3b1d43fd3bc6a9b0f9ac168b77bd 100644
+--- a/backend/src/models/SubscriptionPlan.js
++++ b/backend/src/models/SubscriptionPlan.js
+@@ -9,6 +9,7 @@ module.exports = sequelize.define('SubscriptionPlan', {
+   yearlyAmountPaise: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+   loyaltyPoints: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+   featuredJobs: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
++  attributeValues: { type: DataTypes.JSONB, allowNull: false, defaultValue: {} },
+   features: { type: DataTypes.JSON, allowNull: false, defaultValue: [] },
+   isActive: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true }
+ }, { tableName: 'subscription_plans', timestamps: true });
+diff --git a/backend/src/models/index.js b/backend/src/models/index.js
+index efcc8c471fd00c7dc33a3c4acb8a5c224e484a07..ad9e5352e3e30b8f7644a8e57190f6321a6387da 100644
+--- a/backend/src/models/index.js
++++ b/backend/src/models/index.js
+@@ -33,6 +33,7 @@ const InternalMessage = require('./InternalMessage')
+ const InternalNote = require('./InternalNote')
+ const SubscriptionPlan = require('./SubscriptionPlan')
+ const FeatureFlag = require('./FeatureFlag')
++const PlanAttribute = require('./PlanAttribute')
+ 
+ const optionalModel = (model) => model && typeof model.hasMany === 'function'
+ 
+@@ -774,6 +775,7 @@ module.exports = {
+   InternalMessage,
+   InternalNote,
+   SubscriptionPlan,
++  PlanAttribute,
+   FeatureFlag,
+   syncDatabase
+ }
+diff --git a/backend/src/routes/adminWorkspace.routes.js b/backend/src/routes/adminWorkspace.routes.js
+index 2d397a67e2976f08d80e7cdb95d0a0892de5e534..f3b6fc5ff45e4ae396aaf89d7e1e4eeff5ebe5d0 100644
+--- a/backend/src/routes/adminWorkspace.routes.js
++++ b/backend/src/routes/adminWorkspace.routes.js
+@@ -15,6 +15,11 @@ router.get('/applications', C.applications);
+ router.get('/payments', C.payments);
+ router.get('/invoices', C.invoices);
+ router.get('/audit', C.auditLogs);
++const plans=require('../controllers/planCatalog.controller');
++router.get('/plan-catalog',plans.list);
++router.patch('/plan-catalog/:id',plans.save);
++router.post('/plan-attributes',plans.createAttribute);
++router.patch('/plan-attributes/:key',plans.editAttribute);
+ router.use(authorize('super_admin'));
+ router.get('/staff', C.staff);
+ router.post('/staff', C.createStaff);
+diff --git a/backend/src/services/planAttributes.js b/backend/src/services/planAttributes.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..fc97a83301ff96fdc5b18df29af6b66a2c24e034
+--- /dev/null
++++ b/backend/src/services/planAttributes.js
+@@ -0,0 +1,58 @@
++const { fail } = require('./adminPolicy');
++const SYSTEM = [
++ {key:'amountPaise',label:'Monthly price',type:'money',unit:'INR',defaultValue:0},
++ {key:'yearlyAmountPaise',label:'Yearly price',type:'money',unit:'INR',defaultValue:0},
++ {key:'durationDays',label:'Monthly duration',type:'integer',unit:'days',defaultValue:30,min:1,max:365},
++ {key:'loyaltyPoints',label:'Loyalty redemption cost',type:'integer',unit:'points',defaultValue:0},
++ {key:'featuredJobs',label:'Featured jobs',type:'boolean',unit:'',defaultValue:false},
++ {key:'resumeLimit',label:'Number of resumes allowed',type:'integer',unit:'resumes',defaultValue:null,unlimited:true}
++].map(d=>({...d,system:true,enforced:true}));
++const RESERVED = new Set([...SYSTEM.map(d=>d.key),'__proto__','prototype','constructor','id','name','features','isActive','currency','attributeValues']);
++function validateValue(d,v) {
++ if (v===null && d.type==='integer' && (d.unlimited || !d.system)) return v;
++ if (d.type==='boolean') {if(typeof v!=='boolean')fail(`${d.label} must be true or false`);}
++ else if(d.type==='text') {if(typeof v!=='string'||v.length>200)fail(`${d.label} must be text up to 200 characters`);}
++ else if(!Number.isSafeInteger(v)||v<(d.min??0)||v>(d.max??100000000))fail(`${d.label} must be an integer within its allowed range`);
++ return v;
++}
++function parseDefinition(body) {
++ const key=body.key;
++ if(typeof key!=='string'||!/^[a-z][a-zA-Z0-9_]{1,49}$/.test(key)||RESERVED.has(key))fail('Choose a unique attribute key (2–50 letters, digits or underscores, starting with a lowercase letter)');
++ if(!['integer','boolean','text'].includes(body.type))fail('Choose integer, boolean or text');
++ const d={key,type:body.type,...metadata(body)};
++ d.defaultValue=validateValue(d,body.defaultValue);return d;
++}
++function metadata(body) {
++ if(typeof body.label!=='string'||!body.label.trim()||body.label.trim().length>100)fail('Attribute label is required (maximum 100 characters)');
++ if(typeof body.unit!=='string'||body.unit.trim().length>30)fail('Unit must be text up to 30 characters');
++ return {label:body.label.trim(),unit:body.unit.trim()};
++}
++async function definitions(transaction) {
++ const { PlanAttribute }=require('../models');
++ const custom=await PlanAttribute.findAll({order:[['key','ASC']],transaction});
++ return [...SYSTEM,...custom.map(d=>({...d.toJSON(),system:false,enforced:false,unlimited:d.type==='integer'}))];
++}
++function valuesFor(plan,defs) {
++ const result={};
++ for(const d of defs) {
++ const stored=d.system && d.key!=='resumeLimit' ? plan[d.key] : plan.attributeValues?.[d.key];
++ result[d.key]=validateValue(d,stored===undefined?d.defaultValue:stored);
++ }return result;
++}
++function parseValues(values,defs,planId) {
++ if(!values||typeof values!=='object'||Array.isArray(values))fail('Provide the complete plan attribute values');
++ const keys=defs.map(d=>d.key);
++ if(Object.keys(values).some(k=>!keys.includes(k))||keys.some(k=>!Object.hasOwn(values,k)))fail('Plan attributes changed. Reload and try again.',409);
++ const columns={},attributeValues={};
++ for(const d of defs){const v=validateValue(d,values[d.key]);if(d.system && d.key!=='resumeLimit')columns[d.key]=v;else attributeValues[d.key]=v;}
++ if(planId==='free'&&(columns.amountPaise!==0||columns.yearlyAmountPaise!==0||columns.loyaltyPoints!==0))fail('Free plan prices and redemption cost must be zero');
++ if(planId!=='free'&&(columns.amountPaise<100||columns.yearlyAmountPaise<100))fail('Paid plans must cost at least INR 1');
++ return {...columns,attributeValues};
++}
++// One PostgreSQL transaction lock serializes schema changes and plan saves.
++async function lockCatalog(transaction){await require('../models').sequelize.query('SELECT pg_advisory_xact_lock(7241024)',{transaction});}
++function resumeLimitFor(plan) {
++ const definition=SYSTEM.find(d=>d.key==='resumeLimit');
++ return validateValue(definition,plan?.attributeValues?.resumeLimit ?? definition.defaultValue);
++}
++module.exports={resumeLimitFor,SYSTEM,RESERVED,validateValue,parseDefinition,metadata,definitions,valuesFor,parseValues,lockCatalog};
+diff --git a/backend/src/services/planEntitlements.js b/backend/src/services/planEntitlements.js
+index 49e79cfd4060d67e8fb271581a2d45cf111746a6..978cd7feeeccea99aa3fab8a6e21987177603d11 100644
+--- a/backend/src/services/planEntitlements.js
++++ b/backend/src/services/planEntitlements.js
+@@ -3,6 +3,6 @@ async function entitlementsFor(user) {
+   const active = user?.subscriptionExpiry && new Date(user.subscriptionExpiry).getTime() > Date.now();
+   const plan = await SubscriptionPlan.findByPk(active ? user.subscriptionPlan : 'free');
+   // isActive controls sales, not benefits already purchased. Benefit edits take effect immediately.
+-  return { featuredJobs: Boolean(plan?.featuredJobs) };
++  return { featuredJobs: Boolean(plan?.featuredJobs), resumeLimit: require('./planAttributes').resumeLimitFor(plan) };
+ }
+ module.exports = { entitlementsFor };
+diff --git a/backend/test/phase6-api.test.js b/backend/test/phase6-api.test.js
+index 07f77a0c52e72f8a5f9d1741c5d8740a3fc8e2dc..c7e62e406a9facdd08be3672ce6c0b0c77dc62bc 100644
+--- a/backend/test/phase6-api.test.js
++++ b/backend/test/phase6-api.test.js
+@@ -77,7 +77,7 @@ function define(name) {
+   };
+   return api;
+ }
+-for (const name of ['User', 'Job', 'Application', 'Payment', 'Invoice', 'CandidateProfile', 'EmployerProfile', 'Resume', 'CourseEnrollment', 'Training', 'Deployment', 'Payroll', 'LoyaltyPointTransaction', 'AuditLog', 'InternalThread', 'InternalMessage', 'InternalNote', 'SubscriptionPlan', 'FeatureFlag', 'FraudAlert']) models[name] = define(name);
++for (const name of ['User', 'Job', 'Application', 'Payment', 'Invoice', 'CandidateProfile', 'EmployerProfile', 'Resume', 'CourseEnrollment', 'Training', 'Deployment', 'Payroll', 'LoyaltyPointTransaction', 'AuditLog', 'InternalThread', 'InternalMessage', 'InternalNote', 'SubscriptionPlan', 'PlanAttribute', 'FeatureFlag', 'FraudAlert']) models[name] = define(name);
+ models.User.normalizeEmail = value => typeof value === 'string' ? value.trim().toLowerCase() : null;
+ models.Application.APPLICATION_STATUSES = ['applied', 'shortlisted', 'interview', 'hired', 'rejected'];
+ models.sequelize = {
+@@ -315,3 +315,18 @@ test('invoice status transitions enforce ownership, terminal states and audited
+   assert.equal((await request(url,'employer','PATCH',{status:'draft'})).status,409);
+   assert.equal(rows.AuditLog.filter(a=>a.action==='invoice.status').length,2);
+ });
++
++test('typed plan catalog is available to admins and superadmins but private from portal roles',async()=>{
++ for(const role of ['candidate','employer','trainer'])assert.equal((await request('/admin/workspace/plan-catalog',role)).status,403);
++ assert.equal((await request('/admin/workspace/plan-catalog','admin')).status,200);
++ assert.equal((await request('/admin/workspace/plan-catalog','super')).status,200);
++ const body={key:'supportChannel',label:'Support channel',type:'text',unit:'',defaultValue:'Email',reason:'Define shared support channel'};
++ assert.equal((await request('/admin/workspace/plan-attributes','candidate','POST',body)).status,403);
++ assert.equal((await request('/admin/workspace/plan-attributes','admin','POST',body)).status,201);
++ const catalog=await request('/admin/workspace/plan-catalog','admin'),plan=catalog.data.data[0];
++ assert.equal(plan.attributes.supportChannel,'Email');
++ const save={name:plan.name,isActive:true,attributes:{...plan.attributes,yearlyAmountPaise:1000000,resumeLimit:3},expectedUpdatedAt:plan.updatedAt,reason:'Set quota for this plan'};
++ assert.equal((await request('/admin/workspace/plan-catalog/standard','admin','PATCH',save)).status,200);
++ const publicPlans=await request('/payments/plans',null);assert.equal(publicPlans.data.data[0].attributes.resumeLimit,3);assert.equal(publicPlans.data.data[0].attributes.supportChannel,'Email');
++ assert.equal(publicPlans.data.attributeDefinitions.find(d=>d.key==='supportChannel').type,'text');
++});
+diff --git a/backend/test/plan-attributes.test.js b/backend/test/plan-attributes.test.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..521f2f3d00bb786a63a473159b919c741bdad3da
+--- /dev/null
++++ b/backend/test/plan-attributes.test.js
+@@ -0,0 +1,66 @@
++const {test,beforeEach}=require('node:test'),assert=require('node:assert/strict');
++const P=require('../src/services/planAttributes');
++let state,queue=Promise.resolve(),auditFails=false;
++const clone=x=>JSON.parse(JSON.stringify(x));
++function instance(row){return {...row,toJSON(){const {toJSON,update,...data}=this;return data},async update(changes){Object.assign(row,changes);Object.assign(this,changes);return this}}}
++const models={
++ User:{findByPk:async(id,o)=>{assert.equal(o.lock,'UPDATE');return instance(state.user)}},
++ SubscriptionPlan:{findByPk:async id=>state.plans[id]?instance(state.plans[id]):null,findAll:async()=>Object.values(state.plans).map(instance)},
++ PlanAttribute:{findAll:async()=>Object.values(state.defs).map(instance),findByPk:async k=>state.defs[k]?instance(state.defs[k]):null,create:async d=>{state.defs[d.key]={...d};return instance(state.defs[d.key])}},
++ Resume:{count:async()=>state.resumes.length,create:async d=>{if(state.failResume)throw Error('insert failed');const row={id:String(state.resumes.length),...d};state.resumes.push(row);return row},update:async()=>{state.resumes.forEach(r=>r.isDefault=false)}},
++ sequelize:{query:async(s,o)=>assert.ok(o.transaction),transaction:fn=>{const run=async()=>{const snapshot=clone(state);try{return await fn({LOCK:{UPDATE:'UPDATE'}})}catch(e){state=snapshot;throw e}};const task=queue.then(run);queue=task.catch(()=>{});return task}}
++};
++require.cache[require.resolve('../src/models')]={exports:models};
++require.cache[require.resolve('../src/services/adminOperations')]={exports:{handle:fn=>async(req,res)=>{try{await fn(req,res)}catch(e){res.status(e.status||500).json({message:e.message})}},audit:async()=>{if(auditFails)throw Error('audit failed');state.audits++}}};
++const C=require('../src/controllers/planCatalog.controller'),R=require('../src/controllers/resume.controller');
++const req=(body={},params={})=>({body,params,user:{id:'candidate',role:'candidate'}});
++async function call(fn,request){let status=200,data;await fn(request,{status(s){status=s;return this},json(d){data=d;return this}});return {status,data}}
++beforeEach(()=>{state={user:{id:'candidate',subscriptionPlan:'premium',subscriptionExpiry:'2099-01-01'},plans:{free:{id:'free',name:'Free',amountPaise:0,yearlyAmountPaise:0,durationDays:30,loyaltyPoints:0,featuredJobs:false,isActive:true,attributeValues:{resumeLimit:1}},premium:{id:'premium',name:'Premium',amountPaise:100,yearlyAmountPaise:1200,durationDays:30,loyaltyPoints:1000,featuredJobs:true,isActive:true,attributeValues:{resumeLimit:2}}},defs:{},resumes:[],audits:0};auditFails=false});
++test('typed values reject coercion, fractional and negative quotas; zero and unlimited are distinct',()=>{
++ const d=P.SYSTEM.find(d=>d.key==='resumeLimit');for(const v of [-1,1.5,'2',true,{},undefined])assert.throws(()=>P.validateValue(d,v));assert.equal(P.validateValue(d,0),0);assert.equal(P.validateValue(d,null),null);
++ assert.throws(()=>P.validateValue({label:'Flag',type:'boolean'},'false'));assert.throws(()=>P.parseDefinition({key:'resumeLimit',label:'Fake',type:'integer',unit:'',defaultValue:2}));
++});
++test('adding a definition populates all plans and publishes a single consistent schema',async()=>{
++ const added=await call(C.createAttribute,req({key:'supportLevel',label:'Support level',type:'text',unit:'',defaultValue:'Email',reason:'Add support tier'}));assert.equal(added.status,201);
++ assert.equal(state.plans.free.attributeValues.supportLevel,'Email');assert.equal(state.plans.premium.attributeValues.supportLevel,'Email');
++ const listed=await call(C.list,req());assert.equal(listed.data.attributeDefinitions.filter(d=>d.key==='supportLevel').length,1);assert.equal(listed.data.data[1].attributes.supportLevel,'Email');
++ assert.equal((await call(C.createAttribute,req({key:'supportLevel',label:'Duplicate',type:'text',unit:'',defaultValue:'x',reason:'Duplicate key'}))).status,409);
++});
++test('attribute edits preserve key/type and shared labels apply to every plan',async()=>{
++ state.defs.support={key:'support',label:'Support',type:'text',unit:'',defaultValue:'Email'};
++ assert.equal((await call(C.editAttribute,req({label:'New',unit:'',type:'integer',reason:'Change schema'},{key:'support'}))).status,400);
++ assert.equal((await call(C.editAttribute,req({label:'Support channel',unit:'',reason:'Improve label'},{key:'support'}))).status,200);
++ const listed=await call(C.list,req());assert.equal(listed.data.attributeDefinitions.find(d=>d.key==='support').label,'Support channel');
++});
++test('complete plan values save to canonical price columns and validated JSON values',async()=>{
++ const defs=await P.definitions(),values=P.valuesFor(state.plans.premium,defs);values.amountPaise=2500;values.resumeLimit=5;
++ const result=await call(C.save,req({name:'Premium',isActive:true,attributes:values,reason:'Adjust quota and price'},{id:'premium'}));assert.equal(result.status,200);assert.equal(state.plans.premium.amountPaise,2500);assert.equal(state.plans.premium.attributeValues.resumeLimit,5);assert.equal(state.plans.premium.attributeValues.amountPaise,undefined);
++ values.featuredJobs='yes';assert.equal((await call(C.save,req({name:'Premium',isActive:true,attributes:values,reason:'Invalid field type'},{id:'premium'}))).status,400);
++});
++test('stale schema and stale plan versions cannot silently overwrite settings',async()=>{
++ const defs=await P.definitions(),values=P.valuesFor(state.plans.premium,defs);state.defs.newFlag={key:'newFlag',label:'New flag',type:'boolean',unit:'',defaultValue:false};
++ assert.equal((await call(C.save,req({name:'Premium',isActive:true,attributes:values,reason:'Old schema'},{id:'premium'}))).status,409);
++ state.plans.premium.updatedAt='2026-10-24T00:00:00Z';
++ assert.equal((await call(C.save,req({name:'Premium',isActive:true,expectedUpdatedAt:'2026-10-23T00:00:00Z',attributes:values,reason:'Stale plan'},{id:'premium'}))).status,409);
++});
++test('audit failure rolls back definition creation and all plan defaults',async()=>{
++ auditFails=true;assert.equal((await call(C.createAttribute,req({key:'flag',label:'Flag',type:'boolean',unit:'',defaultValue:false,reason:'Test rollback'}))).status,500);assert.deepEqual(state.defs,{});assert.equal(state.plans.free.attributeValues.flag,undefined);
++});
++test('concurrent resume requests cannot exceed quota and cannot clear the default on rejection',async()=>{
++ state.plans.premium.attributeValues.resumeLimit=1;
++ const results=await Promise.all([call(R.createResume,req({title:'First',isDefault:true})),call(R.createResume,req({title:'Second',isDefault:true}))]);
++ assert.deepEqual(results.map(r=>r.status).sort(),[201,403]);assert.equal(state.resumes.length,1);assert.equal(state.resumes[0].isDefault,true);
++});
++test('expired subscriptions use free limit; zero blocks creation and unlimited permits it',async()=>{
++ state.user.subscriptionExpiry='2000-01-01';state.resumes.push({title:'Existing'});assert.equal((await call(R.createResume,req())).status,403);
++ state.user.subscriptionExpiry='2099-01-01';state.plans.premium.attributeValues.resumeLimit=0;assert.equal((await call(R.createResume,req())).status,403);
++ state.plans.premium.attributeValues.resumeLimit=null;assert.equal((await call(R.createResume,req())).status,201);
++});
++test('failed resume insert rolls back default clearing',async()=>{
++ state.resumes.push({isDefault:true});state.failResume=true;assert.equal((await call(R.createResume,req({isDefault:true}))).status,500);assert.equal(state.resumes[0].isDefault,true);
++});
++test('migration is additive, repeatable and does not change existing limits',async()=>{
++ const columns={},tables=[],S=require('sequelize'),migration=require('../migrations/20261024000100-plan-attributes');let creates=0,adds=0;
++ const q={sequelize:{transaction:async fn=>fn({})},describeTable:async()=>columns,addColumn:async(t,k,d)=>{columns[k]=d;adds++},showAllTables:async()=>tables,createTable:async t=>{tables.push(t);creates++}};
++ await migration.up(q,S);await migration.up(q,S);assert.equal(creates,1);assert.equal(adds,1);
++});
+diff --git a/docs/PLAN-ATTRIBUTES.md b/docs/PLAN-ATTRIBUTES.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..bd1c2d6e35c3fec29eebd1e9f3717044c8d41284
+--- /dev/null
++++ b/docs/PLAN-ATTRIBUTES.md
+@@ -0,0 +1,76 @@
++# Structured plan attributes
++
++Built on `phase7` commit `3d824c8` (Add phase7 business updates). Apply this follow-up patch once; do not reapply the business-updates patch.
++
++## What changed
++
++Both internal admins and superadmins can manage a typed plan catalog. Internal admins use `/admin/plans`; superadmins use their existing Plans page. Staff-role and infrastructure permissions remain unchanged. All changes require a reason and write an audit entry in the same transaction.
++
++The catalog has one shared definition for each attribute. Plan cards use those definitions instead of free-text perk lists. Existing perk strings remain in the database for compatibility but are no longer displayed as the new pricing cards' benefits.
++
++| Attribute | Type | Backend behavior |
++| --- | --- | --- |
++| Monthly price | Money, stored as integer paise | Existing monthly checkout uses this price |
++| Yearly price | Money, stored as integer paise | Existing yearly checkout uses this price |
++| Monthly duration | Whole number, 1–365 days | Existing monthly purchases/redemptions use this duration |
++| Loyalty redemption cost | Nonnegative whole number | Existing redemption uses this cost; zero disables redemption |
++| Featured jobs | Yes/No | Existing featured-job permission uses this value |
++| Number of resumes allowed | Nonnegative whole number or Unlimited | Resume creation counts the account's saved builder resumes and rejects requests at the limit |
++| Custom attribute | Whole number, Yes/No, or text | Validated, saved and displayed consistently; does not automatically implement a new application feature |
++
++Price and other existing system attributes retain their original database columns. They are not duplicated into the custom JSON values. One attribute registry provides labels, types, defaults and validation to admin forms and public plan cards. Resume creation and subscription entitlements share the resume-limit resolver.
++
++## Adding and editing
++
++1. Open **Plans & attributes**.
++2. Add an attribute with a unique key, label, type, optional unit, initial value, and reason. For example: key `supportChannel`, label `Support channel`, type Text, initial value `Email`.
++3. The server initializes it on every plan atomically. Change its value separately on each plan card, for example `Email` on Free and `Priority support` on Premium.
++4. Edit a custom attribute's label/unit once to change its presentation across all plans. Keys, types and initial defaults are immutable after creation to avoid reinterpreting existing data. System attribute definitions are fixed, while their per-plan values are editable.
++5. Save each plan with a reason. Stale plan timestamps or a changed set of attribute keys produce a conflict and require reloading.
++
++Custom attributes do not execute arbitrary code or create new feature gates. To enforce a future attribute such as a job-posting limit, add a server-side implementation tied to its stable key; otherwise it remains a displayed plan detail. Free-plan prices and redemption cost must remain zero. Paid prices must be at least INR 1. Negative/fractional quotas, wrong types, unknown attributes and incomplete attribute sets are rejected.
++
++## Resume limits
++
++All saved Resume Builder records count, including drafts and published resumes. The single profile-uploaded CV attachment is a different record and is not counted. The limit is a concurrent saved-record capacity, not a monthly usage allowance. Deleting a saved builder resume frees a slot.
++
++The migration preserves current behavior by treating missing limits as **Unlimited**. Configure each plan explicitly after installation; for example Free = 1, Standard = 3, Premium = 10, Enterprise = Unlimited. These are examples, not seeded business rules. Zero blocks new builder resumes. Existing resumes are never deleted when a limit is reduced; they remain editable and accessible.
++
++Expired subscriptions use the Free plan's limit. Deactivating a paid plan does not remove benefits already purchased. Limits and featured-job access are live plan settings; prices and purchase duration already saved on payment orders remain snapshots. Purchases remain employer-only and point redemption candidate-only, as in the preceding patch; this patch does not add a candidate checkout flow.
++
++Creation locks the authenticated user's database row, reads the effective plan, counts and creates inside one transaction. Parallel creates therefore cannot both consume the last slot. Default-resume changes roll back if the insert fails. Database/provider test doubles verify the transaction behavior; test against your deployed PostgreSQL instance too.
++
++## Installation — project root in PowerShell
++
++```powershell
++Set-Location D:\college\TY-Project\Insta-HR-main
++git status
++git apply --check .\Phase7-plan-attributes.patch
++git apply .\Phase7-plan-attributes.patch
++npm --prefix backend run migrate:plan-attributes
++npm --prefix backend run test:plan-attributes
++npm --prefix frontend run test:i18n
++npm --prefix frontend run build
++```
++
++Back up the database first and restart both servers after migration. The previous business migration must already have been applied. No new runtime dependencies are required. If the patch check fails, stop and reconcile the base or local changes instead of forcing the patch.
++
++The new migration adds `subscription_plans.attributeValues` and the `plan_attributes` table. It is rerunnable, does not reset configured values, and does not drop existing data. Missing schema is not silently ignored by the catalog. Attribute changes and plan saves share a PostgreSQL transaction-scoped advisory lock to serialize concurrent schema edits.
++
++## Validation and manual checks
++
++Verified on 24 October 2026: **133 backend tests passed, 36 frontend tests passed, and the Next.js production build/TypeScript passed.**
++
++Automated checks also include i18n key/placeholder parity across EN/HI/MR/KN/TA, and clean-base patch application. New cases cover types, duplicate keys, defaults on all plans, metadata edits, canonical prices, stale schema/version conflicts, audit rollback, quota races, expiration, zero/unlimited, and failed-insert rollback. Public-card tests cover structured limits, false flags and unchanged authored values. Real router/JWT tests verify admin/superadmin access and denial for candidate/employer/trainer roles.
++
++Manual checks:
++
++- As admin, create `supportChannel`, change its values on different plans, then rename its label. Verify identical labels and correct individual values on public pricing cards after refresh.
++- Set a resume limit to 1. Create one builder resume and attempt a second, including from two tabs. Confirm the backend rejects it. Delete the first and retry.
++- Reduce a limit below an account's existing count. Confirm existing records remain usable, and new creation is blocked.
++- Set zero and Unlimited and verify both behaviors. Expire a paid account and verify Free-plan limits apply.
++- Open two admin tabs, change a plan in one and save the old version in the other. Confirm a conflict. Add an attribute in one tab and save a plan with the old schema in the other; reload is required.
++- Change monthly/yearly prices and featured-job access; verify checkout amounts and featured-job creation. Confirm candidates cannot mutate the catalog.
++- Switch languages and refresh. System copy is translated; custom labels, units and authored values are preserved as entered.
++
++Live database migrations and payment-provider transactions were not run against your production environment.
+diff --git a/frontend/src/app/admin/plans/page.tsx b/frontend/src/app/admin/plans/page.tsx
+new file mode 100644
+index 0000000000000000000000000000000000000000..5c2bb0b80d29b6e3d08c22dc47c14cb6cb48957b
+--- /dev/null
++++ b/frontend/src/app/admin/plans/page.tsx
+@@ -0,0 +1,2 @@
++import PlanCatalog from '@/components/admin/PlanCatalog'
++export default function Page(){return <PlanCatalog/>}
+diff --git a/frontend/src/app/subscription/page.tsx b/frontend/src/app/subscription/page.tsx
+index 0946abd711d5bbf16d29135db446bf5c970f3192..013046837e50697c93940e88a29daac9bea6fb4b 100644
+--- a/frontend/src/app/subscription/page.tsx
++++ b/frontend/src/app/subscription/page.tsx
+@@ -1,4 +1,5 @@
+ 'use client'
++import { attributeRows, type PlanAttributeDefinition } from '@/lib/planAttributes'
+ import LoyaltyRedemption from '@/components/LoyaltyRedemption'
+ import { readStoredUser } from '@/lib/storage'
+ import { API_BASE } from '@/lib/api'
+@@ -13,7 +14,7 @@ declare global {
+   }
+ }
+ 
+-type Plan = { id: string; name: string; price: number; yearlyPrice: number; durationDays: number; priceLabel: string; period: string; color: string; badge: string; features: string[]; missing: string[]; cta: string; disabled: boolean }
++type Plan = { id: string; name: string; attributes: Record<string,unknown>; price: number; yearlyPrice: number; durationDays: number; priceLabel: string; period: string; color: string; badge: string; features: string[]; missing: string[]; cta: string; disabled: boolean }
+ 
+ export default function SubscriptionPage() {
+   useLocale()
+@@ -30,6 +31,7 @@ export default function SubscriptionPage() {
+   const [paymentHistory, setPaymentHistory] = useState<any[]>([])
+   const [showHistory, setShowHistory] = useState(false)
+   const [user, setUser] = useState<any>(null)
++  const [attributeDefinitions,setAttributeDefinitions]=useState<PlanAttributeDefinition[]>([])
+ 
+   useEffect(() => {
+     const userData = localStorage.getItem('user')
+@@ -38,8 +40,9 @@ export default function SubscriptionPage() {
+     fetch(`${API_BASE}/payments/plans`).then(async response => {
+       const result = await response.json()
+       if (!response.ok || !result.success) throw new Error(result.message || 'Unable to load plans')
++      setAttributeDefinitions(result.attributeDefinitions || [])
+       const colors: Record<string, string> = { free: 'gray', standard: 'blue', premium: 'purple', enterprise: 'gold' }
+-      setPlans(result.data.map((plan: any) => ({ id: plan.id, name: plan.name, price: plan.amountPaise / 100, yearlyPrice: plan.yearlyAmountPaise / 100, durationDays: plan.durationDays, priceLabel: `₹${(plan.amountPaise / 100).toLocaleString(locale())}`, period: plan.id === 'free' ? 'forever' : `/${plan.durationDays} days`, color: colors[plan.id] || 'blue', badge: '', features: plan.features, missing: [], cta: `Get ${plan.name}`, disabled: plan.id === 'free' })))
++      setPlans(result.data.map((plan: any) => ({ attributes: plan.attributes || {}, id: plan.id, name: plan.name, price: plan.amountPaise / 100, yearlyPrice: plan.yearlyAmountPaise / 100, durationDays: plan.durationDays, priceLabel: `₹${(plan.amountPaise / 100).toLocaleString(locale())}`, period: plan.id === 'free' ? 'forever' : `/${plan.durationDays} days`, color: colors[plan.id] || 'blue', badge: '', features: plan.features, missing: [], cta: `Get ${plan.name}`, disabled: plan.id === 'free' })))
+     }).catch(error => setPlanError(error.message)).finally(() => setPlansLoading(false))
+     fetchSubscription()
+   }, [])
+@@ -322,18 +325,7 @@ export default function SubscriptionPage() {
+                 </div>
+ 
+                 <ul className="space-y-2 mb-6 flex-1">
+-                  {plan.features.map(f => (
+-                    <li key={f} className="flex items-start gap-2 text-sm text-gray-700">
+-                      <span className="text-green-500 mt-0.5 flex-shrink-0">✓</span>
+-                      {tr(f)}
+-                    </li>
+-                  ))}
+-                  {plan.missing.map(f => (
+-                    <li key={f} className="flex items-start gap-2 text-sm text-gray-400 line-through">
+-                      <span className="mt-0.5 flex-shrink-0">✗</span>
+-                      {tr(f)}
+-                    </li>
+-                  ))}
++                  {attributeRows(plan.attributes,attributeDefinitions).map(d=><li key={d.key} className="flex justify-between gap-2 text-sm text-gray-700"><span>{d.system?tr(d.label):d.label}</span><span>{d.value===null?tr('Unlimited'):typeof d.value==='boolean'?tr(d.value?'Yes':'No'):typeof d.value==='number'?new Intl.NumberFormat(locale()).format(d.value):String(d.value??'')}{d.unit && d.value!==null && typeof d.value==='number'?' '+d.unit:''}</span></li>)}
+                 </ul>
+ 
+                 <button
+diff --git a/frontend/src/components/admin/AdminShell.tsx b/frontend/src/components/admin/AdminShell.tsx
+index 695e727b1fb9ef74615435d32e3a3cd993f94ec2..24dc46c2ac3c4832c7a52a2de7936e72d9353298 100644
+--- a/frontend/src/components/admin/AdminShell.tsx
++++ b/frontend/src/components/admin/AdminShell.tsx
+@@ -33,6 +33,7 @@ export function AdminFrame({ title, description, children }: { title: string; de
+ 
+   const staff = useStaff(), root = staff.role === 'super_admin' ? '/super-admin' : '/admin'
+   const links = [['Overview', root], ['Candidates', '/admin/candidates'], ['Employers', '/admin/employers'], ['Jobs', '/admin/jobs'], ['Applications', '/admin/applications'], ['Payments', '/admin/payments'], ['Invoices', '/admin/invoices'], ['Support & notes', `${root}/communication`], ['Audit logs', `${root}/audit-logs`], ['Training', '/admin/training']]
++  if (staff.role === 'admin') links.push(['Plans','/admin/plans'])
+   if (staff.role === 'super_admin') links.push(['Wage registers', '/super-admin/wage-register'], ['Staff & roles', '/super-admin/staff'], ['Plans', '/super-admin/plans'], ['Feature flags', '/super-admin/feature-flags'], ['Infrastructure', '/super-admin/infrastructure'])
+   return <main className="min-h-screen bg-slate-50 px-4 pb-16 pt-24 text-slate-900 sm:px-6"><div className="mx-auto max-w-7xl"><p className="text-sm text-blue-700">{tr(staff.role === 'super_admin' ? 'System control' : 'Insta-HR team')}</p><h1 className="mt-1 text-3xl font-bold">{tr(title)}</h1>{description && <p className="mt-2 text-slate-600">{tr(description)}</p>}<nav aria-label={tr("Admin tools")} className="my-6 flex flex-wrap gap-2">{links.map(([label, href]) => <Link key={label} href={href} className="rounded-lg border bg-white px-3 py-2 text-sm text-blue-800 hover:bg-blue-50">{tr(label)}</Link>)}</nav>{children}</div></main>
+ }
+diff --git a/frontend/src/components/admin/PlanCatalog.tsx b/frontend/src/components/admin/PlanCatalog.tsx
+new file mode 100644
+index 0000000000000000000000000000000000000000..5b9f58cedc8bf8f5bcb534eb25f5f60f8e45fd3e
+--- /dev/null
++++ b/frontend/src/components/admin/PlanCatalog.tsx
+@@ -0,0 +1,33 @@
++'use client'
++import { useEffect,useState } from 'react'
++import { tr,useLocale } from '@/lib/localization'
++import { adminRequest,mutation } from '@/lib/adminApi'
++import { AdminFrame,Notice,fieldStyle,primaryStyle } from './AdminShell'
++type Definition={key:string;label:string;type:'money'|'integer'|'boolean'|'text';unit:string;defaultValue:unknown;system:boolean;enforced:boolean;unlimited?:boolean;min?:number;max?:number}
++function ValueInput({definition:d,value,onChange}:{definition:Definition;value:any;onChange:(v:any)=>void}) {
++ if(d.type==='boolean')return <select className={fieldStyle} value={String(value)} onChange={e=>onChange(e.target.value==='true')}><option value="true">{tr('Yes')}</option><option value="false">{tr('No')}</option></select>
++ const unlimited=d.type==='integer' && d.unlimited
++ return <div>{unlimited && <label className="block"><input type="checkbox" checked={value===null} onChange={e=>onChange(e.target.checked?null:0)}/>{tr('Unlimited')}</label>}<input required={value!==null} disabled={value===null} className={fieldStyle} type={d.type==='text'?'text':'number'} min={d.min??0} max={d.type==='money'?1000000:d.max??100000000} step={d.type==='money'?'0.01':'1'} maxLength={200} value={value===null?'':d.type==='money'?value/100:value} onChange={e=>onChange(d.type==='text'?e.target.value:d.type==='money'?Math.round(Number(e.target.value)*100):e.target.value===''?'':Number(e.target.value))}/></div>
++}
++export default function PlanCatalog(){
++ useLocale()
++ const [plans,setPlans]=useState<any[]>([]),[defs,setDefs]=useState<Definition[]>([]),[error,setError]=useState(''),[success,setSuccess]=useState(''),[busy,setBusy]=useState(false),[reasons,setReasons]=useState<Record<string,string>>({})
++ const [form,setForm]=useState({key:'',label:'',type:'integer',unit:'',defaultValue:'0',unlimited:false,reason:''}),[editing,setEditing]=useState(''),[metadata,setMetadata]=useState({label:'',unit:'',reason:''})
++ async function load(){const r=await adminRequest('/admin/workspace/plan-catalog');setPlans(r.data);setDefs(r.attributeDefinitions)}
++ useEffect(()=>{void load().catch(e=>setError(e.message))},[])
++ async function run(fn:()=>Promise<void>){setBusy(true);setError('');setSuccess('');try{await fn();await load();setSuccess('Settings saved and recorded in the audit log.')}catch(e){setError((e as Error).message)}finally{setBusy(false)}}
++ return <AdminFrame title={tr('Plans & attributes')} description={tr('Manage shared attribute definitions and set a value for each plan.')}><Notice error={error} success={success}/>
++ <p className="mb-5 rounded bg-blue-50 p-4">{tr('Built-in attributes control application behavior. Custom attributes are validated plan details; adding one does not create a new backend feature.')}</p>
++ <section className="mb-6 rounded-xl border bg-white p-5"><h2 className="text-xl font-semibold">{tr('Add attribute')}</h2><form className="mt-4 grid gap-3 md:grid-cols-2" onSubmit={e=>{e.preventDefault();void run(async()=>{await adminRequest('/admin/workspace/plan-attributes',mutation('POST',{key:form.key,label:form.label,type:form.type,unit:form.unit,defaultValue:form.type==='boolean'?form.defaultValue==='true':form.type==='text'?form.defaultValue:form.unlimited?null:Number(form.defaultValue),reason:form.reason}));setForm({key:'',label:'',type:'integer',unit:'',defaultValue:'0',unlimited:false,reason:''})})}}>
++ <label>{tr('Attribute key')}<input required pattern="[a-z][a-zA-Z0-9_]{1,49}" className={fieldStyle} value={form.key} onChange={e=>setForm({...form,key:e.target.value})}/></label><label>{tr('Label')}<input required maxLength={100} className={fieldStyle} value={form.label} onChange={e=>setForm({...form,label:e.target.value})}/></label>
++ <label>{tr('Type')}<select className={fieldStyle} value={form.type} onChange={e=>setForm({...form,type:e.target.value,defaultValue:e.target.value==='boolean'?'false':e.target.value==='text'?'':'0',unlimited:false})}><option value="integer">{tr('Whole number')}</option><option value="boolean">{tr('Yes / No')}</option><option value="text">{tr('Text')}</option></select></label>
++ <label>{tr('Unit')}<input maxLength={30} className={fieldStyle} value={form.unit} onChange={e=>setForm({...form,unit:e.target.value})}/></label>
++ <label>{tr('Default for every plan')}{form.type==='boolean'?<select className={fieldStyle} value={form.defaultValue} onChange={e=>setForm({...form,defaultValue:e.target.value})}><option value="false">{tr('No')}</option><option value="true">{tr('Yes')}</option></select>:<input disabled={form.unlimited} required={form.type==='integer'&&!form.unlimited} className={fieldStyle} maxLength={200} type={form.type==='integer'?'number':'text'} min={0} max={100000000} step={1} value={form.defaultValue} onChange={e=>setForm({...form,defaultValue:e.target.value})}/>}</label>
++ {form.type==='integer'&&<label><input type="checkbox" checked={form.unlimited} onChange={e=>setForm({...form,unlimited:e.target.checked})}/>{tr('Unlimited')}</label>}
++ <label>{tr('Reason')}<input required minLength={5} maxLength={500} className={fieldStyle} value={form.reason} onChange={e=>setForm({...form,reason:e.target.value})}/></label><button disabled={busy} className={primaryStyle}>{tr('Add attribute')}</button></form>
++ <p className="my-4 text-sm">{tr('Keys and types stay fixed after creation. Edit labels and units below; set plan values in each plan card.')}</p>
++ {defs.filter(d=>!d.system).map(d=><div key={d.key} className="border-t py-3"><span>{d.label} · {d.key} · {d.type}</span><button className="ml-4 underline" disabled={busy} onClick={()=>{setEditing(d.key);setMetadata({label:d.label,unit:d.unit,reason:''})}}>{tr('Edit')}</button></div>)}
++ {editing&&<form className="mt-4 space-y-3" onSubmit={e=>{e.preventDefault();void run(async()=>{await adminRequest('/admin/workspace/plan-attributes/'+editing,mutation('PATCH',metadata));setEditing('')})}}><label>{tr('Label')}<input required maxLength={100} className={fieldStyle} value={metadata.label} onChange={e=>setMetadata({...metadata,label:e.target.value})}/></label><label>{tr('Unit')}<input maxLength={30} className={fieldStyle} value={metadata.unit} onChange={e=>setMetadata({...metadata,unit:e.target.value})}/></label><label>{tr('Reason')}<input required minLength={5} maxLength={500} className={fieldStyle} value={metadata.reason} onChange={e=>setMetadata({...metadata,reason:e.target.value})}/></label><button disabled={busy} className={primaryStyle}>{tr('Save changes')}</button></form>}</section>
++ <div className="grid gap-5 md:grid-cols-2">{plans.map((p,i)=><form key={p.id} className="rounded-xl border bg-white p-5 space-y-3" onSubmit={e=>{e.preventDefault();void run(async()=>{await adminRequest('/admin/workspace/plan-catalog/'+p.id,mutation('PATCH',{name:p.name,isActive:p.isActive,attributes:p.attributes,expectedUpdatedAt:p.updatedAt,reason:reasons[p.id]}));setReasons({...reasons,[p.id]:''})})}}><h2 className="text-xl font-semibold">{p.name}</h2><label className="block">{tr('Name')}<input required maxLength={100} className={fieldStyle} value={p.name} onChange={e=>setPlans(plans.map((row,j)=>j===i?{...row,name:e.target.value}:row))}/></label>{defs.map(d=><label className="block" key={d.key}>{d.system?tr(d.label):d.label}{d.unit?' ('+d.unit+')':''}<ValueInput definition={d} value={p.attributes[d.key]} onChange={v=>setPlans(plans.map((row,j)=>j===i?{...row,attributes:{...row.attributes,[d.key]:v}}:row))}/></label>)}<label className="block"><input type="checkbox" checked={p.isActive} onChange={e=>setPlans(plans.map((row,j)=>j===i?{...row,isActive:e.target.checked}:row))}/>{tr('Available for new subscriptions')}</label><label className="block">{tr('Reason')}<input required minLength={5} maxLength={500} className={fieldStyle} value={reasons[p.id]||''} onChange={e=>setReasons({...reasons,[p.id]:e.target.value})}/></label><button disabled={busy} className={primaryStyle}>{tr('Save plan')}</button></form>)}</div>
++ </AdminFrame>
++}
+diff --git a/frontend/src/components/admin/SystemSettings.tsx b/frontend/src/components/admin/SystemSettings.tsx
+index f2ca940eae40044081a35334e845e064f5b66c6f..4d6a52dfa8f8e203f59c086ee30d1c1ea0d03aab 100644
+--- a/frontend/src/components/admin/SystemSettings.tsx
++++ b/frontend/src/components/admin/SystemSettings.tsx
+@@ -1,10 +1,11 @@
+ 'use client'
++import PlanCatalog from './PlanCatalog'
+ import { tr, useLocale } from '@/lib/localization'
+ 
+ import { useEffect, useState } from 'react'
+ import { adminRequest, mutation } from '@/lib/adminApi'
+ import { AdminFrame, Notice, RecordFields, fieldStyle, primaryStyle, secondaryStyle } from './AdminShell'
+-export default function SystemSettings({ kind }: { kind: 'plans' | 'flags' | 'infrastructure' }) {
++function LegacySettings({ kind }: { kind: 'plans' | 'flags' | 'infrastructure' }) {
+   useLocale()
+ 
+   const [rows, setRows] = useState<any[]>([]), [infrastructure, setInfrastructure] = useState<any>(), [error, setError] = useState(''), [success, setSuccess] = useState(''), [busy, setBusy] = useState(false), [reasons, setReasons] = useState<Record<string, string>>({})
+@@ -23,3 +24,5 @@ export default function SystemSettings({ kind }: { kind: 'plans' | 'flags' | 'in
+     <div className="grid gap-5 md:grid-cols-2">{rows.map((row, index) => <section key={row.id || row.key} className="rounded-xl border bg-white p-5"><h2 className="text-xl font-semibold">{row.name || row.key}</h2>{kind === 'plans' ? <form onSubmit={event => { event.preventDefault(); save(row) }} className="mt-4 space-y-3"><label className="block">{tr("Name")}<input required maxLength={100} className={fieldStyle} value={row.name} onChange={event => edit(index, { name: event.target.value })} /></label><label className="block">{tr("Price (₹)")}<input required type="number" step="0.01" min={row.id === 'free' ? 0 : 1} max={1000000} readOnly={row.id === 'free'} className={fieldStyle} value={row.priceRupees ?? row.amountPaise / 100} onChange={event => edit(index, { priceRupees: event.target.value })} /></label><label className="block">{tr("Yearly price (₹)")}<input required type="number" min={row.id === 'free' ? 0 : 1} max={1000000} step="0.01" readOnly={row.id === 'free'} className={fieldStyle} value={row.yearlyPriceRupees ?? row.yearlyAmountPaise / 100} onChange={event => edit(index, { yearlyPriceRupees: event.target.value })}/></label><label className="block">{tr("Loyalty points per monthly subscription (0 disables)")}<input required type="number" min={0} max={100000000} readOnly={row.id === 'free'} className={fieldStyle} value={row.loyaltyPoints} onChange={event => edit(index, { loyaltyPoints: event.target.value })}/></label><label className="block"><input type="checkbox" checked={row.featuredJobs} onChange={event => edit(index, { featuredJobs: event.target.checked })}/>{tr("Allow featured jobs")}</label><label className="block">{tr("Duration (days)")}<input required type="number" min={1} max={365} className={fieldStyle} value={row.durationDays} onChange={event => edit(index, { durationDays: event.target.value })} /></label><label className="block">{tr("Perks (one per line)")}<textarea className={fieldStyle} rows={7} value={row.featureText ?? row.features.join('\n')} onChange={event => edit(index, { featureText: event.target.value })} /></label><label className="block"><input type="checkbox" checked={row.isActive} onChange={event => edit(index, { isActive: event.target.checked })} />{tr(" Available for new subscriptions")}</label><label className="block">{tr("Reason")}<input required minLength={5} maxLength={500} className={fieldStyle} value={reasons[row.id] || ''} onChange={event => setReasons({ ...reasons, [row.id]: event.target.value })} /></label><button disabled={busy} className={primaryStyle}>{tr("Save plan")}</button></form> : <form onSubmit={event => { event.preventDefault(); save(row) }} className="mt-4 space-y-3"><p>{tr(row.description)}</p><p className={row.enabled ? 'text-green-800' : 'text-red-800'}>{tr(row.enabled ? 'Enabled' : 'Disabled')}</p><label className="block">{tr("Reason")}<input required minLength={5} maxLength={500} className={fieldStyle} value={reasons[row.key] || ''} onChange={event => setReasons({ ...reasons, [row.key]: event.target.value })} /></label><button disabled={busy} className={primaryStyle}>{tr(row.enabled ? 'Disable module' : 'Enable module')}</button></form>}</section>)}</div>
+   </AdminFrame>
+ }
++
++export default function SystemSettings({kind}:{kind:'plans'|'flags'|'infrastructure'}) { return kind==='plans'?<PlanCatalog/>:<LegacySettings kind={kind}/> }
+diff --git a/frontend/src/lib/navigation.ts b/frontend/src/lib/navigation.ts
+index 56abda6a9964b98d2aeb57bf2c1ec294c5ca4902..e6cd39ce0acdc4b14e79f647d06ac0007b733d96 100644
+--- a/frontend/src/lib/navigation.ts
++++ b/frontend/src/lib/navigation.ts
+@@ -26,7 +26,7 @@ export function getNavigation(role?: string): Navigation {
+       group('hiring', 'Hiring', [item('Jobs', '/admin/jobs'), item('Applications', `${root}/applications`), item('Analytics', '/admin/analytics')]),
+       group('finance', 'Finance', [item('Payments', `${root}/payments`), item('Invoices', `${root}/invoices`), ...(superAdmin ? [item('Wage registers', '/super-admin/wage-register')] : [])]),
+       group('training', 'Training', [item('Courses', '/admin/courses'), item('Training & Classes', '/admin/training'), verification]),
+-      group('system', superAdmin ? 'System Control' : 'Team tools', [item('Internal Communication', `${root}/communication`), item('Audit Logs', `${root}/audit-logs`), item('Audit & Fraud', '/admin/audit'), item('Support', '/admin/support'), ...(superAdmin ? [item('Staff & Roles', '/super-admin/staff'), item('Plans & Perks', '/super-admin/plans'), item('Feature Flags', '/super-admin/feature-flags'), item('Infrastructure', '/super-admin/infrastructure')] : [])])
++      group('system', superAdmin ? 'System Control' : 'Team tools', [item('Internal Communication', `${root}/communication`), item('Audit Logs', `${root}/audit-logs`), item('Audit & Fraud', '/admin/audit'), item('Support', '/admin/support'), ...(!superAdmin ? [item('Plans & Perks', '/admin/plans')] : []), ...(superAdmin ? [item('Staff & Roles', '/super-admin/staff'), item('Plans & Perks', '/super-admin/plans'), item('Feature Flags', '/super-admin/feature-flags'), item('Infrastructure', '/super-admin/infrastructure')] : [])])
+     ], account: [] }
+   }
+   if (role === 'trainer') return { home: '/trainer', primary: [item('Dashboard', '/trainer', true)], groups: [group('training', 'Training', [item('Courses', '/trainer/courses'), item('Batches, classes & attendance', '/trainer', true), verification])], account: [] }
+diff --git a/frontend/src/lib/planAttributes.ts b/frontend/src/lib/planAttributes.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..fb76df0b116633bf778158671461c27bab6c438a
+--- /dev/null
++++ b/frontend/src/lib/planAttributes.ts
+@@ -0,0 +1,4 @@
++export type PlanAttributeDefinition={key:string;label:string;type:string;unit:string;system:boolean;enforced:boolean}
++export function attributeRows(values:Record<string,unknown>,definitions:PlanAttributeDefinition[]) {
++ return definitions.filter(d=>!['amountPaise','yearlyAmountPaise','durationDays'].includes(d.key)).map(d=>({...d,value:values[d.key]}))
++}
+diff --git a/frontend/src/locales/en/common.json b/frontend/src/locales/en/common.json
+index 82cbc9ac89a8a8d89e493eb952bf7a9d614873a9..92534e4b39deb8b7cc87754eac649cd41fa983be 100644
+--- a/frontend/src/locales/en/common.json
++++ b/frontend/src/locales/en/common.json
+@@ -640,5 +640,26 @@
+   "{{value0}} points for {{value1}} days": "{{value0}} points for {{value1}} days",
+   "🎉 Payment successful! Your ": "🎉 Payment successful! Your ",
+   "Choose a plan that includes featured jobs to place this job above regular listings.": "Choose a plan that includes featured jobs to place this job above regular listings.",
+-  "While your plan is active, you can renew it. You can switch plans after it expires.": "While your plan is active, you can renew it. You can switch plans after it expires."
++  "While your plan is active, you can renew it. You can switch plans after it expires.": "While your plan is active, you can renew it. You can switch plans after it expires.",
++  "Plans & attributes": "Plans & attributes",
++  "Add attribute": "Add attribute",
++  "Attribute key": "Attribute key",
++  "Label": "Label",
++  "Whole number": "Whole number",
++  "Yes / No": "Yes / No",
++  "Text": "Text",
++  "Unit": "Unit",
++  "Default for every plan": "Default for every plan",
++  "Save changes": "Save changes",
++  "Monthly price": "Monthly price",
++  "Yearly price": "Yearly price",
++  "Monthly duration": "Monthly duration",
++  "Loyalty redemption cost": "Loyalty redemption cost",
++  "Featured jobs": "Featured jobs",
++  "Number of resumes allowed": "Number of resumes allowed",
++  "Available for new subscriptions": "Available for new subscriptions",
++  "Manage shared attribute definitions and set a value for each plan.": "Manage shared attribute definitions and set a value for each plan.",
++  "Built-in attributes control application behavior. Custom attributes are validated plan details; adding one does not create a new backend feature.": "Built-in attributes control application behavior. Custom attributes are validated plan details; adding one does not create a new backend feature.",
++  "Keys and types stay fixed after creation. Edit labels and units below; set plan values in each plan card.": "Keys and types stay fixed after creation. Edit labels and units below; set plan values in each plan card.",
++  "Your plan resume limit has been reached. Delete a resume or change your plan.": "Your plan resume limit has been reached. Delete a resume or change your plan."
+ }
+diff --git a/frontend/src/locales/hi/common.json b/frontend/src/locales/hi/common.json
+index 62100f41f225604125d2dc04a3a202585312df68..a8afe48632adf09d5ed98dd9cda39861cf644669 100644
+--- a/frontend/src/locales/hi/common.json
++++ b/frontend/src/locales/hi/common.json
+@@ -640,5 +640,26 @@
+   "{{value0}} points for {{value1}} days": "{{value1}} दिनों के लिए {{value0}} अंक",
+   "🎉 Payment successful! Your ": "⁇  भुगतान सफल!",
+   "Choose a plan that includes featured jobs to place this job above regular listings.": "एक योजना चुनें जिसमें विशेष नौकरियां शामिल हों ताकि इस नौकरी को नियमित सूची से ऊपर रखा जाए।",
+-  "While your plan is active, you can renew it. You can switch plans after it expires.": "आपका प्लान सक्रिय रहते हुए आप उसे नवीनीकृत कर सकते हैं। समाप्त होने के बाद आप प्लान बदल सकते हैं।"
++  "While your plan is active, you can renew it. You can switch plans after it expires.": "आपका प्लान सक्रिय रहते हुए आप उसे नवीनीकृत कर सकते हैं। समाप्त होने के बाद आप प्लान बदल सकते हैं।",
++  "Plans & attributes": "योजनाएँ और विशेषताएँ",
++  "Add attribute": "विशेषता जोड़ें",
++  "Attribute key": "विशेषता कुंजी",
++  "Label": "लेबल",
++  "Whole number": "पूर्ण संख्या",
++  "Yes / No": "हाँ / नहीं",
++  "Text": "पाठ",
++  "Unit": "इकाई",
++  "Default for every plan": "हर योजना के लिए प्रारंभिक मान",
++  "Save changes": "बदलाव सहेजें",
++  "Monthly price": "मासिक मूल्य",
++  "Yearly price": "वार्षिक मूल्य",
++  "Monthly duration": "मासिक अवधि",
++  "Loyalty redemption cost": "लॉयल्टी अंक भुनाने की लागत",
++  "Featured jobs": "प्रमुख नौकरियाँ",
++  "Number of resumes allowed": "अनुमत रिज्यूमे की संख्या",
++  "Available for new subscriptions": "नई सदस्यताओं के लिए उपलब्ध",
++  "Manage shared attribute definitions and set a value for each plan.": "साझा विशेषताएँ प्रबंधित करें और हर योजना का मान तय करें।",
++  "Built-in attributes control application behavior. Custom attributes are validated plan details; adding one does not create a new backend feature.": "अंतर्निहित विशेषताएँ ऐप का व्यवहार नियंत्रित करती हैं। नई विशेषताएँ सत्यापित योजना विवरण हैं; उन्हें जोड़ने से नई बैकएंड सुविधा नहीं बनती।",
++  "Keys and types stay fixed after creation. Edit labels and units below; set plan values in each plan card.": "बनाने के बाद कुंजी और प्रकार स्थिर रहते हैं। नीचे लेबल और इकाई बदलें; हर योजना के कार्ड में मान तय करें।",
++  "Your plan resume limit has been reached. Delete a resume or change your plan.": "आपकी योजना की रिज्यूमे सीमा पूरी हो गई है। एक रिज्यूमे हटाएँ या योजना बदलें।"
+ }
+diff --git a/frontend/src/locales/kn/common.json b/frontend/src/locales/kn/common.json
+index de5eae762d7811e44a8ae600f10c850c3a912f23..7fe69d8376b8f7513c711d4a86b05865d503b1fc 100644
+--- a/frontend/src/locales/kn/common.json
++++ b/frontend/src/locales/kn/common.json
+@@ -640,5 +640,26 @@
+   "{{value0}} points for {{value1}} days": "{{value1}} ದಿನಗಳಿಗೆ {{value0}} ಅಂಕಗಳು",
+   "🎉 Payment successful! Your ": "⁇  ಪಾವತಿ ಯಶಸ್ವಿ!",
+   "Choose a plan that includes featured jobs to place this job above regular listings.": "ಸಾಮಾನ್ಯ ಪಟ್ಟಿಗಳ ಮೇಲೆ ಈ ಕೆಲಸವನ್ನು ಇರಿಸಲು ಪ್ರಮುಖ ಉದ್ಯೋಗಗಳನ್ನು ಒಳಗೊಂಡಿರುವ ಯೋಜನೆಯನ್ನು ಆರಿಸಿ.",
+-  "While your plan is active, you can renew it. You can switch plans after it expires.": "ನಿಮ್ಮ ಯೋಜನೆ ಸಕ್ರಿಯವಾಗಿರುವಾಗ ಅದನ್ನು ನವೀಕರಿಸಬಹುದು. ಅವಧಿ ಮುಗಿದ ನಂತರ ಯೋಜನೆಯನ್ನು ಬದಲಿಸಬಹುದು."
++  "While your plan is active, you can renew it. You can switch plans after it expires.": "ನಿಮ್ಮ ಯೋಜನೆ ಸಕ್ರಿಯವಾಗಿರುವಾಗ ಅದನ್ನು ನವೀಕರಿಸಬಹುದು. ಅವಧಿ ಮುಗಿದ ನಂತರ ಯೋಜನೆಯನ್ನು ಬದಲಿಸಬಹುದು.",
++  "Plans & attributes": "ಯೋಜನೆಗಳು ಮತ್ತು ಗುಣಲಕ್ಷಣಗಳು",
++  "Add attribute": "ಗುಣಲಕ್ಷಣ ಸೇರಿಸಿ",
++  "Attribute key": "ಗುಣಲಕ್ಷಣದ ಕೀ",
++  "Label": "ಲೇಬಲ್",
++  "Whole number": "ಪೂರ್ಣ ಸಂಖ್ಯೆ",
++  "Yes / No": "ಹೌದು / ಇಲ್ಲ",
++  "Text": "ಪಠ್ಯ",
++  "Unit": "ಘಟಕ",
++  "Default for every plan": "ಪ್ರತಿ ಯೋಜನೆಯ ಆರಂಭಿಕ ಮೌಲ್ಯ",
++  "Save changes": "ಬದಲಾವಣೆಗಳನ್ನು ಉಳಿಸಿ",
++  "Monthly price": "ಮಾಸಿಕ ಬೆಲೆ",
++  "Yearly price": "ವಾರ್ಷಿಕ ಬೆಲೆ",
++  "Monthly duration": "ಮಾಸಿಕ ಅವಧಿ",
++  "Loyalty redemption cost": "ನಿಷ್ಠಾ ಅಂಕಗಳನ್ನು ಬಳಸುವ ವೆಚ್ಚ",
++  "Featured jobs": "ಪ್ರಮುಖ ಉದ್ಯೋಗಗಳು",
++  "Number of resumes allowed": "ಅನುಮತಿಸಲಾದ ರೆಸ್ಯೂಮ್‌ಗಳ ಸಂಖ್ಯೆ",
++  "Available for new subscriptions": "ಹೊಸ ಚಂದಾದಾರಿಕೆಗಳಿಗೆ ಲಭ್ಯ",
++  "Manage shared attribute definitions and set a value for each plan.": "ಹಂಚಿದ ಗುಣಲಕ್ಷಣಗಳನ್ನು ನಿರ್ವಹಿಸಿ ಮತ್ತು ಪ್ರತಿ ಯೋಜನೆಯ ಮೌಲ್ಯ ನಿಗದಿಪಡಿಸಿ.",
++  "Built-in attributes control application behavior. Custom attributes are validated plan details; adding one does not create a new backend feature.": "ಅಂತರ್ನಿರ್ಮಿತ ಗುಣಲಕ್ಷಣಗಳು ಅಪ್ಲಿಕೇಶನ್ ವರ್ತನೆಯನ್ನು ನಿಯಂತ್ರಿಸುತ್ತವೆ. ಹೊಸ ಗುಣಲಕ್ಷಣಗಳು ಮೌಲ್ಯೀಕರಿಸಿದ ಯೋಜನೆಯ ವಿವರಗಳಾಗಿವೆ; ಅವು ಹೊಸ ಬ್ಯಾಕೆಂಡ್ ಸೌಲಭ್ಯ ಸೃಷ್ಟಿಸುವುದಿಲ್ಲ.",
++  "Keys and types stay fixed after creation. Edit labels and units below; set plan values in each plan card.": "ಸೇರಿಸಿದ ನಂತರ ಕೀ ಮತ್ತು ಪ್ರಕಾರ ಬದಲಾಗುವುದಿಲ್ಲ. ಕೆಳಗೆ ಲೇಬಲ್ ಮತ್ತು ಘಟಕ ಬದಲಿಸಿ; ಪ್ರತಿ ಯೋಜನೆಯ ಕಾರ್ಡ್‌ನಲ್ಲಿ ಮೌಲ್ಯ ನಿಗದಿಪಡಿಸಿ.",
++  "Your plan resume limit has been reached. Delete a resume or change your plan.": "ನಿಮ್ಮ ಯೋಜನೆಯ ರೆಸ್ಯೂಮ್ ಮಿತಿ ತಲುಪಿದೆ. ಒಂದು ರೆಸ್ಯೂಮ್ ಅಳಿಸಿ ಅಥವಾ ಯೋಜನೆ ಬದಲಿಸಿ."
+ }
+diff --git a/frontend/src/locales/mr/common.json b/frontend/src/locales/mr/common.json
+index 558efe4ce1f5a6babdab02b99aeec26d89b88ace..88525290ded1eecbe1ec2f7b4b44d913f5584ec7 100644
+--- a/frontend/src/locales/mr/common.json
++++ b/frontend/src/locales/mr/common.json
+@@ -640,5 +640,26 @@
+   "{{value0}} points for {{value1}} days": "{{value1}} दिवसांसाठी {{value0}} गुण",
+   "🎉 Payment successful! Your ": "⁇  पेमेंट यशस्वी!",
+   "Choose a plan that includes featured jobs to place this job above regular listings.": "नियमित यादीच्या वर या नोकरीला ठेवण्यासाठी वैशिष्ट्यीकृत नोकर्यांचा समावेश असलेल्या योजनेची निवड करा.",
+-  "While your plan is active, you can renew it. You can switch plans after it expires.": "तुमची योजना सक्रिय असताना तिचे नूतनीकरण करू शकता. मुदत संपल्यानंतर योजना बदलू शकता."
++  "While your plan is active, you can renew it. You can switch plans after it expires.": "तुमची योजना सक्रिय असताना तिचे नूतनीकरण करू शकता. मुदत संपल्यानंतर योजना बदलू शकता.",
++  "Plans & attributes": "योजना आणि गुणधर्म",
++  "Add attribute": "गुणधर्म जोडा",
++  "Attribute key": "गुणधर्माची कळ",
++  "Label": "लेबल",
++  "Whole number": "पूर्णांक",
++  "Yes / No": "होय / नाही",
++  "Text": "मजकूर",
++  "Unit": "एकक",
++  "Default for every plan": "प्रत्येक योजनेसाठी प्रारंभिक मूल्य",
++  "Save changes": "बदल जतन करा",
++  "Monthly price": "मासिक किंमत",
++  "Yearly price": "वार्षिक किंमत",
++  "Monthly duration": "मासिक कालावधी",
++  "Loyalty redemption cost": "लॉयल्टी गुण वापरण्याची किंमत",
++  "Featured jobs": "प्रमुख नोकऱ्या",
++  "Number of resumes allowed": "परवानगी असलेल्या रेझ्युमेंची संख्या",
++  "Available for new subscriptions": "नवीन सदस्यत्वांसाठी उपलब्ध",
++  "Manage shared attribute definitions and set a value for each plan.": "सामायिक गुणधर्म व्यवस्थापित करा आणि प्रत्येक योजनेचे मूल्य ठरवा.",
++  "Built-in attributes control application behavior. Custom attributes are validated plan details; adding one does not create a new backend feature.": "अंगभूत गुणधर्म अॅपचे वर्तन नियंत्रित करतात. नवीन गुणधर्म पडताळलेले योजना तपशील आहेत; ते जोडल्याने नवीन बॅकएंड सुविधा तयार होत नाही.",
++  "Keys and types stay fixed after creation. Edit labels and units below; set plan values in each plan card.": "तयार केल्यानंतर कळ आणि प्रकार कायम राहतात. खाली लेबल आणि एकक बदला; प्रत्येक योजनेच्या कार्डमध्ये मूल्ये ठरवा.",
++  "Your plan resume limit has been reached. Delete a resume or change your plan.": "तुमच्या योजनेची रेझ्युमे मर्यादा गाठली आहे. एक रेझ्युमे हटवा किंवा योजना बदला."
+ }
+diff --git a/frontend/src/locales/source-index.json b/frontend/src/locales/source-index.json
+index a78e55ced527fbda726fa63d095c8b5a66962cae..c4599542d1df6c7fadfe1744342810c86cd42923 100644
+--- a/frontend/src/locales/source-index.json
++++ b/frontend/src/locales/source-index.json
+@@ -2979,6 +2979,86 @@
+     "ns": "common",
+     "key": "While your plan is active, you can renew it. You can switch plans after it expires."
+   },
++  "Plans & attributes": {
++    "ns": "common",
++    "key": "Plans & attributes"
++  },
++  "Add attribute": {
++    "ns": "common",
++    "key": "Add attribute"
++  },
++  "Attribute key": {
++    "ns": "common",
++    "key": "Attribute key"
++  },
++  "Label": {
++    "ns": "common",
++    "key": "Label"
++  },
++  "Whole number": {
++    "ns": "common",
++    "key": "Whole number"
++  },
++  "Yes / No": {
++    "ns": "common",
++    "key": "Yes / No"
++  },
++  "Text": {
++    "ns": "common",
++    "key": "Text"
++  },
++  "Unit": {
++    "ns": "common",
++    "key": "Unit"
++  },
++  "Default for every plan": {
++    "ns": "common",
++    "key": "Default for every plan"
++  },
++  "Save changes": {
++    "ns": "common",
++    "key": "Save changes"
++  },
++  "Monthly price": {
++    "ns": "common",
++    "key": "Monthly price"
++  },
++  "Yearly price": {
++    "ns": "common",
++    "key": "Yearly price"
++  },
++  "Monthly duration": {
++    "ns": "common",
++    "key": "Monthly duration"
++  },
++  "Loyalty redemption cost": {
++    "ns": "common",
++    "key": "Loyalty redemption cost"
++  },
++  "Featured jobs": {
++    "ns": "common",
++    "key": "Featured jobs"
++  },
++  "Number of resumes allowed": {
++    "ns": "common",
++    "key": "Number of resumes allowed"
++  },
++  "Manage shared attribute definitions and set a value for each plan.": {
++    "ns": "common",
++    "key": "Manage shared attribute definitions and set a value for each plan."
++  },
++  "Built-in attributes control application behavior. Custom attributes are validated plan details; adding one does not create a new backend feature.": {
++    "ns": "common",
++    "key": "Built-in attributes control application behavior. Custom attributes are validated plan details; adding one does not create a new backend feature."
++  },
++  "Keys and types stay fixed after creation. Edit labels and units below; set plan values in each plan card.": {
++    "ns": "common",
++    "key": "Keys and types stay fixed after creation. Edit labels and units below; set plan values in each plan card."
++  },
++  "Your plan resume limit has been reached. Delete a resume or change your plan.": {
++    "ns": "common",
++    "key": "Your plan resume limit has been reached. Delete a resume or change your plan."
++  },
+   "online": {
+     "ns": "jobs",
+     "key": "online"
+@@ -14199,6 +14279,82 @@
+     "ns": "common",
+     "key": "While your plan is active, you can renew it. You can switch plans after it expires."
+   },
++  "plans & attributes": {
++    "ns": "common",
++    "key": "Plans & attributes"
++  },
++  "add attribute": {
++    "ns": "common",
++    "key": "Add attribute"
++  },
++  "attribute key": {
++    "ns": "common",
++    "key": "Attribute key"
++  },
++  "label": {
++    "ns": "common",
++    "key": "Label"
++  },
++  "whole number": {
++    "ns": "common",
++    "key": "Whole number"
++  },
++  "yes / no": {
++    "ns": "common",
++    "key": "Yes / No"
++  },
++  "text": {
++    "ns": "common",
++    "key": "Text"
++  },
++  "unit": {
++    "ns": "common",
++    "key": "Unit"
++  },
++  "default for every plan": {
++    "ns": "common",
++    "key": "Default for every plan"
++  },
++  "monthly price": {
++    "ns": "common",
++    "key": "Monthly price"
++  },
++  "yearly price": {
++    "ns": "common",
++    "key": "Yearly price"
++  },
++  "monthly duration": {
++    "ns": "common",
++    "key": "Monthly duration"
++  },
++  "loyalty redemption cost": {
++    "ns": "common",
++    "key": "Loyalty redemption cost"
++  },
++  "featured jobs": {
++    "ns": "common",
++    "key": "Featured jobs"
++  },
++  "number of resumes allowed": {
++    "ns": "common",
++    "key": "Number of resumes allowed"
++  },
++  "manage shared attribute definitions and set a value for each plan.": {
++    "ns": "common",
++    "key": "Manage shared attribute definitions and set a value for each plan."
++  },
++  "built-in attributes control application behavior. custom attributes are validated plan details; adding one does not create a new backend feature.": {
++    "ns": "common",
++    "key": "Built-in attributes control application behavior. Custom attributes are validated plan details; adding one does not create a new backend feature."
++  },
++  "keys and types stay fixed after creation. edit labels and units below; set plan values in each plan card.": {
++    "ns": "common",
++    "key": "Keys and types stay fixed after creation. Edit labels and units below; set plan values in each plan card."
++  },
++  "your plan resume limit has been reached. delete a resume or change your plan.": {
++    "ns": "common",
++    "key": "Your plan resume limit has been reached. Delete a resume or change your plan."
++  },
+   "🤖 ai resume matching": {
+     "ns": "jobs",
+     "key": "🤖 AI Resume Matching"
+diff --git a/frontend/src/locales/ta/common.json b/frontend/src/locales/ta/common.json
+index d979baffc6668049bdbb07311e9734e4e53362e3..80b8d64f7649eb80053abc05afc814b793be3ef1 100644
+--- a/frontend/src/locales/ta/common.json
++++ b/frontend/src/locales/ta/common.json
+@@ -640,5 +640,26 @@
+   "{{value0}} points for {{value1}} days": "{{value1}} நாட்களுக்கு {{value0}} புள்ளிகள்",
+   "🎉 Payment successful! Your ": "⁇  பணம் செலுத்துதல் வெற்றிகரமாக!",
+   "Choose a plan that includes featured jobs to place this job above regular listings.": "வழக்கமான பட்டியல்களுக்கு மேல் இந்த வேலையை வைக்க சிறப்பு வேலைகளை உள்ளடக்கிய ஒரு திட்டத்தைத் தேர்ந்தெடுக்கவும்.",
+-  "While your plan is active, you can renew it. You can switch plans after it expires.": "உங்கள் திட்டம் செயலில் இருக்கும்போது அதைப் புதுப்பிக்கலாம். காலாவதியான பிறகு வேறு திட்டத்திற்கு மாறலாம்."
++  "While your plan is active, you can renew it. You can switch plans after it expires.": "உங்கள் திட்டம் செயலில் இருக்கும்போது அதைப் புதுப்பிக்கலாம். காலாவதியான பிறகு வேறு திட்டத்திற்கு மாறலாம்.",
++  "Plans & attributes": "திட்டங்களும் பண்புகளும்",
++  "Add attribute": "பண்பைச் சேர்க்கவும்",
++  "Attribute key": "பண்பின் விசை",
++  "Label": "பெயர்",
++  "Whole number": "முழு எண்",
++  "Yes / No": "ஆம் / இல்லை",
++  "Text": "உரை",
++  "Unit": "அலகு",
++  "Default for every plan": "ஒவ்வொரு திட்டத்திற்குமான தொடக்க மதிப்பு",
++  "Save changes": "மாற்றங்களைச் சேமிக்கவும்",
++  "Monthly price": "மாத விலை",
++  "Yearly price": "ஆண்டு விலை",
++  "Monthly duration": "மாத கால அளவு",
++  "Loyalty redemption cost": "விசுவாசப் புள்ளிகளைப் பயன்படுத்தும் செலவு",
++  "Featured jobs": "சிறப்பு வேலைகள்",
++  "Number of resumes allowed": "அனுமதிக்கப்பட்ட சுயவிவரங்களின் எண்ணிக்கை",
++  "Available for new subscriptions": "புதிய சந்தாக்களுக்குக் கிடைக்கும்",
++  "Manage shared attribute definitions and set a value for each plan.": "பொதுவான பண்புகளை நிர்வகித்து ஒவ்வொரு திட்டத்திற்கும் மதிப்பை அமைக்கவும்.",
++  "Built-in attributes control application behavior. Custom attributes are validated plan details; adding one does not create a new backend feature.": "உள்ளமைந்த பண்புகள் செயலியின் செயல்பாட்டைக் கட்டுப்படுத்தும். புதிய பண்புகள் சரிபார்க்கப்பட்ட திட்ட விவரங்கள்; அவற்றைச் சேர்ப்பதால் புதிய பின்தள வசதி உருவாகாது.",
++  "Keys and types stay fixed after creation. Edit labels and units below; set plan values in each plan card.": "உருவாக்கிய பிறகு விசையும் வகையும் மாறாது. கீழே பெயரையும் அலகையும் திருத்தி, ஒவ்வொரு திட்ட அட்டையிலும் மதிப்புகளை அமைக்கவும்.",
++  "Your plan resume limit has been reached. Delete a resume or change your plan.": "உங்கள் திட்டத்தின் சுயவிவர வரம்பை எட்டிவிட்டீர்கள். ஒரு சுயவிவரத்தை நீக்கவும் அல்லது திட்டத்தை மாற்றவும்."
+ }
+diff --git a/frontend/test/business.test.cjs b/frontend/test/business.test.cjs
+index ef88ee816a5e62845354dc7a62252a9892148b7f..b5e3ce076ecb6755e247efa37782de44e789c38d 100644
+--- a/frontend/test/business.test.cjs
++++ b/frontend/test/business.test.cjs
+@@ -59,3 +59,9 @@ test('trainers can reach home while admin routes still redirect to their workspa
+     if(pathname==='/'){assert.equal(tree,child);assert.deepEqual(redirects,[])}else assert.deepEqual(redirects,['/trainer'])
+   }
+ })
++
++test('pricing cards show structured limits and flags and preserve authored custom attribute text',()=>{
++ const seed=[];seed[0]='monthly';seed[1]=[{id:'standard',name:'Standard',price:10,yearlyPrice:100,durationDays:30,color:'blue',features:['Obsolete prose'],missing:[],disabled:false,attributes:{resumeLimit:3,featuredJobs:false,support:'Open'}}];seed[3]=false;seed[6]=false;seed[11]=[{key:'resumeLimit',label:'Number of resumes allowed',type:'integer',unit:'resumes',system:true},{key:'featuredJobs',label:'Featured jobs',type:'boolean',unit:'',system:true},{key:'support',label:'Custom support',type:'text',unit:'',system:false}];
++ const tree=harness('app/subscription/page.tsx',seed)();
++ assert.ok(text(tree).includes('Number of resumes allowed'));assert.match(text(tree),/3\s+resumes/);assert.ok(text(tree).includes('No'));assert.ok(text(tree).includes('Open'));assert.ok(!text(tree).includes('Obsolete prose'));
++});

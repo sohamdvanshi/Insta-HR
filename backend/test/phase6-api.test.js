@@ -77,7 +77,7 @@ function define(name) {
   };
   return api;
 }
-for (const name of ['User', 'Job', 'Application', 'Payment', 'Invoice', 'CandidateProfile', 'EmployerProfile', 'Resume', 'CourseEnrollment', 'Training', 'Deployment', 'Payroll', 'LoyaltyPointTransaction', 'AuditLog', 'InternalThread', 'InternalMessage', 'InternalNote', 'SubscriptionPlan', 'FeatureFlag', 'FraudAlert']) models[name] = define(name);
+for (const name of ['User', 'Job', 'Application', 'Payment', 'Invoice', 'CandidateProfile', 'EmployerProfile', 'Resume', 'CourseEnrollment', 'Training', 'Deployment', 'Payroll', 'LoyaltyPointTransaction', 'AuditLog', 'InternalThread', 'InternalMessage', 'InternalNote', 'SubscriptionPlan', 'PlanAttribute', 'FeatureFlag', 'FraudAlert']) models[name] = define(name);
 models.User.normalizeEmail = value => typeof value === 'string' ? value.trim().toLowerCase() : null;
 models.Application.APPLICATION_STATUSES = ['applied', 'shortlisted', 'interview', 'hired', 'rejected'];
 models.sequelize = {
@@ -314,4 +314,19 @@ test('invoice status transitions enforce ownership, terminal states and audited 
   assert.equal((await request(url,'employer','PATCH',{status:'paid'})).status,200);
   assert.equal((await request(url,'employer','PATCH',{status:'draft'})).status,409);
   assert.equal(rows.AuditLog.filter(a=>a.action==='invoice.status').length,2);
+});
+
+test('typed plan catalog is available to admins and superadmins but private from portal roles',async()=>{
+ for(const role of ['candidate','employer','trainer'])assert.equal((await request('/admin/workspace/plan-catalog',role)).status,403);
+ assert.equal((await request('/admin/workspace/plan-catalog','admin')).status,200);
+ assert.equal((await request('/admin/workspace/plan-catalog','super')).status,200);
+ const body={key:'supportChannel',label:'Support channel',type:'text',unit:'',defaultValue:'Email',reason:'Define shared support channel'};
+ assert.equal((await request('/admin/workspace/plan-attributes','candidate','POST',body)).status,403);
+ assert.equal((await request('/admin/workspace/plan-attributes','admin','POST',body)).status,201);
+ const catalog=await request('/admin/workspace/plan-catalog','admin'),plan=catalog.data.data[0];
+ assert.equal(plan.attributes.supportChannel,'Email');
+ const save={name:plan.name,isActive:true,attributes:{...plan.attributes,yearlyAmountPaise:1000000,resumeLimit:3},expectedUpdatedAt:plan.updatedAt,reason:'Set quota for this plan'};
+ assert.equal((await request('/admin/workspace/plan-catalog/standard','admin','PATCH',save)).status,200);
+ const publicPlans=await request('/payments/plans',null);assert.equal(publicPlans.data.data[0].attributes.resumeLimit,3);assert.equal(publicPlans.data.data[0].attributes.supportChannel,'Email');
+ assert.equal(publicPlans.data.attributeDefinitions.find(d=>d.key==='supportChannel').type,'text');
 });

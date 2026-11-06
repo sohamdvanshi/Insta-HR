@@ -1,5 +1,5 @@
 const { Op } = require('sequelize');
-const { Resume } = require('../models');
+const { Resume, User, SubscriptionPlan, sequelize } = require('../models');
 
 const VALID_SECTORS = [
   'general',
@@ -16,7 +16,7 @@ const VALID_SECTORS = [
 const VALID_VISIBILITIES = ['private', 'link'];
 const VALID_STATUSES = ['draft', 'published'];
 
-const clearOtherDefaultResumes = async (userId, resumeId = null) => {
+const clearOtherDefaultResumes = async (userId, resumeId = null, transaction) => {
   const where = {
     userId,
     isDefault: true
@@ -30,7 +30,7 @@ const clearOtherDefaultResumes = async (userId, resumeId = null) => {
 
   await Resume.update(
     { isDefault: false },
-    { where }
+    { where, transaction }
   );
 };
 
@@ -61,37 +61,43 @@ exports.createResume = async (req, res) => {
       });
     }
 
-    if (req.body.isDefault === true) {
-      await clearOtherDefaultResumes(req.user.id);
-    }
-
-    const resume = await Resume.create({
-      userId: req.user.id,
-      title: req.body.title || 'My Resume',
-      template: req.body.template || 'classic',
-      sector: req.body.sector || 'general',
-      visibility: req.body.visibility || 'private',
-      isDefault: req.body.isDefault === true,
-      targetJobTitle: req.body.targetJobTitle || '',
-      targetJobDescription: req.body.targetJobDescription || '',
-      personalInfo: req.body.personalInfo || {
-        fullName: '',
-        email: '',
-        phone: '',
-        location: '',
-        jobTitle: '',
-        linkedin: '',
-        github: '',
-        website: ''
-      },
-      summary: req.body.summary || '',
-      experience: req.body.experience || [],
-      education: req.body.education || [],
-      projects: req.body.projects || [],
-      skills: req.body.skills || [],
-      certifications: req.body.certifications || [],
-      languages: req.body.languages || [],
-      status: req.body.status || 'draft'
+    const resume = await sequelize.transaction(async transaction => {
+      const user=await User.findByPk(req.user.id,{transaction,lock:transaction.LOCK.UPDATE});
+      if(!user)throw Object.assign(new Error('Account not found'),{status:404});
+      const active=user.subscriptionExpiry && new Date(user.subscriptionExpiry)>new Date();
+      const plan=await SubscriptionPlan.findByPk(active?user.subscriptionPlan:'free',{transaction});
+      if(!plan)throw Object.assign(new Error('Subscription plan is unavailable'),{status:503});
+      const limit = require('../services/planAttributes').resumeLimitFor(plan);
+      if(limit!==null && await Resume.count({where:{userId:user.id},transaction})>=limit)throw Object.assign(new Error('Your plan resume limit has been reached. Delete a resume or change your plan.'),{status:403});
+      if(req.body.isDefault===true)await clearOtherDefaultResumes(user.id,null,transaction);
+      return Resume.create({
+        userId: req.user.id,
+        title: req.body.title || 'My Resume',
+        template: req.body.template || 'classic',
+        sector: req.body.sector || 'general',
+        visibility: req.body.visibility || 'private',
+        isDefault: req.body.isDefault === true,
+        targetJobTitle: req.body.targetJobTitle || '',
+        targetJobDescription: req.body.targetJobDescription || '',
+        personalInfo: req.body.personalInfo || {
+          fullName: '',
+          email: '',
+          phone: '',
+          location: '',
+          jobTitle: '',
+          linkedin: '',
+          github: '',
+          website: ''
+        },
+        summary: req.body.summary || '',
+        experience: req.body.experience || [],
+        education: req.body.education || [],
+        projects: req.body.projects || [],
+        skills: req.body.skills || [],
+        certifications: req.body.certifications || [],
+        languages: req.body.languages || [],
+        status: req.body.status || 'draft'
+      }, { transaction });
     });
 
     return res.status(201).json({
@@ -100,10 +106,9 @@ exports.createResume = async (req, res) => {
       data: resume
     });
   } catch (error) {
-    return res.status(500).json({
+    return res.status(error.status || 500).json({
       success: false,
-      message: 'Failed to create resume',
-      error: error.message
+      message: error.status ? error.message : 'Failed to create resume'
     });
   }
 };

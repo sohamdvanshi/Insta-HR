@@ -204,4 +204,4 @@ exports.infrastructure = handle(async (req, res) => {
   res.json({ success: true, data: { checkedAt: new Date(), uptimeSeconds: Math.floor(process.uptime()), nodeVersion: process.version, memoryMB: Math.round(process.memoryUsage().rss / 1048576), database, redis: redis?.isReady ? 'connected' : 'unavailable', search: searchStatus,
     integrations: { smtp: Boolean(process.env.SMTP_USER && process.env.SMTP_PASS), payments: Boolean(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET), cloudinary: Boolean(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) } } });
 });
-exports.publicPlans = handle(async (req, res) => res.json({ success: true, data: await SubscriptionPlan.findAll({ where: { isActive: true }, order: [['amountPaise', 'ASC']] }) }));
+exports.publicPlans = handle(async (req, res) => { const P=require('../services/planAttributes'), defs=await P.definitions(); const plans=await SubscriptionPlan.findAll({where:{isActive:true},order:[['amountPaise','ASC']]}); return res.json({success:true,data:plans.map(p=>({...p.toJSON(),attributes:P.valuesFor(p,defs)})),attributeDefinitions:defs}); });

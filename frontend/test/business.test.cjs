@@ -59,3 +59,32 @@ test('trainers can reach home while admin routes still redirect to their workspa
     if(pathname==='/'){assert.equal(tree,child);assert.deepEqual(redirects,[])}else assert.deepEqual(redirects,['/trainer'])
   }
 })
+
+test('pricing cards show structured limits and flags and preserve authored custom attribute text',()=>{
+ const seed=[];seed[0]='monthly';seed[1]=[{id:'standard',name:'Standard',price:10,yearlyPrice:100,durationDays:30,color:'blue',features:['Obsolete prose'],missing:[],disabled:false,attributes:{resumeLimit:3,featuredJobs:false,support:'Open'}}];seed[3]=false;seed[6]=false;seed[11]=[{key:'resumeLimit',label:'Number of resumes allowed',type:'integer',unit:'resumes',system:true},{key:'featuredJobs',label:'Featured jobs',type:'boolean',unit:'',system:true},{key:'support',label:'Custom support',type:'text',unit:'',system:false}];
+ const tree=harness('app/subscription/page.tsx',seed)();
+ assert.ok(text(tree).includes('Number of resumes allowed'));assert.match(text(tree),/3\s+resumes/);assert.ok(text(tree).includes('No'));assert.ok(text(tree).includes('Open'));assert.ok(!text(tree).includes('Obsolete prose'));
+});
+
+test('plan boolean controls are real switches that emit booleans',()=>{
+ const {ValueInput}=loader({'@/lib/localization':copy})(path.join(src,'components/admin/PlanCatalog.tsx'));let updated;
+ const control=nodes(ValueInput({definition:{key:'apiAccess',label:'API Access',type:'boolean',system:true},value:false,onChange:v=>updated=v})).find(n=>n.props.role==='switch');
+ assert.equal(control.props.role,'switch');assert.equal(control.props.checked,false);control.props.onChange({target:{checked:true}});assert.equal(updated,true);
+});
+test('comparison table follows live limits, screening level and toggles instead of a static matrix',()=>{
+ const Component=loader({'@/lib/localization':copy})(path.join(src,'components/PlanComparison.tsx')).default;
+ const definitions=[{key:'jobPostingLimit',label:'Job Postings'},{key:'aiScreening',label:'AI Screening'},{key:'socialPromotion',label:'Social Promotion'}];
+ const plans=[{id:'premium',name:'Revised plan',attributes:{jobPostingLimit:7,aiScreening:true,aiScreeningLevel:'advanced',socialPromotion:true}}];
+ let html=text(Component({plans,definitions}));assert.ok(html.includes('Revised plan'));assert.match(html,/7\s*\/\s*month/);assert.ok(html.includes('advanced'));assert.ok(html.includes('✓'));assert.ok(!html.includes('3/month'));
+ plans[0].attributes.aiScreening=false;plans[0].attributes.socialPromotion=false;html=text(Component({plans,definitions}));assert.ok(!html.includes('advanced'));assert.ok(html.includes('✗'));
+});
+test('invoice navigation is removed for every role',()=>{
+ const {getNavigation}=loader()(path.join(src,'lib/navigation.ts'));
+ for(const role of ['employer','admin','super_admin','candidate','trainer']){const n=getNavigation(role),links=[...n.primary,...n.groups.flatMap(g=>g.items),...n.account];assert.ok(!links.some(l=>/\/invoices$/.test(l.href)));}
+});
+test('approved wage rows offer creation, then download per individual; drafts cannot invoice',()=>{
+ const seed=[];seed[0]='token';seed[11]={id:'register',period:'2026-10',site:'Site',status:'approved',version:4,warnings:[],rows:[{employeeId:'001',name:'Employee',days:[],rate:595,payableDays:26}],invoices:[]};
+ let tree=harness('components/payroll/WageRegisterWorkspace.tsx',seed)({readOnly:false});let create=nodes(tree).find(n=>n.type==='button'&&text(n)==='Create invoice');assert.ok(create);assert.equal(create.props.disabled,false);
+ seed[11].invoices=[{employeeId:'001',number:'WAGE-test',total:13554}];tree=harness('components/payroll/WageRegisterWorkspace.tsx',seed)({readOnly:false});assert.ok(nodes(tree).some(n=>n.type==='button'&&text(n)==='Download invoice'));assert.ok(!nodes(tree).some(n=>n.type==='button'&&text(n)==='Create invoice'));
+ seed[11]={...seed[11],invoices:[],status:'draft'};tree=harness('components/payroll/WageRegisterWorkspace.tsx',seed)({readOnly:false});create=nodes(tree).find(n=>n.type==='button'&&text(n)==='Create invoice');assert.equal(create.props.disabled,true);
+});

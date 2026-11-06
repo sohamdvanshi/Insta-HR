@@ -2979,6 +2979,126 @@
     "ns": "common",
     "key": "While your plan is active, you can renew it. You can switch plans after it expires."
   },
+  "Plans & attributes": {
+    "ns": "common",
+    "key": "Plans & attributes"
+  },
+  "Add attribute": {
+    "ns": "common",
+    "key": "Add attribute"
+  },
+  "Attribute key": {
+    "ns": "common",
+    "key": "Attribute key"
+  },
+  "Label": {
+    "ns": "common",
+    "key": "Label"
+  },
+  "Whole number": {
+    "ns": "common",
+    "key": "Whole number"
+  },
+  "Yes / No": {
+    "ns": "common",
+    "key": "Yes / No"
+  },
+  "Text": {
+    "ns": "common",
+    "key": "Text"
+  },
+  "Unit": {
+    "ns": "common",
+    "key": "Unit"
+  },
+  "Default for every plan": {
+    "ns": "common",
+    "key": "Default for every plan"
+  },
+  "Save changes": {
+    "ns": "common",
+    "key": "Save changes"
+  },
+  "Monthly price": {
+    "ns": "common",
+    "key": "Monthly price"
+  },
+  "Yearly price": {
+    "ns": "common",
+    "key": "Yearly price"
+  },
+  "Monthly duration": {
+    "ns": "common",
+    "key": "Monthly duration"
+  },
+  "Loyalty redemption cost": {
+    "ns": "common",
+    "key": "Loyalty redemption cost"
+  },
+  "Featured jobs": {
+    "ns": "common",
+    "key": "Featured jobs"
+  },
+  "Number of resumes allowed": {
+    "ns": "common",
+    "key": "Number of resumes allowed"
+  },
+  "Manage shared attribute definitions and set a value for each plan.": {
+    "ns": "common",
+    "key": "Manage shared attribute definitions and set a value for each plan."
+  },
+  "Built-in attributes control application behavior. Custom attributes are validated plan details; adding one does not create a new backend feature.": {
+    "ns": "common",
+    "key": "Built-in attributes control application behavior. Custom attributes are validated plan details; adding one does not create a new backend feature."
+  },
+  "Keys and types stay fixed after creation. Edit labels and units below; set plan values in each plan card.": {
+    "ns": "common",
+    "key": "Keys and types stay fixed after creation. Edit labels and units below; set plan values in each plan card."
+  },
+  "Your plan resume limit has been reached. Delete a resume or change your plan.": {
+    "ns": "common",
+    "key": "Your plan resume limit has been reached. Delete a resume or change your plan."
+  },
+  "Create invoice": {
+    "ns": "common",
+    "key": "Create invoice"
+  },
+  "Invoice created.": {
+    "ns": "common",
+    "key": "Invoice created."
+  },
+  "Approve the register before invoicing": {
+    "ns": "common",
+    "key": "Approve the register before invoicing"
+  },
+  "AI screening level": {
+    "ns": "common",
+    "key": "AI screening level"
+  },
+  "per month": {
+    "ns": "common",
+    "key": "per month"
+  },
+  "month": {
+    "ns": "common",
+    "key": "month"
+  },
+  "basic": {
+    "ns": "common",
+    "key": "basic"
+  },
+  "advanced": {
+    "ns": "common",
+    "key": "advanced"
+  },
+  "custom": {
+    "ns": "common",
+    "key": "custom"
+  },
+  "Switches and values update the plan and its comparison. Custom features and service benefits require their own implementation or fulfilment.": {
+    "ns": "common",
+    "key": "Switches and values update the plan and its comparison. Custom features and service benefits require their own implementation or fulfilment."
+  },
   "online": {
     "ns": "jobs",
     "key": "online"
@@ -3494,10 +3614,6 @@
   "• Remote": {
     "ns": "jobs",
     "key": "• Remote"
-  },
-  "per month": {
-    "ns": "jobs",
-    "key": "per month"
   },
   "Deadline:": {
     "ns": "jobs",
@@ -14199,6 +14315,118 @@
     "ns": "common",
     "key": "While your plan is active, you can renew it. You can switch plans after it expires."
   },
+  "plans & attributes": {
+    "ns": "common",
+    "key": "Plans & attributes"
+  },
+  "add attribute": {
+    "ns": "common",
+    "key": "Add attribute"
+  },
+  "attribute key": {
+    "ns": "common",
+    "key": "Attribute key"
+  },
+  "label": {
+    "ns": "common",
+    "key": "Label"
+  },
+  "whole number": {
+    "ns": "common",
+    "key": "Whole number"
+  },
+  "yes / no": {
+    "ns": "common",
+    "key": "Yes / No"
+  },
+  "text": {
+    "ns": "common",
+    "key": "Text"
+  },
+  "unit": {
+    "ns": "common",
+    "key": "Unit"
+  },
+  "default for every plan": {
+    "ns": "common",
+    "key": "Default for every plan"
+  },
+  "monthly price": {
+    "ns": "common",
+    "key": "Monthly price"
+  },
+  "yearly price": {
+    "ns": "common",
+    "key": "Yearly price"
+  },
+  "monthly duration": {
+    "ns": "common",
+    "key": "Monthly duration"
+  },
+  "loyalty redemption cost": {
+    "ns": "common",
+    "key": "Loyalty redemption cost"
+  },
+  "featured jobs": {
+    "ns": "common",
+    "key": "Featured jobs"
+  },
+  "number of resumes allowed": {
+    "ns": "common",
+    "key": "Number of resumes allowed"
+  },
+  "manage shared attribute definitions and set a value for each plan.": {
+    "ns": "common",
+    "key": "Manage shared attribute definitions and set a value for each plan."
+  },
+  "built-in attributes control application behavior. custom attributes are validated plan details; adding one does not create a new backend feature.": {
+    "ns": "common",
+    "key": "Built-in attributes control application behavior. Custom attributes are validated plan details; adding one does not create a new backend feature."
+  },
+  "keys and types stay fixed after creation. edit labels and units below; set plan values in each plan card.": {
+    "ns": "common",
+    "key": "Keys and types stay fixed after creation. Edit labels and units below; set plan values in each plan card."
+  },
+  "your plan resume limit has been reached. delete a resume or change your plan.": {
+    "ns": "common",
+    "key": "Your plan resume limit has been reached. Delete a resume or change your plan."
+  },
+  "create invoice": {
+    "ns": "common",
+    "key": "Create invoice"
+  },
+  "invoice created.": {
+    "ns": "common",
+    "key": "Invoice created."
+  },
+  "approve the register before invoicing": {
+    "ns": "common",
+    "key": "Approve the register before invoicing"
+  },
+  "ai screening level": {
+    "ns": "common",
+    "key": "AI screening level"
+  },
+  "MONTH": {
+    "ns": "common",
+    "key": "month"
+  },
+  "BASIC": {
+    "ns": "common",
+    "key": "basic"
+  },
+  "ADVANCED": {
+    "ns": "common",
+    "key": "advanced"
+  },
+  "CUSTOM": {
+    "ns": "common",
+    "key": "custom"
+  },
+  "switches and values update the plan and its comparison. custom features and service benefits require their own implementation or fulfilment.": {
+    "ns": "common",
+    "key": "Switches and values update the plan and its comparison. Custom features and service benefits require their own implementation or fulfilment."
+  },
   "🤖 ai resume matching": {
     "ns": "jobs",
     "key": "🤖 AI Resume Matching"
@@ -17075,10 +17303,6 @@
     "ns": "payroll",
     "key": "Generate deployment-linked invoices and track billing lifecycle status."
   },
-  "create invoice": {
-    "ns": "payroll",
-    "key": "Create Invoice"
-  },
   "create a billing record for a deployment and billing period.": {
     "ns": "payroll",
     "key": "Create a billing record for a deployment and billing period."
@@ -17286,10 +17510,6 @@
   "review attendance summary, payroll values, and payout status.": {
     "ns": "payroll",
     "key": "Review attendance summary, payroll values, and payout status."
-  },
-  "month": {
-    "ns": "payroll",
-    "key": "Month"
   },
   "gross": {
     "ns": "payroll",
@@ -17654,10 +17874,6 @@
   "rate": {
     "ns": "payroll",
     "key": "Rate"
-  },
-  "basic": {
-    "ns": "payroll",
-    "key": "Basic"
   },
   "ot": {
     "ns": "payroll",
@@ -19162,14 +19378,6 @@
   "ai screening": {
     "ns": "subscription",
     "key": "AI Screening"
-  },
-  "advanced": {
-    "ns": "subscription",
-    "key": "Advanced"
-  },
-  "custom": {
-    "ns": "subscription",
-    "key": "Custom"
   },
   "featured listings": {
     "ns": "subscription",

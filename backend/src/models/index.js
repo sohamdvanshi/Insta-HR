@@ -33,6 +33,7 @@ const InternalMessage = require('./InternalMessage')
 const InternalNote = require('./InternalNote')
 const SubscriptionPlan = require('./SubscriptionPlan')
 const FeatureFlag = require('./FeatureFlag')
+const PlanAttribute = require('./PlanAttribute')
 
 const optionalModel = (model) => model && typeof model.hasMany === 'function'
 
@@ -774,6 +775,7 @@ module.exports = {
   InternalMessage,
   InternalNote,
   SubscriptionPlan,
+  PlanAttribute,
   FeatureFlag,
   syncDatabase
 }

@@ -9,6 +9,7 @@ module.exports = sequelize.define('SubscriptionPlan', {
   yearlyAmountPaise: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
   loyaltyPoints: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
   featuredJobs: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
+  attributeValues: { type: DataTypes.JSONB, allowNull: false, defaultValue: {} },
   features: { type: DataTypes.JSON, allowNull: false, defaultValue: [] },
   isActive: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true }
 }, { tableName: 'subscription_plans', timestamps: true });

@@ -15,5 +15,6 @@ module.exports = sequelize.define('WageRegister', {
   reviewedAt: { type: DataTypes.DATE, allowNull: true },
   reviewedBy: { type: DataTypes.UUID, allowNull: true },
   reviewNotes: { type: DataTypes.TEXT, allowNull: true },
+  invoices: { type: DataTypes.JSONB, allowNull: false, defaultValue: [] },
   approvedAt: { type: DataTypes.DATE, allowNull: true }
 }, { tableName: 'wage_registers', indexes: [{ unique: true, fields: ['employerId','period','site'] }] });

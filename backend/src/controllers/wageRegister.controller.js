@@ -131,3 +131,24 @@ exports.review = run(async (req, res) => {
   });
   res.json({ data: result });
 });
+
+exports.createInvoice = run(async(req,res)=>{
+  if(typeof req.body?.employeeId!=='string'||!req.body.employeeId||req.body.employeeId.length>80)throw fail('Choose an employee from this register');
+  const result=await sequelize.transaction(async transaction=>{
+    const r=await record(req,transaction);
+    if(r.status!=='approved')throw fail('Approve the wage register before creating invoices',409);
+    const existing=(r.invoices||[]).find(i=>i.employeeId===req.body.employeeId);
+    if(existing)return {created:false,invoice:existing};
+    if(req.body.version!==r.version)throw fail('Reload this register before creating an invoice',409);
+    const invoice=require('../services/wageInvoice').snapshot(r,req.body.employeeId);
+    await r.update({invoices:[...(r.invoices||[]),invoice]},{transaction});
+    await audit(req,r,'wage_register.invoice_created',{number:invoice.number,employeeId:invoice.employeeId,total:invoice.total},transaction);
+    return {created:true,invoice};
+  });res.status(result.created?201:200).json({data:result.invoice});
+});
+exports.invoicePdf = run(async(req,res)=>{
+  const r=await record(req);
+  const invoice=(r.invoices||[]).find(i=>i.employeeId===req.params.employeeId);
+  if(!invoice)throw fail('Create an invoice for this employee first',404);
+  require('../services/invoiceDocument').renderInvoice(res,invoice,'issued');
+});

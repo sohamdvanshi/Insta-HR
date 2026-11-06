@@ -18,7 +18,10 @@
     "migrate:password-reset": "node scripts/db/migrate-password-reset.js",
     "test:password-reset": "node --test test/password-reset*.test.js",
     "migrate:business": "node scripts/db/migrate-business.js",
-    "test:business": "node --test test/business*.test.js test/phase6-api.test.js test/wages-api.test.js"
+    "test:business": "node --test test/business*.test.js test/phase6-api.test.js test/wages-api.test.js",
+    "migrate:plan-attributes": "node scripts/db/migrate-plan-attributes.js",
+    "test:plan-attributes": "node --test test/plan-attributes*.test.js",
+    "migrate:wage-invoices": "node scripts/db/migrate-wage-invoices.js"
   },
   "keywords": [],
   "author": "",

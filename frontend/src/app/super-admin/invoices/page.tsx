@@ -1,2 +1,2 @@
-import AdminCollection from '@/components/admin/AdminCollection'
-export default function Page() { return <AdminCollection kind="invoices" title="Invoices" fixedRole="" /> }
+import { redirect } from 'next/navigation'
+export default function Page(){redirect('/super-admin/wage-register')}

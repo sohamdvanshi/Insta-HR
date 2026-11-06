@@ -1,0 +1,1440 @@
+diff --git a/backend/migrations/20261010000300-candidate-databank.js b/backend/migrations/20261010000300-candidate-databank.js
+new file mode 100644
+index 0000000..fddd4af
+--- /dev/null
++++ b/backend/migrations/20261010000300-candidate-databank.js
+@@ -0,0 +1,30 @@
++'use strict';
++module.exports = {
++  async up(q, S) {
++    return q.sequelize.transaction(async transaction => {
++      const options = { transaction };
++      await q.sequelize.query('SELECT pg_advisory_xact_lock(61010003)', options);
++      await q.describeTable('Users', options);
++      const columns = await q.describeTable('candidateprofiles', options);
++      for (const name of ['preferredLocations', 'preferredJobTypes']) {
++        if (!columns[name]) await q.addColumn('candidateprofiles', name, { type: S.JSONB, allowNull: false, defaultValue: [] }, options);
++      }
++      const keys = (await q.getForeignKeyReferencesForTable('candidateprofiles', options)).filter(key => key.columnName === 'userId');
++      for (const key of keys) {
++        if (key.referencedTableName !== 'Users' || key.referencedColumnName !== 'id') await q.removeConstraint('candidateprofiles', key.constraintName, options);
++      }
++      const correct = keys.find(key => key.referencedTableName === 'Users' && key.referencedColumnName === 'id');
++      const name = correct?.constraintName || 'candidateprofiles_userId_Users_fkey';
++      const quoted = q.queryGenerator.quoteIdentifier(name);
++      if (!correct) {
++        // Preserve historical orphan rows while enforcing every new/changed userId.
++        await q.sequelize.query(`ALTER TABLE "candidateprofiles" ADD CONSTRAINT ${quoted} FOREIGN KEY ("userId") REFERENCES "Users" ("id") ON UPDATE CASCADE ON DELETE RESTRICT NOT VALID`, options);
++      }
++      const [rows] = await q.sequelize.query('SELECT COUNT(*) AS count FROM "candidateprofiles" p LEFT JOIN "Users" u ON u.id = p."userId" WHERE p."userId" IS NOT NULL AND u.id IS NULL', options);
++      const orphanCount = Number(rows[0]?.count || 0);
++      if (!orphanCount) await q.sequelize.query(`ALTER TABLE "candidateprofiles" VALIDATE CONSTRAINT ${quoted}`, options);
++      return { orphanCount };
++    });
++  },
++  async down() { throw new Error('Candidate profiles and preferences are preserved. Restore a backup to roll back.'); }
++};
+diff --git a/backend/scripts/db/migrate-candidate-databank.js b/backend/scripts/db/migrate-candidate-databank.js
+new file mode 100644
+index 0000000..6cdbfaf
+--- /dev/null
++++ b/backend/scripts/db/migrate-candidate-databank.js
+@@ -0,0 +1,11 @@
++const path = require('path');
++require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
++const sequelize = require('../../src/config/database');
++(async () => {
++  try {
++    await sequelize.authenticate();
++    const result = await require('../../migrations/20261010000300-candidate-databank').up(sequelize.getQueryInterface(), require('sequelize'));
++    console.log('Candidate profile foreign key and databank preferences are ready.');
++    if (result.orphanCount) console.warn(`${result.orphanCount} historical profiles have no matching account. They were preserved; the corrected foreign key protects new writes.`);
++  } finally { await sequelize.close(); }
++})().catch(error => { console.error(error.message); process.exitCode = 1; });
+diff --git a/backend/src/controllers/candidate.controller.js b/backend/src/controllers/candidate.controller.js
+index bbc549d..9cb9361 100644
+--- a/backend/src/controllers/candidate.controller.js
++++ b/backend/src/controllers/candidate.controller.js
+@@ -4,6 +4,14 @@ const { CloudinaryStorage } = require('multer-storage-cloudinary');
+ const multer = require('multer');
+ const { candidateFields } = require('../services/profileFields');
+ 
++function profileError(res, error) {
++  if (error.name === 'SequelizeForeignKeyConstraintError' || error.parent?.code === '23503') {
++    console.error('Candidate profile foreign key requires schema repair');
++    return res.status(503).json({ success: false, code: 'PROFILE_SCHEMA_MISMATCH', message: 'Profile storage needs an update. Please contact support.' });
++  }
++  return res.status(error.name === 'SequelizeValidationError' ? 400 : 500).json({ success: false, message: error.message });
++}
++
+ // Cloudinary storage for photos
+ const photoStorage = new CloudinaryStorage({
+   cloudinary,
+@@ -26,7 +34,7 @@ exports.getProfile = async (req, res) => {
+     if (!profile) return res.status(404).json({ success: false, message: 'Profile not found' });
+     res.json({ success: true, data: profile });
+   } catch (error) {
+-    res.status(500).json({ success: false, message: error.message });
++    profileError(res, error);
+   }
+ };
+ 
+@@ -38,7 +46,7 @@ exports.createProfile = async (req, res) => {
+     const profile = await CandidateProfile.create({ ...candidateFields(req.body), userId: req.user.id });
+     res.status(201).json({ success: true, data: profile });
+   } catch (error) {
+-    res.status(500).json({ success: false, message: error.message });
++    profileError(res, error);
+   }
+ };
+ 
+@@ -53,7 +61,7 @@ exports.updateProfile = async (req, res) => {
+     }
+     res.json({ success: true, data: profile });
+   } catch (error) {
+-    res.status(500).json({ success: false, message: error.message });
++    profileError(res, error);
+   }
+ };
+ 
+@@ -69,7 +77,7 @@ exports.uploadPhoto = async (req, res) => {
+     await profile.update({ photoUrl: req.file.path, photoPublicId: req.file.filename });
+     res.json({ success: true, message: 'Photo uploaded!', photoUrl: req.file.path });
+   } catch (error) {
+-    res.status(500).json({ success: false, message: error.message });
++    profileError(res, error);
+   }
+ };
+ 
+@@ -85,7 +93,7 @@ exports.uploadResume = async (req, res) => {
+     await profile.update({ resumeUrl: req.file.path, resumePublicId: req.file.filename });
+     res.json({ success: true, message: 'Resume uploaded!', resumeUrl: req.file.path });
+   } catch (error) {
+-    res.status(500).json({ success: false, message: error.message });
++    profileError(res, error);
+   }
+ };
+ 
+@@ -100,35 +108,8 @@ exports.getAIMatches = async (req, res) => {
+     }
+ 
+     const candidates = await require('../services/candidateDiscovery').matchingCandidates(job.id);
+-    if (!candidates.length) return res.json({ success: true, data: [], message: 'No candidates found' });
+-    const aiServiceUrl = (process.env.AI_SERVICE_URL || 'http://localhost:8000').replace(/\/+$/, '');
+-    const results = [];
+-    // Bound each provider request without dropping candidates beyond the first 500.
+-    for (let offset = 0; offset < candidates.length; offset += 250) {
+-      const batch = candidates.slice(offset, offset + 250);
+-      const response = await fetch(`${aiServiceUrl}/match-candidates`, {
+-        method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(15000),
+-        body: JSON.stringify({
+-          job_skills: Array.isArray(job.requiredSkills) ? job.requiredSkills : [],
+-          job_description: job.description || '', job_experience_min: Number(job.minExperienceYears) || 0,
+-          candidates: batch.map(({ userId, firstName, lastName, skills, yearsOfExperience, summary, headline, experience, resumeText }) =>
+-            ({ userId, firstName, lastName, skills, yearsOfExperience, summary, headline, experience, resumeText }))
+-        })
+-      });
+-      if (!response.ok) return res.status(503).json({ success: false, message: 'AI service unavailable' });
+-      const result = await response.json();
+-      if (!result.success || !Array.isArray(result.data)) return res.status(503).json({ success: false, message: 'AI service unavailable' });
+-      const byId = new Map(batch.map(row => [String(row.userId), row]));
+-      const matchedIds = new Set(result.data.map(match => String(match.candidateId)));
+-      if (result.data.length !== batch.length || matchedIds.size !== batch.length || [...byId.keys()].some(id => !matchedIds.has(id))) {
+-        return res.status(503).json({ success: false, message: 'AI service unavailable' });
+-      }
+-      for (const match of result.data) {
+-        const candidate = byId.get(String(match.candidateId));
+-        if (candidate) results.push({ ...match, applicationId: candidate.applicationId || null, applicationStatus: candidate.applicationStatus || null });
+-      }
+-    }
+-    res.json({ success: true, data: results.sort((a, b) => b.matchScore - a.matchScore) });
++    const result = await require('../services/candidateMatching').matchCandidates(job, candidates);
++    res.json({ success: true, ...result });
+   } catch (error) {
+     if (error.cause?.code === 'ECONNREFUSED' || ['TimeoutError', 'AbortError'].includes(error.name)) return res.status(503).json({ success: false, message: 'AI service unavailable' });
+     res.status(500).json({ success: false, message: error.message });
+diff --git a/backend/src/models/CandidateProfile.js b/backend/src/models/CandidateProfile.js
+index 1811255..95782ec 100644
+--- a/backend/src/models/CandidateProfile.js
++++ b/backend/src/models/CandidateProfile.js
+@@ -143,6 +143,20 @@ const CandidateProfile = sequelize.define(
+     photoPublicId: { type: DataTypes.STRING(255), allowNull: true },
+     resumePublicId: { type: DataTypes.STRING(255), allowNull: true },
+ 
++    preferredLocations: {
++      type: DataTypes.JSONB, allowNull: false, defaultValue: [],
++      set(value) { this.setDataValue('preferredLocations', normalizeStringArray(value)) }
++    },
++    preferredJobTypes: {
++      type: DataTypes.JSONB, allowNull: false, defaultValue: [],
++      set(value) { this.setDataValue('preferredJobTypes', normalizeStringArray(value)) },
++      validate: {
++        validTypes(value) {
++          if (!Array.isArray(value) || value.some(type => !['full-time', 'part-time', 'internship', 'contract', 'remote'].includes(type))) throw new Error('Invalid preferred job type')
++        }
++      }
++    },
++
+     isResumePublic: {
+       type: DataTypes.BOOLEAN,
+       allowNull: true,
+diff --git a/backend/src/services/candidateDiscovery.js b/backend/src/services/candidateDiscovery.js
+index 1fbc061..2ae79ba 100644
+--- a/backend/src/services/candidateDiscovery.js
++++ b/backend/src/services/candidateDiscovery.js
+@@ -9,8 +9,9 @@ const userInclude = as => ({ model: User, as, attributes: ['id', 'email', 'phone
+ // Merge overlapping work periods so concurrent positions do not double-count experience.
+ function experienceYears(experience, now = Date.now()) {
+   const intervals = array(experience).map(item => {
+-    const start = Date.parse(item?.startDate);
+-    const end = item?.currentlyWorking || item?.current || !item?.endDate || /present/i.test(item.endDate) ? now : Date.parse(item.endDate);
++    const start = Date.parse(item?.startDate || item?.from);
++    const endDate = item?.endDate || item?.to;
++    const end = item?.currentlyWorking || item?.current || !endDate || /present/i.test(endDate) ? now : Date.parse(endDate);
+     return [start, Math.min(end, now)];
+   }).filter(([start, end]) => Number.isFinite(start) && Number.isFinite(end) && end > start).sort((a, b) => a[0] - b[0]);
+   let total = 0, start, end;
+@@ -32,7 +33,8 @@ function profileRow(value) {
+     experience: array(p.experience), education: array(p.education), currentLocation: p.currentLocation || '',
+     yearsOfExperience: p.yearsOfExperience == null ? experienceYears(p.experience) : Number(p.yearsOfExperience) || 0,
+     industry: p.industry || '', expectedSalary: p.expectedSalary, profileCompleteness: p.profileCompleteness,
+-    resumeUrl: p.resumeUrl || null, email: user.email || '', phone: user.phone || '', source: 'profile'
++    preferredLocations: skillsOf(p.preferredLocations), preferredJobTypes: skillsOf(p.preferredJobTypes),
++    updatedAt: p.updatedAt, resumeUrl: p.resumeUrl || null, email: user.email || '', phone: user.phone || '', source: 'profile'
+   };
+ }
+ 
+@@ -46,7 +48,7 @@ function resumeRow(value, publicProfile) {
+     skills: skillsOf(r.skills), experience: array(r.experience), education: array(r.education),
+     yearsOfExperience: array(r.experience).length ? experienceYears(r.experience) : base.yearsOfExperience || 0, currentLocation: text(info.location) || base.currentLocation || '',
+     industry: r.sector === 'general' ? base.industry || '' : String(r.sector || '').replace(/_/g, ' '),
+-    email: text(info.email) || user.email || '', phone: text(info.phone) || user.phone || '', resumeUrl: null, source: 'resume'
++    email: user.email || text(info.email) || '', phone: text(info.phone) || user.phone || '', resumeUrl: null, updatedAt: r.updatedAt, source: 'resume'
+   };
+ }
+ 
+@@ -63,7 +65,7 @@ async function publicRows() {
+ async function applicationRows({ employerId, jobId }) {
+   const applications = await Application.findAll({
+     ...(jobId ? { where: { jobId } } : {}),
+-    include: [userInclude('candidate'), ...(!jobId ? [{ model: Job, as: 'job', required: true, attributes: ['id'], where: { employerId } }] : [])],
++    include: [userInclude('candidate'), { model: Job, as: 'job', required: true, attributes: ['id', 'location', 'jobType'], ...(!jobId ? { where: { employerId } } : {}) }],
+     order: [['createdAt', 'DESC']]
+   });
+   if (!applications.length) return [];
+@@ -75,64 +77,93 @@ async function applicationRows({ employerId, jobId }) {
+       ...profileRow({ ...profile, user }), id: `application:${a.id}`, userId: a.candidateId,
+       firstName: profile.firstName || user.email || '', applicationId: a.id, applicationStatus: a.status,
+       resumeUrl: a.resumeUrl || null, resumeText: a.resumeText || '', resumeFilename: a.resumeFilename || '',
+-      source: 'application'
++      appliedLocation: text(a.job?.location), appliedJobType: text(a.job?.jobType), updatedAt: a.createdAt, source: 'application'
+     };
+   });
+ }
+ 
++const unique = values => [...new Map(values.filter(Boolean).map(value => [String(value).trim().toLowerCase(), String(value).trim()])).values()];
++const types = new Set(['full-time', 'part-time', 'internship', 'contract', 'remote']);
++
++// Identity is the user ID, never a resume ID, name or editable email address.
++function groupCandidates(rows) {
++  const grouped = new Map();
++  const priority = row => row.source === 'profile' ? 0 : row.source === 'application' && row.firstName !== row.email ? 1 : row.source === 'resume' ? 2 : 3;
++  for (const row of [...rows].sort((a, b) => priority(a) - priority(b))) {
++    const id = String(row.userId);
++    let candidate = grouped.get(id);
++    if (!candidate) {
++      candidate = { ...row, id, userId: id, resumes: [], skills: [], education: [], industries: [], locations: [], preferredLocations: [], preferredJobTypes: [], appliedLocations: [], jobTypes: [], applicationStatuses: [], resumeText: '' };
++      grouped.set(id, candidate);
++    }
++    for (const field of ['firstName', 'lastName', 'headline', 'summary', 'currentLocation', 'industry', 'email', 'phone', 'expectedSalary']) {
++      if ((candidate[field] == null || candidate[field] === '') && row[field] != null) candidate[field] = row[field];
++    }
++    if (candidate.firstName === candidate.email && row.firstName !== row.email && row.firstName) candidate.firstName = row.firstName;
++    candidate.skills = unique([...candidate.skills, ...row.skills]);
++    candidate.education.push(...row.education);
++    candidate.industries = unique([...candidate.industries, row.industry]);
++    candidate.locations = unique([...candidate.locations, row.currentLocation]);
++    candidate.preferredLocations = unique([...candidate.preferredLocations, ...array(row.preferredLocations)]);
++    candidate.preferredJobTypes = unique([...candidate.preferredJobTypes, ...array(row.preferredJobTypes)]);
++    candidate.appliedLocations = unique([...candidate.appliedLocations, row.appliedLocation]);
++    candidate.jobTypes = unique([...candidate.jobTypes, ...array(row.preferredJobTypes), row.appliedJobType]);
++    candidate.applicationStatuses = unique([...candidate.applicationStatuses, row.applicationStatus]);
++    candidate.yearsOfExperience = Math.max(Number(candidate.yearsOfExperience) || 0, Number(row.yearsOfExperience) || 0);
++    if (!candidate.experience.length && row.experience.length) candidate.experience = row.experience;
++    if (row.resumeText && !candidate.resumeText.includes(row.resumeText)) candidate.resumeText = [candidate.resumeText, row.resumeText].filter(Boolean).join('\n');
++    if (row.applicationId && !candidate.applicationId) { candidate.applicationId = row.applicationId; candidate.applicationStatus = row.applicationStatus; }
++    if (row.resumeId || row.resumeUrl) {
++      const key = row.resumeId ? `builder:${row.resumeId}` : `upload:${row.resumeUrl}`;
++      if (!candidate.resumes.some(resume => resume.id === key)) candidate.resumes.push({ id: key, resumeId: row.resumeId || null, url: row.resumeUrl || null, title: row.title || row.resumeFilename || '', source: row.source });
++    }
++  }
++  return [...grouped.values()];
++}
++
++// Other employers' submissions contribute only city/type, for already-visible candidates.
++async function addAppliedPreferences(candidates) {
++  if (!candidates.length) return candidates;
++  const byUser = new Map(candidates.map(c => [String(c.userId), c]));
++  const applications = await Application.findAll({ attributes: ['candidateId'], where: { candidateId: [...byUser.keys()] }, include: [{ model: Job, as: 'job', required: true, attributes: ['location', 'jobType'] }] });
++  for (const value of applications) {
++    const a = plain(value), candidate = byUser.get(String(a.candidateId));
++    if (!candidate) continue;
++    candidate.appliedLocations = unique([...candidate.appliedLocations, text(a.job?.location)]);
++    candidate.jobTypes = unique([...candidate.jobTypes, text(a.job?.jobType)]);
++  }
++  return candidates;
++}
+ function filterRows(rows, filters = {}) {
+   const get = key => text(filters[key]).toLowerCase();
+-  const keyword = get('keyword'), location = get('location'), industry = get('industry');
+-  const min = get('minExperience');
+-  if (min && (!Number.isFinite(Number(min)) || Number(min) < 0)) {
+-    const error = new Error('Invalid minimum experience'); error.statusCode = 400; throw error;
+-  }
++  const keyword = get('keyword'), location = get('location'), industry = get('industry').replace(/_/g, ' '), jobType = get('jobType'), education = get('education');
++  const numeric = key => {
++    const raw = get(key); if (!raw) return null;
++    if (!Number.isFinite(Number(raw)) || Number(raw) < 0) { const error = new Error('Invalid search filters'); error.statusCode = 400; throw error; }
++    return Number(raw);
++  };
++  const min = numeric('minExperience'), max = numeric('maxExperience'), salary = numeric('maxSalary');
++  if ((min !== null && max !== null && min > max) || (jobType && !types.has(jobType))) { const error = new Error('Invalid search filters'); error.statusCode = 400; throw error; }
+   const required = get('skills').split(',').map(s => s.trim()).filter(Boolean);
+   return rows.filter(row => {
+-    const haystack = [row.firstName, row.lastName, row.email, row.title, row.headline, row.summary, row.industry, row.currentLocation, row.resumeText, ...row.skills].join(' ').toLowerCase();
+-    return (!keyword || haystack.includes(keyword)) && (!location || row.currentLocation.toLowerCase().includes(location)) &&
+-      (!industry || row.industry.toLowerCase().includes(industry.replace(/_/g, ' '))) &&
+-      (!min || row.yearsOfExperience >= Number(min)) &&
++    const educationText = row.education.map(item => typeof item === 'string' ? item : Object.values(item || {}).filter(v => typeof v === 'string').join(' ')).join(' ').toLowerCase();
++    const locations = [...row.locations, ...row.preferredLocations, ...row.appliedLocations];
++    const haystack = [row.firstName, row.lastName, row.email, row.headline, row.summary, row.resumeText, educationText, ...row.industries, ...locations, ...row.skills, ...row.resumes.map(r => r.title)].join(' ').toLowerCase();
++    return (!keyword || haystack.includes(keyword)) && (!location || locations.some(city => city.toLowerCase().includes(location))) &&
++      (!industry || row.industries.some(value => value.toLowerCase().replace(/_/g, ' ').includes(industry))) &&
++      (!jobType || row.jobTypes.includes(jobType)) && (!education || educationText.includes(education)) &&
++      (min === null || row.yearsOfExperience >= min) && (max === null || row.yearsOfExperience <= max) &&
++      (salary === null || (row.expectedSalary != null && row.expectedSalary !== '' && Number(row.expectedSalary) <= salary)) &&
+       (!required.length || required.every(s => row.skills.some(skill => skill.toLowerCase() === s)));
+   });
+ }
+-
+ async function databank(employerId, filters) {
+   const [shared, submitted] = await Promise.all([publicRows(), applicationRows({ employerId })]);
+-  const sharedByUser = new Map();
+-  for (const row of shared) if (!sharedByUser.has(String(row.userId))) sharedByUser.set(String(row.userId), row);
+-  for (const row of submitted) {
+-    const sharedRow = sharedByUser.get(String(row.userId));
+-    if (!sharedRow) continue;
+-    for (const field of ['lastName', 'headline', 'summary', 'currentLocation', 'industry']) if (!row[field]) row[field] = sharedRow[field];
+-    if (row.firstName === row.email && sharedRow.firstName) row.firstName = sharedRow.firstName;
+-    if (!row.skills.length) row.skills = sharedRow.skills;
+-    if (!row.yearsOfExperience) row.yearsOfExperience = sharedRow.yearsOfExperience;
+-  }
+-  const seen = new Set();
+-  return filterRows([...shared, ...submitted.filter(row => row.resumeUrl || row.resumeText || row.resumeFilename)].filter(row => {
+-    const key = row.resumeUrl ? `${row.userId}:${row.resumeUrl}` : row.id;
+-    if (seen.has(key)) return false;
+-    seen.add(key); return true;
+-  }), filters).map(({ resumeText, ...row }) => row);
++  const candidates = await addAppliedPreferences(groupCandidates([...shared, ...submitted]));
++  return filterRows(candidates, filters).map(({ resumeText, resumeId, resumeUrl, title, source, ...candidate }) => candidate);
+ }
+-
+ async function matchingCandidates(jobId) {
+   const [shared, submitted] = await Promise.all([publicRows(), applicationRows({ jobId })]);
+-  // Applicants come first, are never truncated, and remain visible in every application status.
+-  const byUser = new Map();
+-  for (const row of [...submitted, ...shared]) {
+-    const key = String(row.userId), existing = byUser.get(key);
+-    if (!existing) byUser.set(key, { ...row });
+-    else {
+-      existing.skills = [...new Set([...existing.skills, ...row.skills])];
+-      if (existing.firstName === existing.email && row.firstName && row.firstName !== row.email) existing.firstName = row.firstName;
+-      for (const field of ['firstName', 'lastName', 'headline', 'summary', 'resumeText', 'currentLocation']) if (!existing[field]) existing[field] = row[field];
+-      existing.yearsOfExperience = Math.max(existing.yearsOfExperience, row.yearsOfExperience);
+-      if (!existing.experience.length) existing.experience = row.experience;
+-    }
+-  }
+-  return [...byUser.values()];
++  return groupCandidates([...shared, ...submitted]);
+ }
+-
+-module.exports = { databank, matchingCandidates, filterRows, experienceYears };
++module.exports = { databank, matchingCandidates, filterRows, experienceYears, groupCandidates };
+diff --git a/backend/src/services/candidateMatching.js b/backend/src/services/candidateMatching.js
+new file mode 100644
+index 0000000..cd0009e
+--- /dev/null
++++ b/backend/src/services/candidateMatching.js
+@@ -0,0 +1,49 @@
++const strings = value => Array.isArray(value) ? value.filter(v => typeof v === 'string').map(v => v.trim()).filter(Boolean) : [];
++const words = value => new Set(String(value || '').toLowerCase().match(/[\p{L}\p{N}_]+/gu) || []);
++const round = value => Math.round(value * 10) / 10;
++const escape = value => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
++function basicMatch(job, candidate) {
++  const required = [...new Set(strings(job.requiredSkills).map(s => s.toLowerCase()))];
++  const listed = new Set(strings(candidate.skills).map(s => s.toLowerCase()));
++  const resumeText = [candidate.resumeText, candidate.summary, candidate.headline, ...(candidate.experience || []).map(e => [e?.title, e?.jobTitle, e?.company, e?.description].filter(Boolean).join(' '))].filter(Boolean).join(' ').toLowerCase();
++  const matchedSkills = required.filter(skill => listed.has(skill) || new RegExp(`(?<![\\w+#.])${escape(skill)}(?![\\w+#.])`, 'i').test(resumeText));
++  const missingSkills = required.filter(skill => !matchedSkills.includes(skill));
++  const skillScore = required.length ? matchedSkills.length / required.length * 100 : 0;
++  const minimum = Math.max(0, Number(job.minExperienceYears) || 0), experience = Math.max(0, Number(candidate.yearsOfExperience) || 0);
++  const expScore = minimum === 0 ? 100 : Math.min(100, experience / minimum * 100);
++  const jobWords = words(job.description), resumeWords = words(resumeText);
++  const textScore = jobWords.size ? [...jobWords].filter(word => resumeWords.has(word)).length / jobWords.size * 100 : 0;
++  return { candidateId: candidate.userId, name: [candidate.firstName, candidate.lastName].filter(Boolean).join(' ') || candidate.email || '', matchScore: round(skillScore * 0.4 + expScore * 0.3 + textScore * 0.3), skillScore: round(skillScore), expScore: round(expScore), matchedSkills, missingSkills };
++}
++async function matchCandidates(job, candidates, { timeoutMs = 4000 } = {}) {
++  const addApplication = match => {
++    const candidate = candidates.find(c => String(c.userId) === String(match.candidateId));
++    return { ...match, applicationId: candidate?.applicationId || null, applicationStatus: candidate?.applicationStatus || null };
++  };
++  if (!candidates.length) return { data: [], matchingMode: 'basic' };
++  const results = [];
++  try {
++    const url = (process.env.AI_SERVICE_URL || 'http://localhost:8000').replace(/\/+$/, '');
++    for (let offset = 0; offset < candidates.length; offset += 250) {
++      const batch = candidates.slice(offset, offset + 250);
++      const response = await fetch(`${url}/match-candidates`, {
++        method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(timeoutMs),
++        body: JSON.stringify({ job_skills: strings(job.requiredSkills), job_description: job.description || '', job_experience_min: Number(job.minExperienceYears) || 0,
++          candidates: batch.map(({ userId, firstName, lastName, skills, yearsOfExperience, summary, headline, experience, resumeText }) => ({ userId, firstName, lastName, skills, yearsOfExperience, summary, headline, experience, resumeText })) })
++      });
++      if (!response.ok) throw new Error(`HTTP ${response.status}`);
++      const body = await response.json(), ids = new Set(batch.map(c => String(c.userId)));
++      if (!body.success || !Array.isArray(body.data) || body.data.length !== batch.length) throw new Error('Incomplete AI response');
++      for (const match of body.data) {
++        if (!ids.delete(String(match.candidateId)) || ['matchScore', 'skillScore', 'expScore'].some(key => typeof match[key] !== 'number' || !Number.isFinite(match[key]) || match[key] < 0 || match[key] > 100)) throw new Error('Invalid AI scores');
++        const candidate = batch.find(c => String(c.userId) === String(match.candidateId));
++        results.push({ ...basicMatch(job, candidate), matchScore: match.matchScore, skillScore: match.skillScore, expScore: match.expScore, matchedSkills: strings(match.matchedSkills), missingSkills: strings(match.missingSkills) });
++      }
++    }
++    return { data: results.map(addApplication).sort((a, b) => b.matchScore - a.matchScore), matchingMode: 'ai' };
++  } catch (error) {
++    console.warn('AI matching unavailable; using basic matching:', error.name);
++    return { data: candidates.map(c => addApplication(basicMatch(job, c))).sort((a, b) => b.matchScore - a.matchScore), matchingMode: 'basic', fallback: true };
++  }
++}
++module.exports = { matchCandidates, basicMatch };
+diff --git a/backend/src/services/profileFields.js b/backend/src/services/profileFields.js
+index 08507a5..c9ff4ff 100644
+--- a/backend/src/services/profileFields.js
++++ b/backend/src/services/profileFields.js
+@@ -1,5 +1,5 @@
+ // Profile identity, verification and uploaded asset identifiers are server-owned.
+ const pick = (body, fields) => Object.fromEntries(fields.filter(key => Object.hasOwn(body || {}, key)).map(key => [key, body[key]]));
+-const candidateFields = body => pick(body, ['firstName', 'lastName', 'headline', 'summary', 'skills', 'experience', 'education', 'currentLocation', 'expectedSalary', 'yearsOfExperience', 'isResumePublic', 'industry']);
++const candidateFields = body => pick(body, ['firstName', 'lastName', 'headline', 'summary', 'skills', 'experience', 'education', 'currentLocation', 'expectedSalary', 'yearsOfExperience', 'isResumePublic', 'industry', 'preferredLocations', 'preferredJobTypes']);
+ const employerFields = body => pick(body, ['companyName', 'tagline', 'about', 'industry', 'companySize', 'website', 'email', 'phone', 'address', 'city', 'state', 'country', 'linkedinUrl', 'twitterUrl', 'foundedYear']);
+ module.exports = { candidateFields, employerFields };
+diff --git a/backend/test/candidate-discovery.test.js b/backend/test/candidate-discovery.test.js
+index c75244f..77a2c9e 100644
+--- a/backend/test/candidate-discovery.test.js
++++ b/backend/test/candidate-discovery.test.js
+@@ -11,7 +11,7 @@ const models = {
+   Job: { findByPk: async id => id === 'missing' ? null : ({ id, employerId: 'employer', requiredSkills: ['React'], description: 'React developer', minExperienceYears: 1.5 }) },
+   CandidateProfile: { findAll: async q => { queries.push(['profile', q]); return profiles.filter(p => q.where.userId ? q.where.userId.includes(p.userId) : p.isResumePublic === true && p.user.isActive && p.user.role === 'candidate'); } },
+   Resume: { findAll: async q => { queries.push(['resume', q]); return resumes.filter(r => r.visibility === q.where.visibility && r.user.isActive && r.user.role === 'candidate'); } },
+-  Application: { findAll: async q => { queries.push(['application', q]); return applications.filter(a => a.candidate.isActive && a.candidate.role === 'candidate' && (q.where ? a.jobId === q.where.jobId : a.employerId === q.include[1].where.employerId)); } }
++  Application: { findAll: async q => { queries.push(['application', q]); return applications.filter(a => a.candidate.isActive && a.candidate.role === 'candidate' && (q.where?.candidateId ? q.where.candidateId.includes(a.candidateId) : q.where?.jobId ? a.jobId === q.where.jobId : a.employerId === q.include[1].where.employerId)); } }
+ };
+ function mock(file, exports) { const p = require.resolve(file); require.cache[p] = { id: p, filename: p, loaded: true, exports }; }
+ mock('../src/models', models); mock('../src/models/index', models);
+@@ -28,14 +28,14 @@ before(async () => { server = app.listen(0, '127.0.0.1'); await new Promise(reso
+     if (!String(url).endsWith('/match-candidates')) return actualFetch(url, options);
+     const body = JSON.parse(options.body); calls.push(body);
+     if (aiFailure) return { ok: aiFailure !== 'http', json: async () => aiFailure === 'partial' ? ({ success: true, data: [] }) : ({ success: false }) };
+-    return { ok: true, json: async () => ({ success: true, data: body.candidates.map(c => ({ candidateId: c.userId, name: `${c.firstName} ${c.lastName}`.trim(), matchScore: c.skills.includes('React') ? 90 : 10 })) }) };
++    return { ok: true, json: async () => ({ success: true, data: body.candidates.map(c => ({ candidateId: c.userId, name: `${c.firstName} ${c.lastName}`.trim(), matchScore: c.skills.includes('React') ? 90 : 10, skillScore: 80, expScore: 70, matchedSkills: ['React'], missingSkills: [] })) }) };
+   };
+ });
+ after(async () => { global.fetch = actualFetch; await new Promise(resolve => server.close(resolve)); });
+ const actor = (id, email = `${id}@example.com`) => ({ id, email, phone: '123', role: 'candidate', isActive: true });
+ const profile = (id, extra = {}) => ({ id: `p-${id}`, userId: id, firstName: id, isResumePublic: true, skills: ['React'], currentLocation: 'Pune', industry: 'IT', yearsOfExperience: 2, user: actor(id), ...extra });
+ const resume = (id, extra = {}) => ({ id, userId: 'builder-only', visibility: 'link', title: 'Frontend Resume', personalInfo: { fullName: 'Builder Person', location: 'Mumbai' }, skills: ['React', 'TypeScript'], sector: 'information_technology', experience: [{ startDate: '2020-01-01', endDate: '2023-01-01' }], user: actor('builder-only'), ...extra });
+-const application = (id, extra = {}) => ({ id, candidateId: id, jobId: 'job', employerId: 'employer', status: 'hired', resumeUrl: `/uploads/${id}.pdf`, resumeText: 'React engineer', candidate: actor(id), ...extra });
++const application = (id, extra = {}) => ({ id, candidateId: id, jobId: 'job', employerId: 'employer', status: 'hired', resumeUrl: `/uploads/${id}.pdf`, resumeText: 'React engineer', candidate: actor(id), job: { location: 'Pune', jobType: 'part-time' }, ...extra });
+ beforeEach(() => { profiles = []; resumes = []; applications = []; calls = []; queries = []; aiFailure = null; });
+ async function request(path, id = 'employer') {
+   const headers = id ? { Authorization: `Bearer ${jwt.sign({ id }, process.env.JWT_SECRET)}` } : {};
+@@ -43,10 +43,11 @@ async function request(path, id = 'employer') {
+ }
+ test('databank includes every shared builder resume, public profile and own submitted upload without requiring a profile', async () => {
+   profiles = [profile('public')]; resumes = [resume('r1'), resume('r2')]; applications = [application('applicant')];
+-  const result = await request('/employers/candidates'); assert.equal(result.status, 200); assert.equal(result.body.count, 4);
+-  assert.deepEqual(result.body.data.map(r => r.id), ['resume:r1', 'resume:r2', 'profile:p-public', 'application:applicant']);
+-  assert.equal(result.body.data[0].resumeId, 'r1'); assert.equal(result.body.data[3].email, 'applicant@example.com');
+-  assert.equal(result.body.data[3].resumeText, undefined);
++  const result = await request('/employers/candidates'); assert.equal(result.status, 200); assert.equal(result.body.count, 3);
++  assert.deepEqual(new Set(result.body.data.map(r => r.id)), new Set(['public', 'builder-only', 'applicant']));
++  assert.equal(result.body.data.find(c => c.userId === 'builder-only').resumes.length, 2);
++  assert.equal(result.body.data.find(c => c.userId === 'applicant').email, 'applicant@example.com');
++  assert.ok(result.body.data.every(c => c.resumeText === undefined));
+   assert.equal(queries.find(([name]) => name === 'resume')[1].include[0].as, 'user');
+   assert.equal(queries.find(([name]) => name === 'application')[1].include[1].required, true);
+ });
+@@ -59,7 +60,7 @@ test('private resumes, nonpublic profiles, inactive users and other employers su
+ test('each filter uses normalized resume fields and all requested skills; clear filters returns all records', async () => {
+   resumes = [resume('r1'), resume('r2', { userId: 'other-builder', personalInfo: { fullName: 'Other', location: 'Pune' }, skills: ['React'] })];
+   let result = await request('/employers/candidates?keyword=builder&location=mumbai&industry=information_technology&minExperience=2.5&skills=react,typescript');
+-  assert.equal(result.body.count, 1); assert.equal(result.body.data[0].id, 'resume:r1');
++  assert.equal(result.body.count, 1); assert.equal(result.body.data[0].resumes[0].resumeId, 'r1');
+   assert.equal((await request('/employers/candidates?skills=React,Python')).body.count, 0);
+   assert.equal((await request('/employers/candidates?keyword=missing')).body.count, 0);
+   assert.equal((await request('/employers/candidates')).body.count, 2);
+@@ -67,7 +68,7 @@ test('each filter uses normalized resume fields and all requested skills; clear
+ });
+ test('application uploads repeat across jobs only once, distinct uploads remain available', async () => {
+   applications = [application('a'), application('a', { id: 'second', jobId: 'job2' }), application('a', { id: 'third', resumeUrl: '/uploads/new.pdf' })];
+-  assert.equal((await request('/employers/candidates')).body.count, 2);
++  const result = await request('/employers/candidates'); assert.equal(result.body.count, 1); assert.equal(result.body.data[0].resumes.length, 2);
+ });
+ test('AI match includes hired/rejected applicants without profiles and enriches them from shared builder resumes', async () => {
+   applications = [application('builder-only'), application('no-profile', { status: 'rejected' }), application('foreign', { jobId: 'different' })];
+@@ -103,17 +104,45 @@ test('overlapping experience periods are merged and malformed/empty records are
+ test('submitted uploads inherit searchable fields from a shared builder resume when no profile exists', async () => {
+   resumes = [resume('r1')]; applications = [application('builder-only')];
+   const result = await request('/employers/candidates?location=mumbai&skills=React,TypeScript&minExperience=2');
+-  assert.equal(result.body.count, 2); assert.equal(result.body.data[1].source, 'application');
++  assert.equal(result.body.count, 1); assert.equal(result.body.data[0].resumes.length, 2);
+ });
+ 
+ test('an empty eligible pool is the only case that returns an empty matching result without contacting AI', async () => {
+   const result = await request('/candidates/ai-match/job');
+   assert.equal(result.status, 200); assert.deepEqual(result.body.data, []); assert.equal(calls.length, 0);
+ });
+-test('provider failure and incomplete responses are reported as unavailable rather than no candidates', async () => {
++test('provider failure and incomplete responses use labelled basic matching with all applicants', async () => {
+   applications = [application('applicant')];
+   for (const mode of ['http', 'invalid', 'partial']) {
+     aiFailure = mode; const result = await request('/candidates/ai-match/job');
+-    assert.equal(result.status, 503); assert.equal(result.body.success, false); assert.equal(result.body.message, 'AI service unavailable');
++    assert.equal(result.status, 200); assert.equal(result.body.matchingMode, 'basic'); assert.equal(result.body.fallback, true); assert.equal(result.body.data.length, 1); assert.ok(Number.isFinite(result.body.data[0].matchScore));
+   }
+ });
++
++test('one candidate groups profile, several builder resumes and job submissions even with different editable emails', async () => {
++  profiles = [profile('builder-only')]; resumes = [resume('r1'), resume('r2', { personalInfo: { fullName: 'Different spelling', email: 'fake' } })];
++  applications = [application('builder-only'), application('builder-only', { id: 'a2', jobId: 'other-job', resumeUrl: '/uploads/other.pdf' })];
++  const result = await request('/employers/candidates'); assert.equal(result.body.count, 1);
++  assert.equal(result.body.data[0].resumes.length, 4); assert.equal(result.body.data[0].email, 'builder-only@example.com');
++});
++test('Mumbai resident applying to a Pune part-time job matches Pune and part-time filters even for a different employer', async () => {
++  profiles = [profile('mobile', { currentLocation: 'Mumbai' })];
++  applications = [application('mobile', { employerId: 'other', job: { location: 'Pune', jobType: 'part-time' }, resumeUrl: '/private.pdf' })];
++  const result = await request('/employers/candidates?location=Pune&jobType=part-time');
++  assert.equal(result.body.count, 1); assert.equal(result.body.data[0].currentLocation, 'Mumbai');
++  assert.deepEqual(result.body.data[0].appliedLocations, ['Pune']); assert.equal(result.body.data[0].resumes.length, 0);
++  assert.equal(JSON.stringify(result.body).includes('/private.pdf'), false); assert.equal(result.body.data[0].applicationId, undefined);
++  assert.equal((await request('/employers/candidates?location=Mumbai')).body.count, 1);
++  assert.equal((await request('/employers/candidates?jobType=full-time')).body.count, 0);
++});
++test('explicit preferences, education, experience range and salary filters work together', async () => {
++  profiles = [profile('preferred', { preferredLocations: ['Bengaluru'], preferredJobTypes: ['full-time'], education: [{ degree: 'BTech', institution: 'College' }], expectedSalary: 45000 })];
++  assert.equal((await request('/employers/candidates?location=bengaluru&jobType=full-time&education=btech&minExperience=1&maxExperience=3&maxSalary=50000')).body.count, 1);
++  assert.equal((await request('/employers/candidates?maxSalary=30000')).body.count, 0);
++  assert.equal((await request('/employers/candidates?minExperience=3&maxExperience=1')).status, 400);
++  assert.equal((await request('/employers/candidates?jobType=invalid')).status, 400);
++});
++test('same name belonging to two different accounts remains two candidates', async () => {
++  profiles = [profile('one', { firstName: 'Savf' }), profile('two', { firstName: 'Savf' })];
++  assert.equal((await request('/employers/candidates')).body.count, 2);
++});
+diff --git a/backend/test/candidate-profile-repair.test.js b/backend/test/candidate-profile-repair.test.js
+new file mode 100644
+index 0000000..0e5f043
+--- /dev/null
++++ b/backend/test/candidate-profile-repair.test.js
+@@ -0,0 +1,15 @@
++const { test } = require('node:test');
++const assert = require('node:assert/strict');
++function mock(file, exports) { const p = require.resolve(file); require.cache[p] = { id: p, filename: p, loaded: true, exports }; }
++let broken = true, saved;
++const profile = { update: async fields => { if (broken) { const error = new Error('database constraint details'); error.name = 'SequelizeForeignKeyConstraintError'; throw error; } saved = fields; return profile; } };
++mock('../src/models/index', { CandidateProfile: { findOne: async () => profile }, Job: {} });
++mock('../src/config/cloudinary', { cloudinary: {} }); mock('multer-storage-cloudinary', { CloudinaryStorage: class {} });
++const controller = require('../src/controllers/candidate.controller');
++const response = () => ({ statusCode: 200, status(n) { this.statusCode = n; return this; }, json(body) { this.body = body; return this; } });
++test('profile FK failure is actionable without exposing SQL; saving succeeds after repair and ignores spoofed ownership', async () => {
++  const req = { user: { id: 'real-user' }, body: { userId: 'someone-else', firstName: 'Savf', preferredLocations: ['Pune'], preferredJobTypes: ['part-time'] } };
++  let res = response(); await controller.updateProfile(req, res); assert.equal(res.statusCode, 503); assert.equal(res.body.code, 'PROFILE_SCHEMA_MISMATCH'); assert.equal(res.body.message.includes('constraint'), false);
++  broken = false; res = response(); await controller.updateProfile(req, res); assert.equal(res.body.success, true);
++  assert.deepEqual(saved, { firstName: 'Savf', preferredLocations: ['Pune'], preferredJobTypes: ['part-time'] });
++});
+diff --git a/backend/test/candidate-rebuild.test.js b/backend/test/candidate-rebuild.test.js
+new file mode 100644
+index 0000000..7d3ac52
+--- /dev/null
++++ b/backend/test/candidate-rebuild.test.js
+@@ -0,0 +1,79 @@
++const { test } = require('node:test');
++const assert = require('node:assert/strict');
++const S = require('sequelize');
++const migration = require('../migrations/20261010000300-candidate-databank');
++const { basicMatch, matchCandidates } = require('../src/services/candidateMatching');
++const job = { requiredSkills: ['React', 'C++'], description: 'React engineer', minExperienceYears: 2 };
++const candidate = { userId: 'person', firstName: 'Savf', skills: ['React'], yearsOfExperience: 2, resumeText: 'C++ React engineer', experience: [], applicationId: 'app', applicationStatus: 'hired' };
++function schema({ orphanCount = 0, correct = false, fail = false } = {}) {
++  const keys = [{ columnName: 'userId', constraintName: 'candidateprofiles_userId_fkey', referencedTableName: correct ? 'Users' : 'users', referencedColumnName: 'id' }];
++  const columns = {}, sql = [], removed = []; let committed = false, rolledBack = false;
++  const q = {
++    queryGenerator: { quoteIdentifier: name => '"' + name.replace(/"/g, '""') + '"' },
++    describeTable: async () => columns,
++    addColumn: async (table, name) => { columns[name] = {}; },
++    getForeignKeyReferencesForTable: async () => keys,
++    removeConstraint: async (table, name) => { removed.push(name); keys.splice(keys.findIndex(k => k.constraintName === name), 1); },
++    sequelize: {
++      transaction: async callback => { try { const result = await callback({ id: 'transaction' }); committed = true; return result; } catch (error) { rolledBack = true; throw error; } },
++      query: async (query, options) => {
++        assert.equal(options.transaction.id, 'transaction'); sql.push(query);
++        if (query.includes('ADD CONSTRAINT')) { if (fail) throw new Error('repair failed'); keys.push({ columnName: 'userId', constraintName: 'candidateprofiles_userId_Users_fkey', referencedTableName: 'Users', referencedColumnName: 'id' }); }
++        return [[{ count: String(orphanCount) }]];
++      }
++    }
++  };
++  return { q, sql, keys, columns, removed, state: () => ({ committed, rolledBack }) };
++}
++test('migration repairs lowercase FK to canonical Users, adds preferences and is repeatable', async () => {
++  const db = schema(); await migration.up(db.q, S); await migration.up(db.q, S);
++  assert.deepEqual(db.removed, ['candidateprofiles_userId_fkey']);
++  assert.equal(db.sql.filter(q => q.includes('ADD CONSTRAINT')).length, 1);
++  assert.ok(db.sql.some(q => q.includes('REFERENCES "Users" ("id")') && q.includes('NOT VALID')));
++  assert.ok(db.sql.some(q => q.includes('VALIDATE CONSTRAINT')));
++  assert.deepEqual(Object.keys(db.columns).sort(), ['preferredJobTypes', 'preferredLocations']);
++  assert.equal(db.state().committed, true);
++});
++test('historical orphans are preserved while the new FK enforces new writes', async () => {
++  const db = schema({ orphanCount: 2 }); const result = await migration.up(db.q, S);
++  assert.equal(result.orphanCount, 2); assert.equal(db.sql.some(q => q.includes('VALIDATE CONSTRAINT')), false);
++  assert.equal(db.sql.some(q => /DELETE FROM|DROP TABLE|TRUNCATE/i.test(q)), false);
++  assert.ok(db.sql.some(q => q.includes('NOT VALID')));
++});
++test('a correct existing FK is preserved and failed repair rolls back', async () => {
++  const db = schema({ correct: true }); await migration.up(db.q, S); assert.deepEqual(db.removed, []);
++  assert.equal(db.sql.some(q => q.includes('ADD CONSTRAINT')), false);
++  const failed = schema({ fail: true }); await assert.rejects(migration.up(failed.q, S), /repair failed/); assert.equal(failed.state().rolledBack, true);
++});
++test('basic matching scores submitted text, fractional experience, and skill boundaries without NaN', () => {
++  const result = basicMatch(job, candidate); assert.deepEqual(result.matchedSkills, ['react', 'c++']); assert.equal(result.matchScore, 100);
++  const partial = basicMatch(job, { ...candidate, yearsOfExperience: 1.5 }); assert.equal(partial.expScore, 75);
++  const boundary = basicMatch({ requiredSkills: ['java'], description: '', minExperienceYears: 0 }, { ...candidate, skills: [], resumeText: 'javascript' }); assert.deepEqual(boundary.matchedSkills, []);
++  assert.equal(Number.isFinite(basicMatch({}, { userId: 'empty' }).matchScore), true);
++});
++test('a refused connection or timeout returns every candidate with honest basic-mode metadata', async () => {
++  const saved = global.fetch;
++  try {
++    for (const name of ['TypeError', 'TimeoutError']) {
++      global.fetch = async () => { const error = new Error('unavailable'); error.name = name; throw error; };
++      const result = await matchCandidates(job, [candidate, { ...candidate, userId: 'second' }]);
++      assert.equal(result.matchingMode, 'basic'); assert.equal(result.fallback, true); assert.equal(result.data.length, 2);
++      assert.equal(result.data[0].applicationStatus, 'hired');
++    }
++  } finally { global.fetch = saved; }
++});
++test('healthy remote scoring stays in AI mode; malformed scores switch the whole result to basic mode', async () => {
++  const saved = global.fetch;
++  try {
++    global.fetch = async () => ({ ok: true, json: async () => ({ success: true, data: [{ ...basicMatch(job, candidate), matchScore: 81 }] }) });
++    const remote = await matchCandidates(job, [candidate]); assert.equal(remote.matchingMode, 'ai'); assert.equal(remote.data[0].matchScore, 81);
++    global.fetch = async () => ({ ok: true, json: async () => ({ success: true, data: [{ ...basicMatch(job, candidate), matchScore: null }] }) });
++    const fallback = await matchCandidates(job, [candidate]); assert.equal(fallback.matchingMode, 'basic'); assert.equal(fallback.data[0].matchScore, 100);
++  } finally { global.fetch = saved; }
++});
++test('preferred job types are validated by the actual model', async () => {
++  const Profile = require('../src/models/CandidateProfile');
++  const p = Profile.build({ userId: 'd9447822-5917-4b71-8908-6a462aa52970', firstName: 'Savf', preferredLocations: [' Mumbai ', 'Pune'], preferredJobTypes: ['part-time'] });
++  await p.validate(); assert.deepEqual(p.preferredLocations, ['Mumbai', 'Pune']);
++  p.preferredJobTypes = ['anything']; await assert.rejects(p.validate(), /Invalid preferred job type/);
++});
+diff --git a/docs/CANDIDATE-DATABANK-REBUILD.md b/docs/CANDIDATE-DATABANK-REBUILD.md
+new file mode 100644
+index 0000000..e5e7122
+--- /dev/null
++++ b/docs/CANDIDATE-DATABANK-REBUILD.md
+@@ -0,0 +1,46 @@
++# Candidate databank rebuild and profile repair
++
++Apply after Phase7-resume-databank-ai-match-fix.patch. This is an incremental patch. No dependency installation is required.
++
++## Fixed issues
++
++1. **Duplicate candidate cards:** the earlier patch listed resumes/uploads separately. Results now group by account user ID, with all authorized resumes inside one expandable list. Repeated file URLs are deduplicated. Different accounts with the same name remain separate people. Account email takes priority over editable resume contact text.
++2. **Incomplete filtering:** rebuilt search supports keyword/name/email/resume text, city, job type, industry, all requested skills, minimum/maximum experience, education/qualification and maximum expected salary. City includes current, explicitly preferred and applied-job cities. A Mumbai resident applying to a Pune part-time job appears for Pune + part-time while the card still shows Mumbai as the current location. Job types include explicit preferences and applied job types. Profile forms now save preferred cities and job types. Work-history duration accepts both profile from/to fields and builder startDate/endDate fields and merges overlaps.
++3. **AI-service errors blocked results:** matching attempts the configured service with a four-second timeout per batch. Connection failure, timeout, HTTP error or invalid/incomplete results trigger built-in basic matching for the entire candidate pool. The page explicitly labels basic matching. Scores use skills, experience and resume-text relevance; healthy remote responses remain in AI mode. Every eligible applicant remains included, including hired applicants. No 500-candidate truncation. This does not start a stopped Python process; the screenshot alone cannot establish the exact local outage cause.
++4. **Profile foreign-key failure:** the migration inspects candidateprofiles.userId, repairs references to tables/columns other than the application's case-sensitive "Users"."id", and adds preference columns. Correct existing constraints are preserved. The migration is transactional and repeatable. It preserves historical orphan profiles; a NOT VALID constraint protects new/changed references when such rows exist, and the script reports their count. With no orphans, the constraint is fully validated. No accounts are fabricated and profiles are not reassigned. Remaining FK failures produce an actionable PROFILE_SCHEMA_MISMATCH response instead of raw SQL.
++
++Public/shared candidates and the employer's own applicants form the eligible pool. Other applications contribute only city/type aggregates for already-visible candidates. Another employer's application IDs, statuses, companies and submitted files are not exposed. Private unshared builder resumes remain private.
++
++## Apply once
++
++Stop the backend, then run from the repository root in PowerShell:
++
++```powershell
++git apply --check .\Phase7-candidate-databank-rebuild.patch
++git apply .\Phase7-candidate-databank-rebuild.patch
++node .\backend\scripts\db\migrate-candidate-databank.js
++npm --prefix frontend run i18n:index
++node --test backend/test/candidate*.test.js backend/test/audit*.test.js
++node --test frontend/test/candidate-discovery.test.cjs frontend/test/audit.test.cjs frontend/test/i18n.test.cjs
++npm --prefix frontend run build
++```
++
++The migration explicitly reads backend/.env. If it fails, resolve its reported error before restarting the backend. Restart both apps after migration/build succeed. The generated translation index is omitted from the patch to preserve previous password-reset/navbar additions; regenerate it using the command above. No package.json changes are needed.
++
++## Validation
++
++- 53 backend tests passed, covering grouping/filtering, matching modes, ownership, migration branches, profile errors and existing audit checks.
++- 21 frontend tests passed, covering grouped links, city/type requests, stale responses, fallback notice, saving preferences, localization and audit checks.
++- Next.js production build and TypeScript passed.
++
++Tests use actual Express/authentication and page handlers with ORM/provider test doubles. Migration tests cover repair, repeat execution, rollback and orphan preservation. The migration was not run against the user's PostgreSQL database; its exact FK target was unavailable for inspection. These local acceptance checks remain necessary.
++
++## Manual checks
++
++1. Confirm the migration success message. Save a candidate profile, reload and confirm name/preferences persist.
++2. Confirm Savf has one card per account, with authorized resume links in its Resumes list.
++3. Set Mumbai as current location and apply to a Pune part-time job. Both Mumbai and Pune searches should find the candidate; Pune + part-time should also match.
++4. Save Bengaluru + full-time as explicit preferences and verify those filters.
++5. Test skill, qualification, experience range and expected salary filters, then Clear Filters.
++6. Stop the Python engine: Find Matches should show applicants with the basic-matching notice. With a healthy engine configured, the notice should disappear.
++7. Verify hired applicants remain included and changing jobs during a request never displays the old job's results.
+diff --git a/frontend/src/app/ai-match/page.tsx b/frontend/src/app/ai-match/page.tsx
+index 967bd6f..b7716a9 100644
+--- a/frontend/src/app/ai-match/page.tsx
++++ b/frontend/src/app/ai-match/page.tsx
+@@ -13,6 +13,7 @@ export default function AIMatchPage() {
+   const [results, setResults] = useState<any[]>([])
+   const [loading, setLoading] = useState(false)
+   const [message, setMessage] = useState('')
++  const [basicMatching, setBasicMatching] = useState(false)
+ 
+   useEffect(() => {
+     const token = localStorage.getItem('token')
+@@ -40,6 +41,7 @@ export default function AIMatchPage() {
+     const currentRequest = ++requestId.current
+     setLoading(true)
+     setResults([])
++    setBasicMatching(false)
+     setMessage('')
+     try {
+       const res = await fetch(`${API_BASE}/candidates/ai-match/${selectedJob}`, {
+@@ -49,6 +51,7 @@ export default function AIMatchPage() {
+       if (currentRequest !== requestId.current) return
+       if (res.ok && data.success && Array.isArray(data.data)) {
+         setResults(data.data)
++        setBasicMatching(data.matchingMode === 'basic' && !!data.fallback)
+         if (data.data.length === 0) setMessage('No candidates found!')
+       } else setMessage(data.message || 'Unable to complete request')
+     } catch (err) {
+@@ -89,7 +92,7 @@ export default function AIMatchPage() {
+           <div className='flex gap-4'>
+             <select
+               value={selectedJob}
+-              onChange={e => { requestId.current++; setSelectedJob(e.target.value); setResults([]); setMessage(''); setLoading(false) }}
++              onChange={e => { requestId.current++; setSelectedJob(e.target.value); setResults([]); setBasicMatching(false); setMessage(''); setLoading(false) }}
+               className='flex-1 px-4 py-3 border border-gray-200 rounded-xl outline-none focus:border-blue-500 transition-all'
+             >
+               <option value=''>{tr("-- Select a Job --")}</option>
+@@ -114,6 +117,8 @@ export default function AIMatchPage() {
+           )}
+         </div>
+ 
++        {basicMatching && <p role="status" className="bg-amber-50 text-amber-800 rounded-xl p-4 mb-6">{tr('Basic matching is active because the AI service is unavailable. Results use skills, experience, and resume text.')}</p>}
++
+         {/* Results */}
+         {results.length > 0 && (
+           <div>
+diff --git a/frontend/src/app/employer/candidates/page.tsx b/frontend/src/app/employer/candidates/page.tsx
+index a043df3..2fede6f 100644
+--- a/frontend/src/app/employer/candidates/page.tsx
++++ b/frontend/src/app/employer/candidates/page.tsx
+@@ -1,331 +1,116 @@
+ "use client"
+ import { API_BASE, BACKEND_BASE } from '@/lib/api'
+ import { tr, trError, useLocale } from '@/lib/localization'
+-
+-
+-import { useEffect, useState, useRef } from "react"
+-import { useRouter } from "next/navigation"
+-
+-interface Candidate {
+-  id: string
+-  userId: string
+-  firstName?: string
+-  lastName?: string
+-  headline?: string
+-  summary?: string
+-  skills?: string[]
+-  experience?: any[]
+-  education?: any[]
+-  currentLocation?: string
+-  expectedSalary?: string | number
+-  yearsOfExperience?: number | string
+-  resumeId?: string
+-  title?: string
+-  resumeUrl?: string
+-  industry?: string
+-  profileCompleteness?: number
+-  email?: string
+-  phone?: string
++import { readStoredUser } from '@/lib/storage'
++import { useEffect, useRef, useState } from 'react'
++import { useRouter } from 'next/navigation'
++
++type ResumeLink = { id: string; resumeId?: string; url?: string; title?: string }
++type Candidate = {
++  id: string; userId: string; firstName?: string; lastName?: string; email?: string; phone?: string;
++  headline?: string; summary?: string; currentLocation?: string; yearsOfExperience?: number;
++  expectedSalary?: string | number; skills: string[]; industries: string[]; preferredLocations: string[];
++  appliedLocations: string[]; jobTypes: string[]; resumes: ResumeLink[];
+ }
++const emptyFilters = { keyword: '', location: '', jobType: '', industry: '', skills: '', minExperience: '', maxExperience: '', education: '', maxSalary: '' }
++const fields = [
++  ['keyword', 'Keyword', 'text'], ['location', 'City / location', 'text'],
++  ['industry', 'Industry', 'text'], ['skills', 'Skills (comma separated)', 'text'],
++  ['minExperience', 'Min Experience', 'number'], ['maxExperience', 'Maximum experience', 'number'],
++  ['education', 'Education / qualification', 'text'], ['maxSalary', 'Maximum expected salary', 'number']
++] as const
++const jobTypes = [['full-time', 'Full-time'], ['part-time', 'Part-time'], ['internship', 'Internship'], ['contract', 'Contract'], ['remote', 'Remote']]
+ 
+ export default function EmployerCandidatesPage() {
+   useLocale()
+-
+-  const router = useRouter()
+-  const requestId = useRef(0)
+-
++  const router = useRouter(), requestId = useRef(0)
+   const [candidates, setCandidates] = useState<Candidate[]>([])
+   const [loading, setLoading] = useState(true)
+   const [searching, setSearching] = useState(false)
+-  const [error, setError] = useState("")
+-  const [filters, setFilters] = useState({
+-    keyword: "",
+-    location: "",
+-    industry: "",
+-    minExperience: "",
+-    skills: ""
+-  })
+-
+-  useEffect(() => {
+-    const user = localStorage.getItem("user")
+-    if (!user) {
+-      router.replace("/login")
+-      return
+-    }
+-
+-    let parsed
+-    try { parsed = JSON.parse(user) } catch { router.replace("/login"); return }
+-    if (parsed?.role !== "employer") {
+-      router.replace("/dashboard")
+-      return
+-    }
+-
+-    fetchCandidates()
+-    return () => { requestId.current++ }
+-  }, [router])
+-
+-  const fetchCandidates = async (customFilters = filters) => {
++  const [error, setError] = useState('')
++  const [filters, setFilters] = useState(emptyFilters)
++  const fetchCandidates = async (values = filters) => {
+     const currentRequest = ++requestId.current
+-    const token = localStorage.getItem("token")
+-    if (!token) { router.replace("/login"); return }
+-    setError("")
+-    setSearching(true)
+-
++    const token = localStorage.getItem('token')
++    if (!token) { router.replace('/login'); return }
++    setError(''); setSearching(true)
+     try {
+-      const params = new URLSearchParams()
+-
+-      if (customFilters.keyword.trim()) params.append("keyword", customFilters.keyword.trim())
+-      if (customFilters.location.trim()) params.append("location", customFilters.location.trim())
+-      if (customFilters.industry.trim()) params.append("industry", customFilters.industry.trim())
+-      if (customFilters.minExperience.trim()) params.append("minExperience", customFilters.minExperience.trim())
+-      if (customFilters.skills.trim()) params.append("skills", customFilters.skills.trim())
+-
++      const params = new URLSearchParams(Object.entries(values).map(([key, value]) => [key, value.trim()]).filter(([, value]) => value))
+       const query = params.toString()
+-      const url = `${API_BASE}/employer/candidates${query ? `?${query}` : ""}`
+-
+-      const res = await fetch(url, {
+-        headers: {
+-          Authorization: "Bearer " + token
+-        }
+-      })
+-
+-      const data = await res.json()
+-
+-      if (currentRequest !== requestId.current) return
+-      if (res.ok && data.success) {
+-        setCandidates(data.data || [])
+-      } else {
+-        setError(data.message || "Failed to load candidates")
+-      }
+-    } catch (err) {
++      const response = await fetch(`${API_BASE}/employer/candidates${query ? `?${query}` : ''}`, { headers: { Authorization: `Bearer ${token}` } })
++      const data = await response.json()
+       if (currentRequest !== requestId.current) return
+-      console.error(err)
+-      setError("Failed to load candidates")
++      if (!response.ok || !data.success || !Array.isArray(data.data)) { setError(data.message || 'Failed to load candidates'); return }
++      setCandidates(data.data)
++    } catch {
++      if (currentRequest === requestId.current) setError('Failed to load candidates')
+     } finally {
+       if (currentRequest === requestId.current) { setLoading(false); setSearching(false) }
+     }
+   }
+-
+-  const handleSearch = () => {
+-    fetchCandidates(filters)
+-  }
+-
+-  const clearFilters = () => {
+-    const cleared = {
+-      keyword: "",
+-      location: "",
+-      industry: "",
+-      minExperience: "",
+-      skills: ""
+-    }
+-    setFilters(cleared)
+-    fetchCandidates(cleared)
+-  }
+-
+-  const formatNamePart = (value?: string) => {
+-    if (!value) return ""
+-    return value
+-      .trim()
+-      .split(" ")
+-      .filter(Boolean)
+-      .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+-      .join(" ")
+-  }
+-
+-  const getCandidateName = (candidate: Candidate) => {
+-    const firstName = formatNamePart(candidate.firstName)
+-    const lastName = formatNamePart(candidate.lastName)
+-    const fullName = `${firstName} ${lastName}`.trim()
+-    return fullName || candidate.email || "Candidate"
+-  }
+-
+-  const getExperienceValue = (value?: number | string) => {
+-    if (value === undefined || value === null || value === "") return null
+-    const parsed = Number(value)
+-    return Number.isNaN(parsed) ? null : parsed
+-  }
+-
+-  if (loading) {
+-    return (
+-      <main className="min-h-screen bg-gray-50 pt-24 flex items-center justify-center">
+-        <p className="text-gray-400">{tr("Loading candidates...")}</p>
+-      </main>
+-    )
+-  }
+-
+-  return (
+-    <main className="min-h-screen bg-gray-50 pt-16">
+-      <div className="max-w-7xl mx-auto px-6 py-10">
+-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white mb-8">
+-          <h1 className="text-3xl font-bold mb-1">{tr("Resume Databank")}</h1>
+-          <p className="text-blue-100">{tr("Search public candidate profiles by skill, location, industry, and experience")}</p>
++  useEffect(() => {
++    const user = readStoredUser()
++    if (!localStorage.getItem('token')) { router.replace('/login'); return }
++    if (user.role !== 'employer') { router.replace('/dashboard'); return }
++    fetchCandidates(emptyFilters)
++    return () => { requestId.current++ }
++  }, [router])
++  return <main className="min-h-screen bg-gray-50 pt-20 pb-12">
++    <div className="max-w-7xl mx-auto px-6">
++      <header className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white my-6">
++        <h1 className="text-3xl font-bold">{tr('Resume Databank')}</h1>
++        <p className="mt-2 text-blue-100">{tr('One candidate, all available resumes.')}</p>
++      </header>
++      <form onSubmit={event => { event.preventDefault(); fetchCandidates() }} className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
++        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
++          {fields.map(([key, label, type]) => <label key={key} className="text-sm font-medium text-gray-700">
++            {tr(label)}
++            <input type={type} placeholder={tr(label)} value={filters[key]} min={type === 'number' ? 0 : undefined} step={type === 'number' ? 'any' : undefined}
++              onChange={event => setFilters(previous => ({ ...previous, [key]: event.target.value }))}
++              className="block w-full mt-1 px-3 py-2.5 border border-gray-200 rounded-xl font-normal" />
++          </label>)}
++          <label className="text-sm font-medium text-gray-700">{tr('Job type')}
++            <select value={filters.jobType} onChange={event => setFilters(previous => ({ ...previous, jobType: event.target.value }))} className="block w-full mt-1 px-3 py-2.5 border border-gray-200 rounded-xl font-normal">
++              <option value="">{tr('All job types')}</option>
++              {jobTypes.map(([value, label]) => <option key={value} value={value}>{tr(label)}</option>)}
++            </select>
++          </label>
+         </div>
+-
+-        {error && (
+-          <div className="bg-red-50 text-red-700 px-4 py-3 rounded-xl mb-6 font-medium">
+-            {trError(error)}
+-          </div>
+-        )}
+-
+-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
+-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
+-            <input
+-              type="text"
+-              placeholder={tr("Keyword")}
+-              value={filters.keyword}
+-              onChange={(e) => setFilters((prev) => ({ ...prev, keyword: e.target.value }))}
+-              className="px-4 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:border-blue-500"
+-            />
+-
+-            <input
+-              type="text"
+-              placeholder={tr("Location")}
+-              value={filters.location}
+-              onChange={(e) => setFilters((prev) => ({ ...prev, location: e.target.value }))}
+-              className="px-4 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:border-blue-500"
+-            />
+-
+-            <input
+-              type="text"
+-              placeholder={tr("Industry")}
+-              value={filters.industry}
+-              onChange={(e) => setFilters((prev) => ({ ...prev, industry: e.target.value }))}
+-              className="px-4 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:border-blue-500"
+-            />
+-
+-            <input
+-              type="number"
+-              min="0"
+-              step="0.1"
+-              placeholder={tr("Min Experience")}
+-              value={filters.minExperience}
+-              onChange={(e) => setFilters((prev) => ({ ...prev, minExperience: e.target.value }))}
+-              className="px-4 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:border-blue-500"
+-            />
+-
+-            <input
+-              type="text"
+-              placeholder={tr("Skills (comma separated)")}
+-              value={filters.skills}
+-              onChange={(e) => setFilters((prev) => ({ ...prev, skills: e.target.value }))}
+-              className="px-4 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:border-blue-500"
+-            />
+-          </div>
+-
+-          <div className="flex flex-wrap gap-3 mt-4">
+-            <button
+-              onClick={handleSearch}
+-              disabled={searching}
+-              className="px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 disabled:opacity-50"
+-            >
+-              {tr(searching ? "Searching..." : "Search Candidates")}
+-            </button>
+-
+-            <button
+-              onClick={clearFilters}
+-              className="px-5 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-200"
+-            >{tr("Clear Filters")}</button>
+-          </div>
++        <p className="text-sm text-gray-500 mt-4">{tr('City includes current location, preferred cities, and cities where the candidate has applied. All listed skills must match.')}</p>
++        <div className="flex gap-3 mt-4">
++          <button type="submit" disabled={searching} className="bg-blue-600 text-white rounded-xl px-5 py-2 disabled:opacity-50">{tr(searching ? 'Searching...' : 'Search Candidates')}</button>
++          <button type="button" onClick={() => { setFilters(emptyFilters); fetchCandidates(emptyFilters) }} className="bg-gray-100 rounded-xl px-5 py-2">{tr('Clear Filters')}</button>
+         </div>
+-
+-        {candidates.length === 0 ? (
+-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center text-gray-400">
+-            <p className="text-lg mb-2">{tr("No candidates found")}</p>
+-            <p className="text-sm">{tr("Try changing your filters or search terms")}</p>
+-          </div>
+-        ) : (
+-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+-            {candidates.map((candidate) => {
+-              const experienceValue = getExperienceValue(candidate.yearsOfExperience)
+-              const hasSkills = Array.isArray(candidate.skills) && candidate.skills.length > 0
+-              const hasSummary = !!candidate.summary?.trim()
+-              const hasHeadline = !!candidate.headline?.trim()
+-              const hasLocation = !!candidate.currentLocation?.trim()
+-              const hasIndustry = !!candidate.industry?.trim()
+-              const hasPhone = !!candidate.phone?.trim()
+-              const showCompleteness =
+-                typeof candidate.profileCompleteness === "number" && candidate.profileCompleteness > 0
+-
+-              return (
+-                <div
+-                  key={candidate.id}
+-                  className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6"
+-                >
+-                  <div className="flex items-start justify-between gap-4 mb-3">
+-                    <div>
+-                      <h2 className="text-lg font-bold text-gray-900">
+-                        {getCandidateName(candidate)}
+-                      </h2>
+-                      <p className="text-gray-500 text-sm">
+-                        {candidate.email || tr("No email available")}
+-                      </p>
+-
+-                      {hasHeadline && (
+-                        <p className="text-gray-600 text-sm mt-1">{candidate.headline}</p>
+-                      )}
+-                    </div>
+-
+-                    {showCompleteness && (
+-                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full whitespace-nowrap">
+-                        {candidate.profileCompleteness}{tr("% complete")}</span>
+-                    )}
+-                  </div>
+-
+-                  {(experienceValue !== null || hasLocation || hasIndustry || hasPhone) && (
+-                    <div className="flex flex-wrap gap-3 mb-3 text-xs text-gray-500">
+-                      {experienceValue !== null && <span>{tr("Exp: ")}{experienceValue}{tr(" yrs")}</span>}
+-                      {hasLocation && <span>{tr("Location: ")}{candidate.currentLocation}</span>}
+-                      {hasIndustry && <span>{tr("Industry: ")}{tr(candidate.industry)}</span>}
+-                      {hasPhone && <span>{tr("Phone: ")}{candidate.phone}</span>}
+-                    </div>
+-                  )}
+-
+-                  {hasSummary ? (
+-                    <p className="text-gray-600 text-sm mb-3 leading-6">{candidate.summary}</p>
+-                  ) : (
+-                    <p className="text-gray-400 text-sm mb-3 italic">{tr("No summary added yet.")}</p>
+-                  )}
+-
+-                  {hasSkills && (
+-                    <div className="flex flex-wrap gap-1 mb-4">
+-                      {candidate.skills!.slice(0, 8).map((skill, i) => (
+-                        <span
+-                          key={i}
+-                          className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full"
+-                        >
+-                          {skill}
+-                        </span>
+-                      ))}
+-                    </div>
+-                  )}
+-
+-                  <div className="flex flex-wrap gap-3">
+-                    {candidate.title && <span className="text-gray-600 text-sm">{candidate.title}</span>}
+-                    {candidate.resumeId && (
+-                      <a href={`/resume/share/${candidate.resumeId}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 text-sm hover:underline">{tr("View Resume")}</a>
+-                    )}
+-                    {candidate.resumeUrl && (
+-                      <a
+-                        href={/^https?:\/\//i.test(candidate.resumeUrl!) ? candidate.resumeUrl : `${BACKEND_BASE}/${candidate.resumeUrl!.replace(/^\/+/, "")}`}
+-                        target="_blank"
+-                        rel="noopener noreferrer"
+-                        className="text-blue-600 text-sm hover:underline"
+-                      >{tr("View Resume")}</a>
+-                    )}
+-
+-                    {candidate.email && (
+-                      <a
+-                        href={`mailto:${candidate.email}`}
+-                        className="text-purple-600 text-sm hover:underline"
+-                      >{tr("Contact Candidate")}</a>
+-                    )}
+-                  </div>
+-                </div>
+-              )
+-            })}
+-          </div>
+-        )}
++      </form>
++      {error && <p role="alert" className="bg-red-50 text-red-700 p-4 rounded-xl mt-6">{trError(error)}</p>}
++      <div aria-live="polite" aria-busy={loading || searching} className="my-6 text-gray-600">
++        {loading ? tr('Loading candidates...') : <>{candidates.length} {tr('Candidates')}</>}
++      </div>
++      {!loading && !error && candidates.length === 0 && <div className="p-10 bg-white rounded-2xl text-center text-gray-500"><p>{tr('No candidates found')}</p><p className="mt-2 text-sm">{tr('Try changing your filters or search terms')}</p></div>}
++      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
++        {candidates.map(candidate => <article key={candidate.userId} className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
++          <h2 className="text-lg font-bold text-gray-900">{[candidate.firstName, candidate.lastName].filter(Boolean).join(' ') || candidate.email || tr('Candidate')}</h2>
++          <p className="text-sm text-gray-500">{candidate.email}</p>
++          {candidate.headline && <p className="mt-2 text-gray-700">{candidate.headline}</p>}
++          <dl className="text-sm text-gray-600 space-y-2 mt-4">
++            <div><dt className="inline font-medium">{tr('Current location')}: </dt><dd className="inline">{candidate.currentLocation || '—'}</dd></div>
++            {!!candidate.preferredLocations?.length && <div><dt className="inline font-medium">{tr('Preferred cities')}: </dt><dd className="inline">{candidate.preferredLocations.join(', ')}</dd></div>}
++            {!!candidate.appliedLocations?.length && <div><dt className="inline font-medium">{tr('Applied cities')}: </dt><dd className="inline">{candidate.appliedLocations.join(', ')}</dd></div>}
++            {!!candidate.jobTypes?.length && <div><dt className="inline font-medium">{tr('Preferred or applied job types')}: </dt><dd className="inline">{candidate.jobTypes.map(value => tr(jobTypes.find(([type]) => type === value)?.[1] || value)).join(', ')}</dd></div>}
++            <div><dt className="inline font-medium">{tr('Experience')}: </dt><dd className="inline">{candidate.yearsOfExperience ?? 0} {tr('yrs')}</dd></div>
++            {!!candidate.industries?.length && <div><dt className="inline font-medium">{tr('Industry')}: </dt><dd className="inline">{candidate.industries.join(', ')}</dd></div>}
++          </dl>
++          {candidate.summary && <p className="text-sm text-gray-600 mt-4">{candidate.summary}</p>}
++          <div className="flex flex-wrap gap-2 my-4">{candidate.skills?.map(skill => <span key={skill.toLowerCase()} className="bg-blue-50 text-blue-700 text-xs rounded-full px-3 py-1">{skill}</span>)}</div>
++          {!!candidate.resumes?.length && <details className="border-t border-gray-100 py-3">
++            <summary className="cursor-pointer font-medium text-blue-700">{tr('Resumes')} ({candidate.resumes.length})</summary>
++            <ul className="mt-3 space-y-2">{candidate.resumes.map(resume => <li key={resume.id}>
++              <a href={resume.resumeId ? `/resume/share/${resume.resumeId}` : /^https?:\/\//i.test(resume.url || '') ? resume.url : `${BACKEND_BASE}/${(resume.url || '').replace(/^\/+/, '')}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm">{resume.title || tr('View Resume')}</a>
++            </li>)}</ul>
++          </details>}
++          {candidate.email && <a href={`mailto:${candidate.email}`} className="text-purple-600 text-sm hover:underline">{tr('Contact Candidate')}</a>}
++        </article>)}
+       </div>
+-    </main>
+-  )
+-}
+\ No newline at end of file
++    </div>
++  </main>
++}
+diff --git a/frontend/src/app/profile/page.tsx b/frontend/src/app/profile/page.tsx
+index b28179d..91af6d8 100644
+--- a/frontend/src/app/profile/page.tsx
++++ b/frontend/src/app/profile/page.tsx
+@@ -57,7 +57,7 @@ export default function ProfilePage() {
+   const [form, setForm] = useState({
+     firstName: '', lastName: '', headline: '', summary: '',
+     currentLocation: '', industry: '', yearsOfExperience: '',
+-    expectedSalary: '', skills: '', isResumePublic: true
++    expectedSalary: '', skills: '', isResumePublic: true, preferredLocations: '', preferredJobTypes: [] as string[]
+   })
+ 
+   const [education, setEducation] = useState<Education[]>([])
+@@ -88,7 +88,9 @@ export default function ProfilePage() {
+           yearsOfExperience: p.yearsOfExperience?.toString() || '',
+           expectedSalary: p.expectedSalary?.toString() || '',
+           skills: p.skills?.join(', ') || '',
+-          isResumePublic: p.isResumePublic ?? true
++          isResumePublic: p.isResumePublic ?? true,
++          preferredLocations: (p.preferredLocations || []).join(', '),
++          preferredJobTypes: p.preferredJobTypes || []
+         })
+         setEducation(p.education || [])
+         setExperience(p.experience || [])
+@@ -111,6 +113,7 @@ export default function ProfilePage() {
+         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+         body: JSON.stringify({
+           ...form,
++          preferredLocations: form.preferredLocations.split(',').map(s => s.trim()).filter(Boolean),
+           yearsOfExperience: form.yearsOfExperience ? Number(form.yearsOfExperience) : 0,
+           expectedSalary: form.expectedSalary ? Number(form.expectedSalary) : 0,
+           skills: form.skills.split(',').map(s => s.trim()).filter(Boolean),
+@@ -284,6 +287,18 @@ export default function ProfilePage() {
+         </div>
+ 
+         {/* Basic Info Tab */}
++        {activeTab === 'basic' && <section className="bg-white border border-gray-100 rounded-2xl p-6 mb-6">
++          <h2 className="font-bold text-gray-900 mb-4">{tr('Work preferences')}</h2>
++          <label className="block text-sm text-gray-700">{tr('Preferred cities (comma separated)')}
++            <input value={form.preferredLocations} onChange={e => setForm({ ...form, preferredLocations: e.target.value })} className="block w-full border border-gray-200 rounded-xl px-4 py-2 mt-2" />
++          </label>
++          <fieldset className="mt-4"><legend className="text-sm text-gray-700 mb-2">{tr('Preferred job types')}</legend>
++            <div className="flex flex-wrap gap-4">{[['full-time', 'Full-time'], ['part-time', 'Part-time'], ['internship', 'Internship'], ['contract', 'Contract'], ['remote', 'Remote']].map(([value, label]) => <label key={value} className="flex items-center gap-2 text-sm">
++              <input type="checkbox" checked={form.preferredJobTypes.includes(value)} onChange={e => setForm({ ...form, preferredJobTypes: e.target.checked ? [...form.preferredJobTypes, value] : form.preferredJobTypes.filter(type => type !== value) })} />{tr(label)}
++            </label>)}</div>
++          </fieldset>
++        </section>}
++
+         {activeTab === 'basic' && (
+           <div className="space-y-6">
+             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+diff --git a/frontend/src/locales/en/errors.json b/frontend/src/locales/en/errors.json
+index d345566..b660b64 100644
+--- a/frontend/src/locales/en/errors.json
++++ b/frontend/src/locales/en/errors.json
+@@ -419,5 +419,8 @@
+   "This job is no longer accepting applications": "This job is no longer accepting applications",
+   "Authentication service unavailable. Please try again.": "Authentication service unavailable. Please try again.",
+   "Payment service is not configured": "Payment service is not configured",
+-  "Account created. OTP email could not be sent. Please resend OTP.": "Account created. OTP email could not be sent. Please resend OTP."
++  "Account created. OTP email could not be sent. Please resend OTP.": "Account created. OTP email could not be sent. Please resend OTP.",
++  "Invalid search filters": "Invalid search filters",
++  "Invalid preferred job type": "Invalid preferred job type",
++  "Profile storage needs an update. Please contact support.": "Profile storage needs an update. Please contact support."
+ }
+diff --git a/frontend/src/locales/en/jobs.json b/frontend/src/locales/en/jobs.json
+index 6d708ea..cefa85c 100644
+--- a/frontend/src/locales/en/jobs.json
++++ b/frontend/src/locales/en/jobs.json
+@@ -220,5 +220,23 @@
+   "Job results_one": "{{count}} job found",
+   "Job results_other": "{{count}} jobs found",
+   "Job share": "Check out this job: {{job}}",
+-  "Job share with location": "Check out this job: {{job}} in {{location}}"
++  "Job share with location": "Check out this job: {{job}} in {{location}}",
++  "One candidate, all available resumes.": "One candidate, all available resumes.",
++  "City / location": "City / location",
++  "Maximum experience": "Maximum experience",
++  "Education / qualification": "Education / qualification",
++  "Maximum expected salary": "Maximum expected salary",
++  "All job types": "All job types",
++  "Job type": "Job type",
++  "City includes current location, preferred cities, and cities where the candidate has applied. All listed skills must match.": "City includes current location, preferred cities, and cities where the candidate has applied. All listed skills must match.",
++  "Current location": "Current location",
++  "Preferred cities": "Preferred cities",
++  "Applied cities": "Applied cities",
++  "Preferred or applied job types": "Preferred or applied job types",
++  "Resumes": "Resumes",
++  "yrs": "yrs",
++  "Work preferences": "Work preferences",
++  "Preferred cities (comma separated)": "Preferred cities (comma separated)",
++  "Preferred job types": "Preferred job types",
++  "Basic matching is active because the AI service is unavailable. Results use skills, experience, and resume text.": "Basic matching is active because the AI service is unavailable. Results use skills, experience, and resume text."
+ }
+diff --git a/frontend/src/locales/hi/errors.json b/frontend/src/locales/hi/errors.json
+index fd3ca15..4adebeb 100644
+--- a/frontend/src/locales/hi/errors.json
++++ b/frontend/src/locales/hi/errors.json
+@@ -419,5 +419,8 @@
+   "This job is no longer accepting applications": "इस नौकरी के लिए अब आवेदन स्वीकार नहीं किए जा रहे हैं",
+   "Authentication service unavailable. Please try again.": "लॉगिन सेवा उपलब्ध नहीं है। कृपया फिर कोशिश करें।",
+   "Payment service is not configured": "भुगतान सेवा कॉन्फ़िगर नहीं की गई है",
+-  "Account created. OTP email could not be sent. Please resend OTP.": "खाता बन गया है। OTP ईमेल नहीं भेजा जा सका। कृपया OTP दोबारा भेजें।"
++  "Account created. OTP email could not be sent. Please resend OTP.": "खाता बन गया है। OTP ईमेल नहीं भेजा जा सका। कृपया OTP दोबारा भेजें।",
++  "Invalid search filters": "खोज फ़िल्टर अमान्य हैं",
++  "Invalid preferred job type": "पसंदीदा नौकरी प्रकार अमान्य है",
++  "Profile storage needs an update. Please contact support.": "प्रोफ़ाइल संग्रहण को अपडेट करने की आवश्यकता है। कृपया सहायता से संपर्क करें।"
+ }
+diff --git a/frontend/src/locales/hi/jobs.json b/frontend/src/locales/hi/jobs.json
+index 66d6a61..2847337 100644
+--- a/frontend/src/locales/hi/jobs.json
++++ b/frontend/src/locales/hi/jobs.json
+@@ -220,5 +220,23 @@
+   "Job results_one": "{{count}} नौकरी मिली",
+   "Job results_other": "{{count}} नौकरियाँ मिलीं",
+   "Job share": "यह नौकरी देखें: {{job}}",
+-  "Job share with location": "{{location}} में यह नौकरी देखें: {{job}}"
++  "Job share with location": "{{location}} में यह नौकरी देखें: {{job}}",
++  "One candidate, all available resumes.": "एक उम्मीदवार, सभी उपलब्ध रिज़्यूमे।",
++  "City / location": "शहर / स्थान",
++  "Maximum experience": "अधिकतम अनुभव",
++  "Education / qualification": "शिक्षा / योग्यता",
++  "Maximum expected salary": "अधिकतम अपेक्षित वेतन",
++  "All job types": "सभी नौकरी प्रकार",
++  "Job type": "नौकरी का प्रकार",
++  "City includes current location, preferred cities, and cities where the candidate has applied. All listed skills must match.": "शहर में वर्तमान स्थान, पसंदीदा शहर और वे शहर शामिल हैं जहाँ उम्मीदवार ने आवेदन किया है। सूचीबद्ध सभी कौशल मेल खाने चाहिए।",
++  "Current location": "वर्तमान स्थान",
++  "Preferred cities": "पसंदीदा शहर",
++  "Applied cities": "आवेदन किए गए शहर",
++  "Preferred or applied job types": "पसंदीदा या आवेदन किए गए नौकरी प्रकार",
++  "Resumes": "रिज़्यूमे",
++  "yrs": "वर्ष",
++  "Work preferences": "काम की प्राथमिकताएँ",
++  "Preferred cities (comma separated)": "पसंदीदा शहर (अल्पविराम से अलग करें)",
++  "Preferred job types": "पसंदीदा नौकरी प्रकार",
++  "Basic matching is active because the AI service is unavailable. Results use skills, experience, and resume text.": "AI सेवा उपलब्ध नहीं है, इसलिए बुनियादी मिलान सक्रिय है। परिणाम कौशल, अनुभव और रिज़्यूमे के पाठ पर आधारित हैं।"
+ }
+diff --git a/frontend/src/locales/mr/errors.json b/frontend/src/locales/mr/errors.json
+index 597f707..230bfda 100644
+--- a/frontend/src/locales/mr/errors.json
++++ b/frontend/src/locales/mr/errors.json
+@@ -419,5 +419,8 @@
+   "This job is no longer accepting applications": "या नोकरीसाठी आता अर्ज स्वीकारले जात नाहीत",
+   "Authentication service unavailable. Please try again.": "लॉगिन सेवा उपलब्ध नाही. कृपया पुन्हा प्रयत्न करा.",
+   "Payment service is not configured": "देयक सेवा कॉन्फिगर केलेली नाही",
+-  "Account created. OTP email could not be sent. Please resend OTP.": "खाते तयार झाले आहे. OTP ईमेल पाठवता आला नाही. कृपया OTP पुन्हा पाठवा."
++  "Account created. OTP email could not be sent. Please resend OTP.": "खाते तयार झाले आहे. OTP ईमेल पाठवता आला नाही. कृपया OTP पुन्हा पाठवा.",
++  "Invalid search filters": "शोध फिल्टर अवैध आहेत",
++  "Invalid preferred job type": "पसंतीचा नोकरी प्रकार अवैध आहे",
++  "Profile storage needs an update. Please contact support.": "प्रोफाइल साठवण अद्ययावत करणे आवश्यक आहे. कृपया सहाय्याशी संपर्क साधा."
+ }
+diff --git a/frontend/src/locales/mr/jobs.json b/frontend/src/locales/mr/jobs.json
+index 3dfcf02..c0b3a51 100644
+--- a/frontend/src/locales/mr/jobs.json
++++ b/frontend/src/locales/mr/jobs.json
+@@ -220,5 +220,23 @@
+   "Job results_one": "{{count}} नोकरी सापडली",
+   "Job results_other": "{{count}} नोकऱ्या सापडल्या",
+   "Job share": "ही नोकरी पाहा: {{job}}",
+-  "Job share with location": "{{location}} येथील ही नोकरी पाहा: {{job}}"
++  "Job share with location": "{{location}} येथील ही नोकरी पाहा: {{job}}",
++  "One candidate, all available resumes.": "एक उमेदवार, सर्व उपलब्ध रेझ्युमे.",
++  "City / location": "शहर / ठिकाण",
++  "Maximum experience": "कमाल अनुभव",
++  "Education / qualification": "शिक्षण / पात्रता",
++  "Maximum expected salary": "कमाल अपेक्षित वेतन",
++  "All job types": "सर्व नोकरी प्रकार",
++  "Job type": "नोकरीचा प्रकार",
++  "City includes current location, preferred cities, and cities where the candidate has applied. All listed skills must match.": "शहरामध्ये सध्याचे ठिकाण, पसंतीची शहरे आणि उमेदवाराने अर्ज केलेली शहरे समाविष्ट आहेत. दिलेली सर्व कौशल्ये जुळणे आवश्यक आहे.",
++  "Current location": "सध्याचे ठिकाण",
++  "Preferred cities": "पसंतीची शहरे",
++  "Applied cities": "अर्ज केलेली शहरे",
++  "Preferred or applied job types": "पसंतीचे किंवा अर्ज केलेले नोकरी प्रकार",
++  "Resumes": "रेझ्युमे",
++  "yrs": "वर्षे",
++  "Work preferences": "कामाच्या पसंती",
++  "Preferred cities (comma separated)": "पसंतीची शहरे (स्वल्पविरामाने वेगळी करा)",
++  "Preferred job types": "पसंतीचे नोकरी प्रकार",
++  "Basic matching is active because the AI service is unavailable. Results use skills, experience, and resume text.": "AI सेवा उपलब्ध नसल्यामुळे मूलभूत जुळवणी सक्रिय आहे. निकाल कौशल्ये, अनुभव आणि रेझ्युमेतील मजकुरावर आधारित आहेत."
+ }
+diff --git a/frontend/test/candidate-discovery.test.cjs b/frontend/test/candidate-discovery.test.cjs
+index f41bfcd..b621057 100644
+--- a/frontend/test/candidate-discovery.test.cjs
++++ b/frontend/test/candidate-discovery.test.cjs
+@@ -23,6 +23,7 @@ function harness(page) {
+       useRef: initial => { const index = refIndex++; return refs[index] ||= { current: initial }; },
+       useEffect: fn => effects.push(fn)
+     },
++    '@/lib/storage': { readStoredUser: () => ({ role: 'employer' }) },
+     '@/lib/api': { API_BASE: 'https://api.test/api/v1', BACKEND_BASE: 'https://api.test' },
+     '@/lib/localization': { tr: value => String(value || ''), trError: value => String(value || ''), useLocale: () => ({ language: 'en' }) },
+     'next/navigation': { useRouter: () => router }
+@@ -33,7 +34,7 @@ function harness(page) {
+   const nodes = () => walk(tree);
+   const find = predicate => nodes().find(predicate);
+   return { render, nodes, find, requests, destinations, states,
+-    resolve: async (index, data) => { requests[index].resolve({ ok: true, json: async () => ({ success: true, data }) }); await new Promise(resolve => setImmediate(resolve)); render(); },
++    resolve: async (index, data, extra = {}) => { requests[index].resolve({ ok: true, json: async () => ({ success: true, data, ...extra }) }); await new Promise(resolve => setImmediate(resolve)); render(); },
+     restore: () => { global.fetch = saved.fetch; global.localStorage = saved.localStorage; }
+   };
+ }
+@@ -41,7 +42,7 @@ test('databank shows builder share links, resolves submitted relative upload URL
+   const h = harness('app/employer/candidates/page.tsx');
+   try {
+     assert.equal(h.requests[0].options.headers.Authorization, 'Bearer session-token');
+-    await h.resolve(0, [{ id: 'resume:r1', userId: 'candidate', firstName: 'Builder', title: 'Frontend CV', resumeId: 'r1', skills: ['React'] }, { id: 'application:a', userId: 'other', firstName: 'Applicant', resumeUrl: '/uploads/a.pdf' }]);
++    await h.resolve(0, [{ id: 'resume:r1', userId: 'candidate', firstName: 'Builder', title: 'Frontend CV', skills: ['React'], resumes: [{ id: 'builder:r1', resumeId: 'r1', title: 'Frontend CV' }] }, { id: 'application:a', userId: 'other', firstName: 'Applicant', resumes: [{ id: 'upload:a', url: '/uploads/a.pdf' }] }]);
+     const links = h.nodes().filter(node => node.type === 'a').map(node => node.props.href);
+     assert.ok(links.includes('/resume/share/r1')); assert.ok(links.includes('https://api.test/uploads/a.pdf'));
+     assert.ok(h.nodes().some(node => node.props.children === 'Frontend CV'));
+@@ -52,7 +53,7 @@ test('clearing databank filters wins over an older filtered response', async ()
+   try {
+     await h.resolve(0, []);
+     h.find(node => node.type === 'input' && node.props.placeholder === 'Skills (comma separated)').props.onChange({ target: { value: 'React, TypeScript' } }); h.render();
+-    h.find(node => node.type === 'button' && node.props.children === 'Search Candidates').props.onClick();
++    h.find(node => node.type === 'form').props.onSubmit({ preventDefault() {} });
+     assert.ok(h.requests[1].url.includes('skills=React%2C+TypeScript'));
+     h.find(node => node.type === 'button' && node.props.children === 'Clear Filters').props.onClick();
+     assert.equal(h.requests[2].url, 'https://api.test/api/v1/employer/candidates');
+@@ -75,3 +76,43 @@ test('changing selected job discards an old AI response and renders matches for
+     assert.ok(h.nodes().some(node => node.props.children === 'Applicant'));
+   } finally { h.restore(); }
+ });
++
++test('city and employment filters are sent together and grouped resumes render on one card', async () => {
++  const h = harness('app/employer/candidates/page.tsx');
++  try {
++    await h.resolve(0, []);
++    h.find(n => n.type === 'input' && n.props.placeholder === 'City / location').props.onChange({ target: { value: 'Pune' } }); h.render();
++    h.find(n => n.type === 'select').props.onChange({ target: { value: 'part-time' } }); h.render();
++    h.find(n => n.type === 'form').props.onSubmit({ preventDefault() {} });
++    const params = new URL(h.requests[1].url).searchParams; assert.equal(params.get('location'), 'Pune'); assert.equal(params.get('jobType'), 'part-time');
++    await h.resolve(1, [{ id: 'one', userId: 'one', firstName: 'Savf', currentLocation: 'Mumbai', appliedLocations: ['Pune'], jobTypes: ['part-time'], skills: ['React'], resumes: [{ id: 'a', resumeId: 'r1', title: 'CV one' }, { id: 'b', url: '/uploads/b.pdf', title: 'CV two' }] }]);
++    assert.equal(h.nodes().filter(n => n.type === 'article').length, 1);
++    assert.equal(h.nodes().filter(n => n.type === 'details').length, 1);
++    assert.equal(h.nodes().filter(n => n.type === 'li').length, 2);
++    assert.ok(h.nodes().some(n => n.props.children === 'Mumbai')); assert.ok(h.nodes().some(n => n.props.children === 'Pune'));
++  } finally { h.restore(); }
++});
++test('offline matching displays candidates and an explicit basic-matching notice', async () => {
++  const h = harness('app/ai-match/page.tsx');
++  try {
++    await h.resolve(0, [{ id: 'job', title: 'Developer' }]);
++    h.find(n => n.type === 'select').props.onChange({ target: { value: 'job' } }); h.render();
++    const pending = h.find(n => n.type === 'button').props.onClick();
++    await h.resolve(1, [{ candidateId: 'one', name: 'Savf', matchScore: 80, skillScore: 100, expScore: 70 }], { matchingMode: 'basic', fallback: true }); await pending; h.render();
++    assert.ok(h.nodes().some(n => n.props.children === 'Savf'));
++    assert.ok(h.find(n => n.props.role === 'status').props.children.includes('Basic matching'));
++  } finally { h.restore(); }
++});
++test('profile saves preferred cities and job types as arrays', async () => {
++  const h = harness('app/profile/page.tsx');
++  try {
++    await h.resolve(0, { firstName: 'Savf', preferredLocations: ['Mumbai'], preferredJobTypes: [] });
++    const cityLabel = h.find(n => n.type === 'label' && Array.isArray(n.props.children) && n.props.children[0] === 'Preferred cities (comma separated)');
++    cityLabel.props.children[1].props.onChange({ target: { value: 'Mumbai, Pune' } }); h.render();
++    const typeLabel = h.find(n => n.type === 'label' && Array.isArray(n.props.children) && n.props.children[1] === 'Part-time');
++    typeLabel.props.children[0].props.onChange({ target: { checked: true } }); h.render();
++    const pending = h.find(n => n.type === 'button' && n.props.children === 'Save Profile').props.onClick();
++    const payload = JSON.parse(h.requests[1].options.body); assert.deepEqual(payload.preferredLocations, ['Mumbai', 'Pune']); assert.deepEqual(payload.preferredJobTypes, ['part-time']);
++    await h.resolve(1, payload); await pending;
++  } finally { h.restore(); }
++});
