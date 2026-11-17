@@ -24,11 +24,12 @@ function harness(pathname, seed=[], other={}) {
  return props=>{cursor=0;return Page(props)}
 }
 const text=tree=> typeof tree==='string'||typeof tree==='number'?String(tree):!tree||typeof tree!=='object'?'':React.Children.toArray(tree.props?.children).map(text).join(' ')
-test('superadmin review UI offers decisions only for submitted registers and never wage editing',()=>{
+test('employers review submitted registers while superadmins retain view access',()=>{
  const seed=[];seed[0]='token';seed[11]={id:'register',employerId:'employer',period:'2026-10',site:'Site',status:'submitted',version:3,rows:[],warnings:[],sourceName:'attendance.xlsx'}
- const render=harness('components/payroll/WageRegisterWorkspace.tsx',seed)
- let tree=render({readOnly:true});assert.ok(text(tree).includes('Approve and lock'));assert.ok(text(tree).includes('Return for corrections'));assert.ok(!text(tree).includes('Save wages'));assert.ok(!nodes(tree).some(n=>n.props.type==='file'))
- seed[11]={...seed[11],status:'approved'};tree=harness('components/payroll/WageRegisterWorkspace.tsx',seed)({readOnly:true});assert.ok(!text(tree).includes('Return for corrections'))
+ let tree=harness('components/payroll/WageRegisterWorkspace.tsx',seed)({readOnly:true});assert.ok(!text(tree).includes('Approve and lock'));assert.ok(!text(tree).includes('Return for corrections'));assert.ok(!text(tree).includes('Save wages'));assert.ok(!nodes(tree).some(n=>n.props.type==='file'));assert.ok(text(tree).includes('Export Excel with formulas'))
+ tree=harness('components/payroll/WageRegisterWorkspace.tsx',seed)({readOnly:false});assert.ok(text(tree).includes('Approve and lock'));assert.ok(text(tree).includes('Return for corrections'));assert.ok(!text(tree).includes('Save wages'))
+ const returnButton=nodes(tree).find(n=>n.type==='button'&&text(n)==='Return for corrections');assert.equal(returnButton.props.disabled,true)
+ seed[11]={...seed[11],status:'approved'};tree=harness('components/payroll/WageRegisterWorkspace.tsx',seed)({readOnly:false});assert.ok(!text(tree).includes('Approve and lock'));assert.ok(!text(tree).includes('Return for corrections'))
  seed[11]={...seed[11],status:'draft'};tree=harness('components/payroll/WageRegisterWorkspace.tsx',seed)({readOnly:false});assert.ok(text(tree).includes('Submit for review'));assert.ok(!text(tree).includes('Approve and lock'))
 })
 test('yearly selector displays annual price and 365 days, monthly restores the monthly terms',()=>{

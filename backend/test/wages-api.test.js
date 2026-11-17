@@ -30,27 +30,33 @@ test('save recalculates totals, detects stale edits and prohibits attendance cha
  assert.equal((await req('employer','/'+r.id,'PUT',{version:1,rows:r.rows})).status,409);
  r.rows[0].days[0].code='A';assert.equal((await req('employer','/'+r.id,'PUT',{version:2,rows:r.rows})).status,400);
 });
-test('employer submits, superadmin reviews, stale reviews and employer approvals are rejected',async()=>{
+test('employer reviews own submissions; superadmin, cross-employer and stale reviews are rejected',async()=>{
  let r=await imported();assert.equal((await req('employer','/'+r.id+'/submit','POST',{version:1})).status,400);
  r.rows[0].rate=595;r=(await req('employer','/'+r.id,'PUT',{version:1,rows:r.rows})).data.data;
  assert.equal((await req('super_admin','/'+r.id,'PUT',{version:2,rows:r.rows})).status,403);
  assert.equal((await req('otherEmployer','/'+r.id+'/submit','POST',{version:2})).status,404);
  const submitted=await req('employer','/'+r.id+'/submit','POST',{version:2});assert.equal(submitted.status,200);assert.equal(submitted.data.data.status,'submitted');
  assert.equal((await req('employer','/'+r.id,'PUT',{version:3,rows:r.rows})).status,409);
- assert.equal((await req('employer','/'+r.id+'/review','POST',{version:3,decision:'approve',notes:''})).status,403);
- assert.equal((await req('super_admin','/'+r.id+'/review','POST',{version:2,decision:'approve',notes:''})).status,409);
- const reviewed=await req('super_admin','/'+r.id+'/review','POST',{version:3,decision:'approve',notes:'Checked wages'});assert.equal(reviewed.status,200);assert.equal(reviewed.data.data.status,'approved');
- assert.equal(reviewed.data.data.reviewedBy,users.super_admin.id);
- assert.equal((await req('super_admin','/'+r.id+'/review','POST',{version:4,decision:'approve',notes:''})).status,409);
+ for(const decision of ['approve','return']) {
+  assert.equal((await req('super_admin','/'+r.id+'/review','POST',{version:3,decision,notes:'Review note'})).status,403);
+  assert.equal((await req('otherEmployer','/'+r.id+'/review','POST',{version:3,decision,notes:'Review note'})).status,404);
+ }
+ assert.equal(records[0].status,'submitted');assert.equal(records[0].version,3);
+ assert.equal((await req('employer','/'+r.id+'/review','POST',{version:2,decision:'approve',notes:''})).status,409);
+ const reviewed=await req('employer','/'+r.id+'/review','POST',{version:3,decision:'approve',notes:'Checked wages'});assert.equal(reviewed.status,200);assert.equal(reviewed.data.data.status,'approved');
+ assert.equal(reviewed.data.data.reviewedBy,users.employer.id);
+ assert.equal((await req('employer','/'+r.id+'/review','POST',{version:4,decision:'approve',notes:''})).status,409);
  assert.equal((await req('super_admin','/'+r.id+'/export')).status,200);assert.equal(audits.length,4);
+ assert.equal(audits[3].actorRole,'employer');assert.equal(audits[3].actorId,users.employer.id);
+ assert.equal((await req('employer','/'+r.id,'PUT',{version:4,rows:r.rows})).status,409);
 });
 test('return requires a reason, audit failure rolls back review, returned draft can be edited',async()=>{
  let r=await imported();r.rows[0].rate=595;r=(await req('employer','/'+r.id,'PUT',{version:1,rows:r.rows})).data.data;
  await req('employer','/'+r.id+'/submit','POST',{version:2});
- assert.equal((await req('super_admin','/'+r.id+'/review','POST',{version:3,decision:'return',notes:''})).status,400);
- auditFail=true;assert.equal((await req('super_admin','/'+r.id+'/review','POST',{version:3,decision:'return',notes:'Correct the deduction'})).status,500);
+ assert.equal((await req('employer','/'+r.id+'/review','POST',{version:3,decision:'return',notes:''})).status,400);
+ auditFail=true;assert.equal((await req('employer','/'+r.id+'/review','POST',{version:3,decision:'return',notes:'Correct the deduction'})).status,500);
  assert.equal(records[0].status,'submitted');auditFail=false;
- const returned=await req('super_admin','/'+r.id+'/review','POST',{version:3,decision:'return',notes:'Correct the deduction'});
+ const returned=await req('employer','/'+r.id+'/review','POST',{version:3,decision:'return',notes:'Correct the deduction'});
  assert.equal(returned.data.data.status,'draft');assert.equal(returned.data.data.version,4);
  assert.equal((await req('employer','/'+r.id,'PUT',{version:4,rows:r.rows})).status,200);
 });
@@ -78,7 +84,7 @@ test('JSONB property ordering does not reject unchanged attendance during wage e
  assert.equal((await req('employer','/'+r.id,'PUT',{version:2,rows:r.rows})).status,400);
 });
 
-async function approvedRegister(){let r=await imported();r.rows[0].rate=595;r=(await req('employer','/'+r.id,'PUT',{version:1,rows:r.rows})).data.data;await req('employer','/'+r.id+'/submit','POST',{version:2});const approved=await req('super_admin','/'+r.id+'/review','POST',{version:3,decision:'approve',notes:'All figures checked'});assert.equal(approved.status,200);return approved.data.data;}
+async function approvedRegister(){let r=await imported();r.rows[0].rate=595;r=(await req('employer','/'+r.id,'PUT',{version:1,rows:r.rows})).data.data;await req('employer','/'+r.id+'/submit','POST',{version:2});const approved=await req('employer','/'+r.id+'/review','POST',{version:3,decision:'approve',notes:'All figures checked'});assert.equal(approved.status,200);return approved.data.data;}
 test('individual wage invoice uses authoritative net payable and retries return one immutable invoice',async()=>{
  const r=await approvedRegister();records[0].rows[0].net=999999; // Never trust a stored/client-derived total.
  const created=await req('employer','/'+r.id+'/invoices','POST',{employeeId:'001',version:r.version,total:1,tax:99});assert.equal(created.status,201);assert.equal(created.data.data.total,13554);assert.equal(created.data.data.subtotal,13554);assert.equal(created.data.data.tax,0);assert.equal(created.data.data.buyer,'Employee');

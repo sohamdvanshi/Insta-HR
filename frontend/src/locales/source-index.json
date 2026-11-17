@@ -2795,9 +2795,9 @@
     "ns": "common",
     "key": "Only submitted registers can be reviewed"
   },
-  "Only superadmins can review registers": {
+  "Only employers can review their own registers": {
     "ns": "common",
-    "key": "Only superadmins can review registers"
+    "key": "Only employers can review their own registers"
   },
   "Physical sessions include a venue. Online sessions use a Meet, Zoom, or other meeting link. Invitations go to enrolled candidates; times below use": {
     "ns": "common",
@@ -2835,9 +2835,9 @@
     "ns": "common",
     "key": "Register not found"
   },
-  "Register submitted for superadmin review.": {
+  "Register submitted. Review and approve it, or return it for corrections.": {
     "ns": "common",
-    "key": "Register submitted for superadmin review."
+    "key": "Register submitted. Review and approve it, or return it for corrections."
   },
   "Reload before replacing attendance": {
     "ns": "common",
@@ -2867,9 +2867,9 @@
     "ns": "common",
     "key": "Review status"
   },
-  "Review submitted wage registers, approve them or return them for corrections.": {
+  "View employer wage registers and their approval status. Employers manage approvals.": {
     "ns": "common",
-    "key": "Review submitted wage registers, approve them or return them for corrections."
+    "key": "View employer wage registers and their approval status. Employers manage approvals."
   },
   "Select an attendance .xlsx file": {
     "ns": "common",
@@ -14143,9 +14143,9 @@
     "ns": "common",
     "key": "Only submitted registers can be reviewed"
   },
-  "only superadmins can review registers": {
+  "only employers can review their own registers": {
     "ns": "common",
-    "key": "Only superadmins can review registers"
+    "key": "Only employers can review their own registers"
   },
   "physical sessions include a venue. online sessions use a meet, zoom, or other meeting link. invitations go to enrolled candidates; times below use": {
     "ns": "common",
@@ -14183,9 +14183,9 @@
     "ns": "common",
     "key": "Register not found"
   },
-  "register submitted for superadmin review.": {
+  "register submitted. review and approve it, or return it for corrections.": {
     "ns": "common",
-    "key": "Register submitted for superadmin review."
+    "key": "Register submitted. Review and approve it, or return it for corrections."
   },
   "reload before replacing attendance": {
     "ns": "common",
@@ -14215,9 +14215,9 @@
     "ns": "common",
     "key": "Review status"
   },
-  "review submitted wage registers, approve them or return them for corrections.": {
+  "view employer wage registers and their approval status. employers manage approvals.": {
     "ns": "common",
-    "key": "Review submitted wage registers, approve them or return them for corrections."
+    "key": "View employer wage registers and their approval status. Employers manage approvals."
   },
   "select an attendance .xlsx file": {
     "ns": "common",

@@ -115,7 +115,7 @@ exports.template = run(async (req, res) => {
 });
 
 exports.review = run(async (req, res) => {
-  if (req.user.role !== 'super_admin') throw fail('Only superadmins can review registers', 403);
+  if (req.user.role !== 'employer') throw fail('Only employers can review their own registers', 403);
   const { decision, notes, version } = req.body;
   if (!['approve', 'return'].includes(decision)) throw fail('Choose approve or return');
   if (typeof notes !== 'string' || notes.trim().length > 2000 || (decision === 'return' && notes.trim().length < 5)) throw fail('Provide a review note (5–2000 characters when returning)');

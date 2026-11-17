@@ -17,5 +17,5 @@ router.get('/:id',c.get);
 router.post('/:id/attendance',authorize('employer'),file,c.replaceAttendance);
 router.put('/:id',authorize('employer'),c.update);
 router.post('/:id/submit',authorize('employer'),c.submit);
-router.post('/:id/review',authorize('super_admin'),c.review);
+router.post('/:id/review',authorize('employer'),c.review);
 module.exports = router;
